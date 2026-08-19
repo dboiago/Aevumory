@@ -1,19 +1,37 @@
-Aevumory is not a calendar
+# Concept
 
-Aevumory is not a task manager
+Aevumory is a persistent, ambient household presence
 
-Aevumory is not a smart-home controller
+It is not a calendar
+It is not a task manager
+It is not an RPG interface
+It is not a smart-home dashboard
 
-Aevumory presents persistent household context
+The system may contain all of those capabilities underneath, but the
+visible experience should not feel like any of them
 
-Routine tasks may exist, but recurrence is not the organizing principle
+Aevumory exists to make the things that matter to a household quietly
+visible
 
-Events are exceptional information that enters the household's temporal field
+Routine responsibilities may be managed by the system, but recurrence is
+not the core concept
+
+A task can be temporary
+A responsibility can evolve
+A reward can change
+An event can appear once and never happen again
+
+The system should preserve these things until they are relevant, then
+surface them without demanding attention
 
 The display is passive by default
 
-The system should surface information rather than demand interaction
+It should feel like part of the room rather than an application running
+inside it
 
-The UI should remain legible and useful at 10 feet
+It should be atmospheric, restrained, and legible from a distance
 
-The underlying system may be significantly more complex than the visible interface
+The underlying system may be deep and complicated
+
+The visible experience should not advertise that complexity unless the
+user chooses to see it
