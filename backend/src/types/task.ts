@@ -26,35 +26,36 @@ export type TaskSourceType = 'core' | 'event' | 'encounter';
 export type TaskState = 'active' | 'foothold_established' | 'completed';
 
 export interface Task {
-  /** Identity & Visibility */
+  /** Identity & Discovery */
   id: string;
   title: string;
   description?: string;
-  is_hidden: boolean;               // Inquiry: Hidden in plain sight until discovered
-  visible_to_user_ids?: string[];   // Inquiry: Targeted individual discovery
+  is_hidden: boolean;               // Inquiry: Discovered via perception[cite: 2, 4]
+  visible_to_user_ids?: string[];   // Inquiry: Targeted individual discovery[cite: 2, 4]
 
   /** Domain & Discipline Attribution */
-  domain: TaskDomain;
-  primary_discipline: DisciplineTag;
-  secondary_discipline?: DisciplineTag; // Synthesis: Cross-domain yield connection
+  domain: TaskDomain;               //[cite: 4]
+  primary_discipline: DisciplineTag; //[cite: 4]
+  secondary_discipline?: DisciplineTag; // Synthesis: Cross-discipline yield[cite: 2, 4]
 
-  /** Effort, Duration & Cognitive Attributes */
-  duration_tier: DurationTier;
-  effort_type: EffortType;
-  cognitive_load: CognitiveLoad;
+  /** Descriptive Trait Profiles */
+  duration_tier: DurationTier;      //[cite: 4]
+  effort_type: EffortType;          //[cite: 4]
+  cognitive_load: CognitiveLoad;    //[cite: 4]
 
-  /** Engine Hooks & Behavior Flags */
-  supports_foothold: boolean;       // Reason: Foothold point-of-entry supported
-  has_strict_window: boolean;       // Care: Checked by temporal constraint engine
+  /** Engine Hooks & Behavioral Flags */
+  supports_foothold: boolean;       // Reason: Point-of-entry enabled[cite: 2, 4]
+  has_strict_window: boolean;       // Care: Evaluated by schedule engine[cite: 1, 4]
+  is_major_reset?: boolean;         // Renewal: Explicit trigger requirement
 
-  /** Yield & Execution Rules */
-  base_practice_yield: number;
-  max_daily_completions: number;
-  cooldown_hours: number;
+  /** Yield & Execution Constraints */
+  base_practice_yield: number;      //[cite: 4]
+  max_daily_completions: number;    //[cite: 4]
+  cooldown_hours: number;           //[cite: 4]
 
   /** Origin Tracking */
-  source_type: TaskSourceType;
-  origin_id?: string;
+  source_type: TaskSourceType;      //[cite: 4]
+  origin_id?: string;               //[cite: 4]
 }
 
 export interface TaskStateRecord {
