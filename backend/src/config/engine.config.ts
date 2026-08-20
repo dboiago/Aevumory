@@ -3,12 +3,9 @@
  */
 
 export const RENEWAL_ENGINE_CONFIG = {
-  /** Duration of the mental recovery window in hours */
-  recovery_window_hours: 24,
-  /** Discount multiplier applied to personal reward costs (0.25 = 25% discount) */
-  reward_cost_reduction: 0.25,
-  /** Maximum concurrent active recovery windows permitted */
-  max_active_windows: 1,
+  recovery_window_hours: 24,[cite: 3]
+  reward_cost_reduction: 0.25,[cite: 3]
+  max_window_horizon_hours: 48, // Maximum cap when extending active windows
 } as const;
 
 export const ORDER_ENGINE_CONFIG = {
