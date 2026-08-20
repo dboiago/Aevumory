@@ -1,46 +1,54 @@
-# RPG Engine & Household Gamification Rules
+# Aevumory Core System Specification & Game Rules
 
-## Design Philosophy
-* **Accessible Depth:** Simple for casual users (pick a class, complete tasks, get points), but deep for theorycrafters (synergies, passives, archetype bonuses).
-* **Non-Punitive Mechanics:** Losing a duel or failing a task multiplier never steals progress—it triggers catch-up mechanics, restoration buffs, or alternative paths.
+## Overview & Philosophy
+Aevumory is a grounded interaction and discipline system designed for shared household/individual checklists. It avoids punitive mechanics, superficial gamification (e.g., visual cosmetics, grinding, penalties, or negative friction tags), and heavy UI branching. Every mechanic is purely additive, modeling authentic human behavior, cognitive energy, and recovery cycles.
 
-## Primary Forces of Action (Archetypes)
-Instead of standard elementals, classes align with core forces:
+---
 
-1. **Momentum:** Focuses on velocity and chain execution. Completing tasks in short windows builds stacking point multipliers.
-2. **Stasis:** Focuses on patience and large yields. Charges up over time, giving massive bonuses to periodic, high-friction chores.
-3. **Entropy:** Focuses on friction and disruption. Spent points apply beneficial modifiers to available family tasks.
-4. **Siphon:** Focuses on co-op symbiosis. Earns passive bonus XP whenever another household member completes a task.
+## The 4 Domains & 12 Disciplines
 
-## Class & Subclass Architecture
-Each user selects **1 Base Class** which unlocks a dedicated **Subclass Spec** at Level 5.
+### Summary Architecture Matrix
 
-              ┌──────────────┐
-              │ Base Class:  │
-              │   MARTIAL    │
-              └──────┬───────┘
-                     │
-       ┌─────────────┴─────────────┐
-       ▼                           ▼
+| Domain | Discipline | Core Verb | Core Impulse (*Praxis*) | Fundamental Mechanism |
+| :--- | :--- | :--- | :--- | :--- |
+| **Erudite** (Mind) | **Inquiry** | Discover | *"What is there?"* | **Discovery:** Surfaces hidden tasks, household information, contextual suggestions, or system secrets directly onto your HUD view. Discovery *is* the reward. |
+| | **Reason** | Solve | *"How do I approach this?"* | **Efficiency / Foothold:** Pierces task paralysis on tasks supporting point-of-entry (`supports_foothold: true`). Ticking a Foothold awards initiation credit and daily continuity protection while rolling over without penalty. |
+| | **Synthesis** | Connect | *"How does this connect?"* | **Cross-Domain Yield:** Ticking cross-domain tasks generates a targeted practice yield boost for the secondary discipline/domain involved. |
+| **Kinetic** (Body) | **Motion** | Carry | *"I'm already moving..."* | **Momentum:** Ticking Kinetic practice establishes a daily Momentum state. Subsequent qualifying physical practice on the same day benefits from that active state until the midnight reset. |
+| | **Force** | Recover | *"I need physical recovery."* | **Physical Recovery:** Substantial physical exertion grants a protected **Recovery Interval** (banked physical rest day) that preserves Continuity without breaking cadence, modeling real training cycles. |
+| | **Precision** | Persist | *"I keep showing up over time."* | **Continuity Anchor:** Rewards showing up over time. Ticking Precision practice on established cadence strengthens your personal Continuity modifier. |
+| **Form** (Creation) | **Making** | Create | *"I create."* | **Creation ($P$):** Increases the backend probability of an exceptional outcome (`exceptional_outcome_probability`) when completing build or fabrication tasks. |
+| | **Composition**| Flow | *"I flow."* | **Flow Carryover:** Completing a creative practice task applies an immediate yield bonus to whatever task you tick next. |
+| | **Craft** | Refine | *"I refine."* | **Refinement ($M$):** Scales the magnitude multiplier applied *when* an exceptional outcome occurs ($P \times M$), rewarding deep mastery without runaway passive multiplier bloat. |
+| **Keeping** (Space) | **Care** | Accommodate| *"Care removes timing friction."*| **Grace:** Care practices maintain full personal Continuity credit whenever performed—removing time-of-day friction and restrictions. |
+| | **Order** | Resolve | *"I resolve."* | **Clear Slate:** Clearing your complete active daily list OR reaching a 4-task completion threshold awards a "Clear Slate" bonus yield, scaling cleanly across short or long lists. |
+| | **Renewal** | Restore | *"I restore."* | **Recovery Window:** Completing a qualifying major reset/overhaul grants a time-limited Recovery Window that reduces eligible personal reward costs, validating psychological completion before expecting further output. |
 
-┌─────────────────┐         ┌─────────────────┐
-│ Subclass:       │         │ Subclass:       │
-│ TAI CHI         │         │ WUSHU           │
-│ (Recovery &     │         │ (High-Yield     │
-│ Streak Buffs)   │         │ Labor Execution)│
-└─────────────────┘         └─────────────────┘
+---
 
+## 12-Verb Architecture Summary
+* **Inquiry** discovers
+* **Reason** solves
+* **Synthesis** connects
+* **Motion** carries
+* **Force** recovers
+* **Precision** persists
+* **Making** creates
+* **Composition** flows
+* **Craft** refines
+* **Care** accommodates
+* **Order** resolves
+* **Renewal** restores
 
-## Passive Skill Mechanics
-* **Class Passives:** Inherited automatically upon choosing a class or subclass.
-* **Keystones (Optional):** Powerful double-edged modifiers that introduce strategic trade-offs (e.g., higher point yield in exchange for faster point decay).
+---
 
-## Asymmetric Duel System (Household Contests)
-When two users claim the same real-life reward (e.g., borrowing the car on Saturday night):
+## Core System Principles
 
-1. Both players stake points or XP into the Duel Pool.
-2. The server executes a deterministic calculation based on:
-   `Base Roll + (Active Class Bonus) + (Streak Multiplier) - (Entropy Modifiers)`
-3. **Outcome:** 
-   * **Winner:** Claims the real-world reward.
-   * **Runner-Up:** Retains their points and receives a **Restoration Buff** ($+25\%$ XP generation for 7 days) to come back stronger for the next contest.
+1. **Zero Penalties & No Negative States:**
+   Interruption or uncompleted tasks simply sit there or fade quietly. The system never generates negative friction tags, red flags, or "overdue" warnings.
+2. **Short-List Friendly:**
+   Mechanics like Order's *Clear Slate* operate on realistic daily checklists (3–5 items) or threshold limits (4 items) rather than assuming a massive task backlog.
+3. **Purely Additive:**
+   Every mechanic is an incentive or an operational tweak to how your yield or recovery behaves, keeping participation completely opt-in.
+4. **Decoupled Architecture:**
+   Tasks store descriptive characteristics (`duration_tier`, `effort_type`, `cognitive_load`, `supports_foothold`, `has_strict_window`), while temporal and system engines handle schedule constraints and yield calculations.
