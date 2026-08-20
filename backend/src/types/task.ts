@@ -30,32 +30,32 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  is_hidden: boolean;               // Inquiry: Discovered via perception[cite: 2, 4]
-  visible_to_user_ids?: string[];   // Inquiry: Targeted individual discovery[cite: 2, 4]
+  is_hidden: boolean;               // Inquiry: Discovered via perception threshold
+  visible_to_user_ids?: string[];   // Inquiry: Targeted individual discovery
 
   /** Domain & Discipline Attribution */
-  domain: TaskDomain;               //[cite: 4]
-  primary_discipline: DisciplineTag; //[cite: 4]
-  secondary_discipline?: DisciplineTag; // Synthesis: Cross-discipline yield[cite: 2, 4]
+  domain: TaskDomain;
+  primary_discipline: DisciplineTag;
+  secondary_discipline?: DisciplineTag; // Synthesis: Cross-discipline yield
 
   /** Descriptive Trait Profiles */
-  duration_tier: DurationTier;      //[cite: 4]
-  effort_type: EffortType;          //[cite: 4]
-  cognitive_load: CognitiveLoad;    //[cite: 4]
+  duration_tier: DurationTier;
+  effort_type: EffortType;
+  cognitive_load: CognitiveLoad;
 
   /** Engine Hooks & Behavioral Flags */
-  supports_foothold: boolean;       // Reason: Point-of-entry enabled[cite: 2, 4]
-  has_strict_window: boolean;       // Care: Evaluated by schedule engine[cite: 1, 4]
-  is_major_reset?: boolean;         // Renewal: Explicit trigger requirement
+  supports_foothold: boolean;       // Reason: Point-of-entry state enabled
+  has_strict_window: boolean;       // Care: Evaluated by schedule engine
+  is_major_reset?: boolean;         // Renewal: Explicit recovery trigger requirement
 
   /** Yield & Execution Constraints */
-  base_practice_yield: number;      //[cite: 4]
-  max_daily_completions: number;    //[cite: 4]
-  cooldown_hours: number;           //[cite: 4]
+  base_practice_yield: number;      // Base XP
+  max_daily_completions: number;
+  cooldown_hours: number;
 
   /** Origin Tracking */
-  source_type: TaskSourceType;      //[cite: 4]
-  origin_id?: string;               //[cite: 4]
+  source_type: TaskSourceType;
+  origin_id?: string;
 }
 
 export interface TaskStateRecord {
