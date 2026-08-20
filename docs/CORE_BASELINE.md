@@ -7,6 +7,7 @@
 * **Obligation Reduction over Grind Escalation:** Rewards and progression should create grace, flexibility, legitimate recovery, and increased optionality. They must not systematically increase household obligations or turn participation into a treadmill.
 * **Game Mechanics, Not a Game World:** Aevumory intentionally uses game mechanics for motivation, discovery, and delight. It does not simulate a fictional RPG world, require fictional roles, or turn real-world activity into character roleplay.
 * **Optionality:** Ignoring optional game layers must never degrade the underlying household system or penalize the participant.
+* **Universal Pause:** Life disruptions, emergencies, vacations, and other legitimate interruptions are handled by a universal Pause state available to everyone. Pause is not a mastery, reward, or progression unlock and carries no penalty for use.
 
 ## 2. Task Model Rules
 
@@ -15,6 +16,11 @@
 * **Administrative Task Authority:** The admin defines what constitutes a valid task and which activities are worthy of Practice tracking. The engine should not invent its own semantic definition of whether a task is "meaningful".
 * **Descriptive Metadata Only:** Fields such as `cognitive_load`, `duration_tier`, and `effort_type` describe task characteristics. They are not dynamic difficulty statistics and must not be treated as combat-style attributes.
 * **No Artificial Task Decomposition:** If a real-world activity has legitimate discrete units, those may exist as separate tasks. The system should not manufacture subtask trees solely to create additional progression events.
+* **Delay Policy:** Tasks declare how safely they may move beyond their nominal schedule using `delay_policy: 'none' | 'bounded' | 'flexible'`.
+  * `none`: The task should not be intentionally delayed by progression mechanics
+  * `bounded`: Delay is permitted within an administrator-defined safe bound
+  * `flexible`: The task may be deferred without a fixed delay bound
+* **Delay Is Not Failure:** A task outside its nominal timing is never converted into an overdue or failed state. `delay_policy` describes scheduling safety, not participant performance.
 
 ## 3. Practice & Progression Invariants
 
@@ -36,6 +42,7 @@
 
 ## 5. Key Behavioral Flags
 
-* **Care (Grace):** Evaluates schedule flexibility through `has_strict_window`. Care removes timing friction rather than measuring degrees of lateness.
+* **Care (Grace):** Evaluates schedule flexibility through `has_strict_window`. Care removes timing friction rather than measuring degrees of lateness. Care Mastery currently explores **Relief**, recognizing a limited same-day response to another person's immediate need or an unexpected household circumstance.
 * **Reason (Foothold):** Allows a qualifying task to expose an initiation state through `supports_foothold`, recognizing activation friction without changing the binary real-world completion model.
-* **Renewal (Recovery):** A qualifying `is_major_reset` task can trigger a time-limited Recovery Window. Recovery is a legitimate outcome of substantial effort, not a productivity bonus for grinding harder.
+* **Renewal (Recovery):** A qualifying `is_major_reset` task can trigger a time-limited Recovery Window. Renewal Mastery currently explores a **Fresh Start** effect that improves the chance of an exceptional outcome on the next eligible task rather than granting XP without corresponding practice.
+* **Universal Pause:** Pause protects continuity from legitimate disruption for all participants and is never gated by Discipline level or Mastery.
