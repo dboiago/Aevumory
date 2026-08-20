@@ -32,3 +32,10 @@ export const MOTION_ENGINE_CONFIG = {
   /** Maximum momentum stack multiplier ceiling */
   max_momentum_multiplier: 1.50,
 } as const;
+
+export const REWARD_ENGINE_CONFIG = {
+  /** Maximum active recovery windows a user can hold simultaneously */
+  max_concurrent_recovery_windows: 1,
+  /** Default yield conversion multiplier if base yields are scaled */
+  credit_yield_multiplier: 1.0,
+} as const;
