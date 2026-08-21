@@ -23,6 +23,7 @@
 * **Responsibility Is Visible:** Individual responsibility is represented by task placement on a participant's board/card. Household tasks may exist in a shared pool and may be assigned by moving them onto a participant's card.
 * **Reward Ownership:** The participant assigned responsibility for a task receives its ordinary Experience and Credits when the task is completed, regardless of which household member physically performs it. This is an intentional household model, not a claim that the assigned participant personally performed the work.
 * **Task Reassignment:** Moving a task from one participant's card to another changes responsibility for the applicable cycle. Reassignment is an ordinary household action, not a separate game mode.
+* **Household Task Creation:** Household members may create legitimate tasks. Administration may retain the authority to revoke, edit, assign, or correct tasks and their reward values where appropriate.
 
 ## 3. Practice & Progression Invariants
 
@@ -46,15 +47,15 @@
 
 ## 5. Current Mastery Direction
 
-* **Motion:** Recognizes sustained/clustered physical activity without limiting the amount of physical activity performed.
+* **Motion:** Recognizes sustained/clustered Kinetic activity without limiting the amount of physical activity performed. The special bonus applies to recognized activity windows rather than to a fixed task count.
 * **Force:** Recognizes legitimate physical recovery after substantial exertion.
 * **Precision:** Expands acceptable timing variance around recurring practice without mutating recurrence anchors.
-* **Reason:** Recognizes investigation that establishes a task is unnecessary.
-* **Inquiry:** Current Contextual Discovery mastery direction is intentionally unresolved pending a richer household-context model.
+* **Reason:** Recognizes investigation that establishes an existing task is unnecessary, with auditable causal evidence and compensating reversal when an authorized correction rejects the result.
+* **Inquiry:** Represents proactive household awareness rather than hidden personal discoveries. A mastered participant may gain greater credibility to surface legitimate future work, add useful tasks, place tasks into the household pool, or assign appropriate responsibility without requiring private task state. Exact authority boundaries remain subject to implementation design.
 * **Synthesis:** Removes artificial limits on the number of legitimate secondary Disciplines recognized by a task.
-* **Making:** Enables exceptional-outcome probability for qualifying Form practice.
-* **Craft:** Controls exceptional-outcome magnitude when exceptional practice occurs.
-* **Composition:** Intentionally deferred. No additional workflow should be introduced solely to support it.
+* **Making:** Enables exceptional-outcome probability for qualifying Practice where sufficient experience makes an exceptional result plausible.
+* **Craft:** Controls exceptional-outcome magnitude when exceptional practice occurs, primarily affecting Credits and remaining grounded in realistic real-world value.
+* **Composition:** Recognizes sustained completion of assigned household responsibility as a completed-day continuity benefit. It is not a task-grouping or project-management mechanic and does not require task chains or grouped tasks.
 * **Care:** Recognizes limited same-day response to another person's immediate need or unexpected household circumstance.
 * **Order:** Rewards sustained maintenance associated with larger household upkeep without altering the real-world schedule of the larger task.
 * **Renewal:** Uses earned recovery to improve exceptional-outcome probability on the next eligible Practice action.
