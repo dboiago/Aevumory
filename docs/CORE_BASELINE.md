@@ -65,3 +65,21 @@
 * **Historical Absence:** Internal scheduling records may retain historical absence, but it is never a user-facing failure state or streak breaker.
 * **Superseded:** A cycle may be superseded when another valid real-world condition makes the underlying work unnecessary. Supersession does not fabricate completion or award task Experience/Credits.
 * **Corrective Transactions:** Historical reward transactions are immutable. If an administrative correction reverses an awarded result, the system records a compensating transaction rather than mutating history.
+
+## 7. Reward Economy
+
+### Currency & Minting Mechanics
+
+- **Base Credit Derivation:** 10 minutes of qualifying Practice = 1.0 Base Credit. Fractional effort is retained to one decimal place by default (e.g., 5 min = 0.5 Credits; 17 min = 1.7 Credits) to preserve direct physical effort anchoring across short activities
+- **Minting Invariant:** Credits are created only by authorized Reward Transactions. They may arise from qualifying Practice actions, Footholds, exceptional outcomes, or explicitly authorized administrative adjustments. Credits are never generated passively by time, account status, task ownership, or reward availability
+- **Separation of Concerns:** Experience measures permanent personal history and skill development. Base XP is anchored approximately to qualifying focused effort, then Discipline mechanics may modify the resulting Experience. Base Credits are independently derived from qualifying Practice effort and the configured Credit economy
+
+### Valuation & Household Pricing
+
+- **Localized Pricing Authority:** Reward prices are subjective household judgments set by the Admin, calibrated to real-world family norms rather than external MSRP or commercial dollar values
+- **Repricing & Liquidity:** Credits maintain stable nominal values in personal ledgers. If an Admin reprices a reward, redemptions occur at the spot price active at the moment of exchange
+
+### Household Buckets & Financial Anchors
+
+- **Shared Goal Sinks:** Household Buckets accept voluntary, irreversible Credit transfers from individual ledgers to fund collective goals
+- **Optional Financial Anchors:** Large goals may optionally display an Admin-configured financial overlay (e.g., 1 Credit = $0.50 toward a savings goal). This overlay is strictly informational and does not turn the underlying system into accounting software or alter internal Credit mechanics
