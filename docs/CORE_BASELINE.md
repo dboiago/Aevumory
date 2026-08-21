@@ -55,7 +55,7 @@
 * **Synthesis:** Removes artificial limits on the number of legitimate secondary Disciplines recognized by a task.
 * **Making:** Enables exceptional-outcome probability for qualifying Practice where sufficient experience makes an exceptional result plausible.
 * **Craft:** Controls exceptional-outcome magnitude when exceptional practice occurs, primarily affecting Credits and remaining grounded in realistic real-world value.
-* **Composition:** Recognizes sustained completion of assigned household responsibility as a completed-day continuity benefit. It is not a task-grouping or project-management mechanic and does not require task chains or grouped tasks.
+* **Composition:** A qualifying Practice Day is derived from the proportion of ordinary assigned work resolved by the end of the local calendar day. Daily Continuity is neutral when no qualifying work exists and is never treated as a punitive streak
 * **Care:** Recognizes limited same-day response to another person's immediate need or unexpected household circumstance.
 * **Order:** Rewards sustained maintenance associated with larger household upkeep without altering the real-world schedule of the larger task.
 * **Renewal:** Uses earned recovery to improve exceptional-outcome probability on the next eligible Practice action.
