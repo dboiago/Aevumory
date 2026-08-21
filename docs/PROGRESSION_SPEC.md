@@ -1,77 +1,276 @@
 # Progression & Engine Specification
 
-## 1. Execution Pipeline
+## 1. Experience Anchor
 
-When a task transitions state, the Practice Engine evaluates the following 8-stage pipeline in strict invariant order:
+`1 Base XP ≈ 1 minute` of qualifying focused real-world effort before Discipline modifiers, Flow, Synthesis, or exceptional outcomes.
 
-1. **Action Trigger & Event Validation:** State transitions from `active` -> `foothold_established` -> `completed`.
-2. **Context Resolution:** Evaluates active Motion Momentum, Composition Flow Carryover, Care Grace, and Order state where applicable.
-3. **Base Yield Generation:** Calculates uncoupled base quantities.
-   * `1 Base XP ≈ 1 minute of focused practice` before modifiers
-   * `Base Credit` is generated via a provisional credit formula
-4. **Experience Calculation Sequence:**
-   * `Base XP -> Additive Yield Modifiers -> Exceptional Roll (P) -> Craft Magnitude (M) -> Synthesis Split`
-5. **Credit Deposit:** Final integer Credits are deposited directly into wallet balance and are not modified by Discipline XP multipliers.
-6. **State Effects Execution:** Physical recovery intervals, Renewal Recovery Windows, Motion momentum, Composition flow, Care/Grace, and Order effects are evaluated according to their task and profile conditions.
-7. **Level & Mastery Resolution:** Adds XP to primary/secondary Disciplines. Level is derived from cumulative XP. Level 10 at 10,000 XP sets the Discipline to `mastered`.
-8. **Mark Mutation:** Records an immutable ledger entry including practice outcome, Credits, XP, and relevant state transitions.
+The anchor applies to Base XP only. Final earned XP may exceed raw elapsed effort because of deliberate Discipline mechanics.
 
-## 2. Progression Math
+Experience and Credits remain separate economies even when both are awarded from the same task.
 
-Progression follows the polynomial curve:
+---
 
-`Cumulative XP Required(L) = 100 × L²`
+## 2. Progression Curve
 
-| Level | Cumulative XP | State |
-| :--- | ---: | :--- |
-| 1 | 0 | Developing |
-| 2 | 400 | Developing |
-| 3 | 900 | Developing |
-| 4 | 1,600 | Developing |
-| 5 | 2,500 | Developing |
-| 6 | 3,600 | Developing |
-| 7 | 4,900 | Developing |
-| 8 | 6,400 | Developing |
-| 9 | 8,100 | Developing |
-| 10 | 10,000 | Mastered |
+Cumulative XP follows:
 
-### Post-Mastery
+```text
+XP(L) = 100 × L²
+````
 
-Experience past 10,000 XP continues accumulating indefinitely without decay, maintenance drain, or consumption. It feeds **The Mark's** long-term historical weight and fulfills the Experience prerequisite for Hybrid eligibility.
+| Level |     XP | State      |
+| ----: | -----: | ---------- |
+|     1 |      0 | Developing |
+|     2 |    400 | Developing |
+|     3 |    900 | Developing |
+|     4 |  1,600 | Developing |
+|     5 |  2,500 | Developing |
+|     6 |  3,600 | Developing |
+|     7 |  4,900 | Developing |
+|     8 |  6,400 | Developing |
+|     9 |  8,100 | Developing |
+|    10 | 10,000 | Mastered   |
 
-## 3. Discipline Behavior and Mastery Directions
+Level is derived from cumulative Experience and is never stored as mutable progression state.
 
-| Discipline | Current Core Behavior | Mastery Direction |
-| :--- | :--- | :--- |
-| **Inquiry** | Discovery surfaces hidden tasks, household information, contextual suggestions, or system secrets | Deductive discovery remains the focus. A qualifying realization that a planned activity is invalid or redundant may be recognized rather than forcing unnecessary work |
-| **Reason** | Foothold recognizes the activation barrier of intimidating tasks without changing their binary completion state | Improve accommodation of task initiation and rollover without pretending to alter real-world cognitive difficulty |
-| **Synthesis** | Secondary yield recognizes cross-discipline alignment, including same-domain combinations | **Omnipresent Yield:** remove the ordinary single-secondary cap so all valid backend-tagged secondary Disciplines can receive their yield without diluting primary XP |
-| **Motion** | Daily Momentum rewards accumulated qualifying physical practice | **Cluster Unification:** recognize a cluster as an aggregated Momentum Block with an appropriately upscaled yield expression |
-| **Force** | Substantial physical effort can bank a protected physical Recovery Interval | **Exertion Offset:** increase recognition of the legitimate recovery demand following substantial physical exertion |
-| **Precision** | Long-term cadence and repeated showing up reinforce Continuity | **Cadence Elasticity:** widen safe execution windows around recurring routines without introducing lateness scoring |
-| **Making** | Eligible Form work can trigger exceptional outcomes using probability `P` | Increase the chance of exceptional outcomes on eligible creation work |
-| **Composition** | Creative work can create immediate Flow Carryover into the next task | **Under review:** the previous broad "well-rounded day" / Confluence direction is not currently adopted |
-| **Craft** | Exceptional outcomes use magnitude multiplier `M` | Increase the ceiling of exceptional outcomes rather than passively multiplying ordinary tasks |
-| **Care** | Grace removes unnecessary timing friction from eligible care practice | **Relief:** recognize a limited same-day response to another person's immediate need or an unexpected household circumstance, with a real-world cooldown and credit only for work actually performed |
-| **Order** | Clear Slate recognizes resolution of the active daily list or configured threshold | **Maintenance Resonance:** reward sustained routine maintenance when it safely keeps a larger reset deferred. `delay_policy: 'none'` prevents unsafe deferral |
-| **Renewal** | Major reset tasks can activate a Recovery Window that reduces eligible personal reward costs | **Fresh Start:** improve the probability of an exceptional outcome on the next eligible task after earned recovery, without awarding XP merely for resting |
+Mastery is permanent.
 
-## 4. Scheduling and Delay Policy
+Experience continues accumulating indefinitely after Level 10.
 
-Tasks expose a descriptive `delay_policy`:
+---
 
-```ts
-type DelayPolicy = 'none' | 'bounded' | 'flexible';
+## 3. Post-Mastery Experience
+
+Post-Mastery Experience:
+
+* Never caps
+* Never decays
+* Is never consumed for maintenance
+* Contributes to The Mark's long-horizon historical weight
+* Satisfies the Experience prerequisite for Hybrid eligibility
+
+Post-Mastery Experience does not create an obligation to continue practicing.
+
+---
+
+## 4. Modifier Architecture
+
+Modifiers are evaluated by type rather than flattened into one global multiplier.
+
+### Base Yield Modifiers
+
+These operate before exceptional-outcome resolution.
+
+Examples:
+
+* Motion Cluster
+* Composition Flow
+* Clear Slate or other ordinary additive Experience effects
+
+### Exceptional Probability Modifiers
+
+These modify `P`, the probability of an exceptional outcome.
+
+Examples:
+
+* Making
+* Renewal Fresh Start
+
+### Exceptional Magnitude Modifiers
+
+These modify `M`, the magnitude of an exceptional outcome after the probability check succeeds.
+
+Example:
+
+* Craft
+
+### Secondary Yield Allocation
+
+Synthesis determines additional Discipline Experience after the primary result is resolved.
+
+### Credit Modifiers
+
+Credit modifiers remain independent from Experience modifiers.
+
+---
+
+## 5. Modifier Caps
+
+Initial target ceilings:
+
+* **Experience bonus modifiers:** maximum `+50%` of Base XP within the applicable 24-hour recognition window
+* **Credit bonus modifiers:** initial target maximum `+15%` of Base Credits within the applicable 24-hour recognition window
+
+The ceilings apply to their respective modifier classes.
+
+Exceptional probability and exceptional magnitude are not treated as ordinary additive yield bonuses and are not automatically folded into the same cap.
+
+All numerical values remain tunable configuration rather than fixed product-law until implementation tuning begins.
+
+---
+
+## 6. Motion Cluster Recognition
+
+Motion Mastery recognizes qualifying Kinetic task completions occurring within an approximately 90-minute rolling activity window as a continuous bout.
+
+The system does not cap the number of physical tasks performed.
+
+The recognition limiter applies only to the special Motion bonus.
+
+Initial target:
+
+```text
+Motion Experience Bonus: +20%
+Motion Credit Bonus: +5%
 ```
 
-* `none`: the task should not be intentionally delayed by progression mechanics
-* `bounded`: delay is permitted within an administrator-defined safe bound
-* `flexible`: the task may be deferred without a fixed delay bound
+The cluster does not alter the underlying task records or merge them into a new user-facing task.
 
-Delay policy is a scheduling safety constraint, not a performance score. It must never produce overdue, failed, late, or punitive task states.
+---
 
-## 5. Universal Pause
+## 7. Making / Craft / Renewal Outcome Model
 
-Pause is a system-level continuity protection available to every participant regardless of Discipline, level, or Mastery. It covers vacations, emergencies, illness, and ordinary periods where household practice should stop.
+Exceptional outcome flow:
 
-Pause does not create catch-up obligations, consume progression, or require an earned resource. Resuming from Pause returns the household to ordinary operation.
+```text
+Base XP
+    ↓
+Additive Experience Modifiers
+    ↓
+Exceptional Probability P
+    ↓
+Exceptional Magnitude M
+    ↓
+Synthesis Split
+```
+
+### Making
+
+Making determines whether an exceptional outcome may occur.
+
+### Craft
+
+Craft determines the magnitude multiplier when an exceptional outcome occurs.
+
+### Renewal
+
+Fresh Start temporarily increases exceptional probability `P` for the next eligible Practice action after earned recovery.
+
+Renewal does not award XP simply because a Recovery Window was used.
+
+---
+
+## 8. Synthesis
+
+Developing Synthesis can recognize a limited number of legitimate secondary Disciplines.
+
+Synthesis Mastery removes the artificial single-secondary limitation and allows all legitimately attributed `secondary_disciplines` to receive secondary Experience.
+
+Secondary attribution must be explicit in task definition.
+
+---
+
+## 9. Reason: Deductive Pruning
+
+A valid Deductive Pruning action represents real investigative work that establishes that the task is unnecessary.
+
+Reason Experience is derived from the burden of the task being avoided, not from a universal fixed reward.
+
+The underlying task does not generate normal completion XP or Credits because the physical work did not occur.
+
+Possible causal evidence:
+
+* Another task completed the requirement
+* An external event satisfied the requirement
+* The physical condition no longer exists
+* Investigation established the task is redundant
+
+Pruning is auditable.
+
+If an admin rejects a pruning result:
+
+1. The original RewardTransaction remains immutable
+2. A compensating transaction reverses the inappropriate reward
+3. The task cycle is reopened
+4. A later legitimate completion may produce a new reward transaction
+
+This prevents duplicate reward farming.
+
+---
+
+## 10. Force
+
+Force mastery recognizes legitimate recovery following substantial physical effort.
+
+The engine may protect Continuity or reduce ordinary daily practice expectations after qualifying exertion.
+
+Force does not create XP or Credits for tasks the participant did not perform.
+
+---
+
+## 11. Precision
+
+Precision mastery widens permissible execution windows around recurring cadence targets.
+
+Precision never mutates:
+
+* `cycle_id`
+* `target_date`
+* `series_anchor_date`
+* calendar anchors
+
+Only the resolved execution window changes.
+
+---
+
+## 12. Care
+
+Care Relief is a conditional mastery award, not a replacement for ordinary task reward.
+
+Initial qualification:
+
+1. `source_type === 'ad_hoc'`
+2. task created after active-day boundary
+3. completed same calendar day
+4. performer is acting on another participant's responsibility
+5. Care Relief cooldown is available
+
+The underlying task remains rewarded according to assignment/responsibility.
+
+---
+
+## 13. Order
+
+Order Mastery recognizes the sustained value of routine maintenance.
+
+Maintenance relationships connect upkeep tasks with larger reset tasks for reward interpretation only.
+
+Consistent maintenance does not:
+
+* suppress major-task cycles
+* rewrite recurrence
+* alter delay policy
+* fabricate completion
+* reduce the future major-task reward
+
+The major task receives its full ordinary reward when actually completed.
+
+---
+
+## 14. Inquiry
+
+Inquiry Mastery is intentionally unresolved.
+
+The previous design relied on personal hidden tasks and private interaction state. The current shared household display does not assume an authenticated active participant.
+
+A future Inquiry capability must emerge from useful household-context discovery without introducing personal hidden-task infrastructure solely for the purpose of the mechanic.
+
+---
+
+## 15. Composition
+
+Composition Mastery is intentionally deferred.
+
+No additional task-chain, project graph, grouping workflow, or user-managed composition structure should be introduced solely to implement the current theory.
+
+A future implementation must preserve the default `view → perform → complete` interaction model.
