@@ -64,8 +64,7 @@ These operate before exceptional-outcome resolution.
 Examples:
 
 * Motion Cluster
-* Composition Flow
-* Clear Slate or other ordinary additive Experience effects
+* Other ordinary additive Experience or Credit effects
 
 ### Exceptional Probability Modifiers
 
@@ -78,7 +77,7 @@ Examples:
 
 ### Exceptional Magnitude Modifiers
 
-These modify `M`, the magnitude of an exceptional outcome after the probability check succeeds.
+These modify the yield of an exceptional outcome after the probability check succeeds.
 
 Example:
 
@@ -113,9 +112,11 @@ All numerical values remain tunable configuration rather than fixed product-law 
 
 Motion Mastery recognizes qualifying Kinetic task completions occurring within an approximately 90-minute rolling activity window as a continuous bout.
 
+The window represents continuity of physical activity, not uninterrupted exertion. Reasonable gaps such as meals, travel, changing activities, or transitions do not automatically terminate recognition.
+
 The system does not cap the number of physical tasks performed.
 
-The recognition limiter applies only to the special Motion bonus.
+The recognition limiter applies only to the special Motion bonus. Additional qualifying work remains fully rewarded according to the underlying tasks.
 
 Initial target:
 
@@ -124,43 +125,153 @@ Motion Experience Bonus: +20%
 Motion Credit Bonus: +5%
 ```
 
+The Motion bonus is subject to the applicable 24-hour Experience and Credit modifier ceilings.
+
 The cluster does not alter the underlying task records or merge them into a new user-facing task.
 
 ---
 
-## 7. Making / Craft / Renewal Outcome Model
+## 7. Exceptional Outcomes
 
-Exceptional outcome flow:
+Exceptional Outcomes represent unusually successful real-world execution.
+
+They are progression mechanics rather than critical-hit mechanics. The purpose is to recognize that repeated practice, skill, recovery, and experience can occasionally produce an outcome meaningfully better than the ordinary baseline.
+
+Exceptional outcomes must remain grounded in the underlying task. They do not create arbitrary large multipliers or introduce additional work for the participant.
+
+### Eligibility
+
+Form-class tasks are a natural initial source of Exceptional Outcomes because their results can have meaningful variation in quality, technique, or execution.
+
+Exceptional eligibility is not permanently restricted to Form.
+
+As progression and mastery develop, other task types may become eligible where the participant has demonstrated sufficient experience, repetition, or discipline to make an exceptional result plausible.
+
+The exact progression path for expanding eligibility remains subject to further definition.
+
+The eligibility system must not require a new user workflow. Existing task completion remains the interaction:
 
 ```text
-Base XP
-    ↓
-Additive Experience Modifiers
-    ↓
-Exceptional Probability P
-    ↓
-Exceptional Magnitude M
-    ↓
-Synthesis Split
+View → Perform → Complete
 ```
 
-### Making
+### Exceptional Probability
 
-Making determines whether an exceptional outcome may occur.
+Making determines the participant's ability to produce an exceptional outcome.
 
-### Craft
+Renewal Fresh Start may temporarily increase exceptional probability for the next eligible Practice action after earned recovery.
 
-Craft determines the magnitude multiplier when an exceptional outcome occurs.
+Probability modifiers are additive and subject to a hard ceiling.
 
-### Renewal
+Initial target values remain configurable and should be tuned against realistic real-world frequency rather than game-like reward frequency.
 
-Fresh Start temporarily increases exceptional probability `P` for the next eligible Practice action after earned recovery.
+### Exceptional Magnitude
 
-Renewal does not award XP simply because a Recovery Window was used.
+Craft determines the magnitude of an exceptional result after the probability check succeeds.
+
+Magnitude must remain grounded in realistic differences in outcome quality or household value.
+
+The system should favor a modest bounded increase rather than large multipliers.
+
+Initial magnitude values remain configuration rather than fixed product-law until real-world tuning is complete.
+
+### Yield Distribution
+
+Exceptional outcomes primarily affect Credits.
+
+Credits represent discretionary household reward capacity and can therefore tolerate a more noticeable exceptional-result bonus without distorting the participant's historical Experience record.
+
+Experience may receive a smaller bounded variance because real-world learning and focus are not perfectly uniform from one session to another.
+
+Exceptional outcomes must not substantially distort the `Base XP ≈ 1 minute` historical anchor.
+
+### Synthesis Interaction
+
+A task receives one exceptional-outcome resolution.
+
+Synthesis does not create independent exceptional rolls for secondary Disciplines.
+
+The exceptional result is resolved against the task's total primary yield before secondary Experience attribution is performed.
+
+### Modifier Interaction
+
+Exceptional modifiers do not multiply one another into a stacking cascade.
+
+Where multiple applicable modifiers affect the same exceptional result, their effects are resolved according to explicit additive rules and applicable caps.
+
+Exceptional magnitude does not automatically count as an ordinary Experience or Credit modifier for the global daily modifier ceilings.
+
+### Reward Transaction
+
+An Exceptional Outcome is recorded as part of the completion's RewardTransaction.
+
+It does not create:
+
+* A second task
+* A separate completion workflow
+* A new user-managed object
+* A second Practice action
+
+The transaction records the exceptional result and the resulting yield for historical reconstruction.
+
+### User Feedback
+
+Exceptional Outcomes must be visible at the moment they occur.
+
+Standard completion may display the normal earned XP and Credit values using the ordinary completion animation.
+
+An exceptional completion uses the same interaction with a restrained visual distinction, such as:
+
+* Slightly larger floating yield values
+* A subtle growth or shimmer effect
+* A brief accent treatment
+* A distinct but non-intrusive settle animation
+
+There should be no arcade-style sounds, fireworks, confetti, blocking dialogs, or separate confirmation workflow.
+
+The result should feel noticeably different without turning ordinary household work into a game spectacle.
 
 ---
 
-## 8. Synthesis
+## 8. Making
+
+Making mastery increases the participant's ability to produce Exceptional Outcomes.
+
+Making primarily governs exceptional probability rather than exceptional magnitude.
+
+Making does not independently increase the value of ordinary task completion.
+
+The exact probability curve remains configurable and must remain subject to the Exceptional Outcome probability ceiling.
+
+---
+
+## 9. Craft
+
+Craft mastery increases the magnitude of an Exceptional Outcome after the exceptional probability check succeeds.
+
+Craft primarily affects Credits.
+
+Any Experience increase associated with exceptional magnitude must remain smaller and bounded so that exceptional execution does not undermine the historical effort anchor.
+
+Magnitude must remain within a grounded real-world range.
+
+Large critical-hit-style multipliers are explicitly excluded.
+
+---
+
+## 10. Renewal
+
+Renewal mastery represents the effect of earned recovery on subsequent performance.
+
+Fresh Start does not award XP or Credits merely because a Recovery Window was used.
+
+Instead, consuming an earned Renewal charge may increase the probability of an Exceptional Outcome on the next eligible Practice action.
+
+The charge is consumed according to the Renewal execution rule regardless of whether the exceptional roll succeeds.
+
+---
+
+## 11. Synthesis
 
 Developing Synthesis can recognize a limited number of legitimate secondary Disciplines.
 
@@ -168,15 +279,19 @@ Synthesis Mastery removes the artificial single-secondary limitation and allows 
 
 Secondary attribution must be explicit in task definition.
 
+Synthesis does not require task grouping, project chains, additional completion steps, or user-managed composition structures.
+
 ---
 
-## 9. Reason: Deductive Pruning
+## 12. Reason: Deductive Pruning
 
 A valid Deductive Pruning action represents real investigative work that establishes that the task is unnecessary.
 
 Reason Experience is derived from the burden of the task being avoided, not from a universal fixed reward.
 
-The underlying task does not generate normal completion XP or Credits because the physical work did not occur.
+A larger avoided task may therefore provide greater Reason yield than a trivial avoided task because successfully establishing that three hours of work are unnecessary creates substantially more opportunity for other activity.
+
+The underlying task does not generate normal physical completion XP or Credits because the physical work did not occur.
 
 Possible causal evidence:
 
@@ -185,20 +300,37 @@ Possible causal evidence:
 * The physical condition no longer exists
 * Investigation established the task is redundant
 
-Pruning is auditable.
+A pruning action may reference another task or provide an optional short write-in explanation.
 
-If an admin rejects a pruning result:
+Pruning must remain frictionless and optional within the normal completion interaction.
+
+### Audit and Reversal
+
+Pruning actions are recorded in the backend audit ledger with sufficient provenance to reconstruct:
+
+* The pruned task
+* The participant who performed the pruning
+* The reason or linked task
+* The resulting RewardTransaction
+* Any subsequent administrative reversal
+
+If an authorized admin rejects a pruning result:
 
 1. The original RewardTransaction remains immutable
-2. A compensating transaction reverses the inappropriate reward
-3. The task cycle is reopened
-4. A later legitimate completion may produce a new reward transaction
+2. A compensating transaction removes the inappropriate XP and Credits
+3. The pruning resolution is reversed
+4. The task cycle becomes eligible for legitimate completion again
+5. A later legitimate completion produces a new RewardTransaction
 
-This prevents duplicate reward farming.
+The participant does not retain the original reward after reversal.
+
+This prevents a participant from receiving Reason rewards for pruning and then receiving the original task reward for subsequently performing the same work.
+
+Administrative reversal is an audit correction, not a pending approval workflow.
 
 ---
 
-## 10. Force
+## 13. Force
 
 Force mastery recognizes legitimate recovery following substantial physical effort.
 
@@ -206,9 +338,11 @@ The engine may protect Continuity or reduce ordinary daily practice expectations
 
 Force does not create XP or Credits for tasks the participant did not perform.
 
+Force should reduce artificial pressure following substantial physical activity rather than manufacture additional rewards.
+
 ---
 
-## 11. Precision
+## 14. Precision
 
 Precision mastery widens permissible execution windows around recurring cadence targets.
 
@@ -217,29 +351,35 @@ Precision never mutates:
 * `cycle_id`
 * `target_date`
 * `series_anchor_date`
-* calendar anchors
+* Calendar anchors
 
 Only the resolved execution window changes.
 
+Precision absorbs reasonable variance without creating schedule creep.
+
 ---
 
-## 12. Care
+## 15. Care
 
-Care Relief is a conditional mastery award, not a replacement for ordinary task reward.
+Care Relief is a conditional mastery award recognizing an unexpected same-day response to another participant's immediate need or household circumstance.
 
 Initial qualification:
 
 1. `source_type === 'ad_hoc'`
-2. task created after active-day boundary
-3. completed same calendar day
-4. performer is acting on another participant's responsibility
+2. Task created after the active-day boundary
+3. Task completed on the same calendar day
+4. Action responds to another participant's immediate need or unexpected household circumstance
 5. Care Relief cooldown is available
 
-The underlying task remains rewarded according to assignment/responsibility.
+Care Relief remains separate from ordinary task reward.
+
+The underlying task is rewarded according to its assignment/responsibility model.
+
+Future Care interactions may emerge from shared task movement and other cross-Discipline behavior, but these do not alter the current Relief mechanic.
 
 ---
 
-## 13. Order
+## 16. Order
 
 Order Mastery recognizes the sustained value of routine maintenance.
 
@@ -247,30 +387,91 @@ Maintenance relationships connect upkeep tasks with larger reset tasks for rewar
 
 Consistent maintenance does not:
 
-* suppress major-task cycles
-* rewrite recurrence
-* alter delay policy
-* fabricate completion
-* reduce the future major-task reward
+* Suppress major-task cycles
+* Rewrite recurrence
+* Alter delay policy
+* Fabricate completion
+* Reduce the future major-task reward
 
-The major task receives its full ordinary reward when actually completed.
+The maintenance task continues to receive its normal reward.
+
+When a related major task eventually occurs, it receives its full ordinary reward when actually completed.
+
+The benefit of sustained upkeep is therefore expressed through:
+
+* Ongoing maintenance rewards
+* Order progression
+* A better-maintained physical state
+* Potentially faster or easier execution of the related major task in real life
+
+The engine does not assume that it can directly evaluate the physical condition of the maintained object.
 
 ---
 
-## 14. Inquiry
+## 17. Inquiry
 
-Inquiry Mastery is intentionally unresolved.
+Inquiry's previous hidden-task model is deprecated.
 
-The previous design relied on personal hidden tasks and private interaction state. The current shared household display does not assume an authenticated active participant.
+The current household model assumes a shared display in which task ownership is represented by visible participant categories or cards rather than authenticated personal interaction state.
 
-A future Inquiry capability must emerge from useful household-context discovery without introducing personal hidden-task infrastructure solely for the purpose of the mechanic.
+The system therefore cannot reliably provide:
+
+* Privately visible Inquiry tasks
+* Participant-specific hidden discoveries
+* Interaction attribution based on account identity
+* Personal-only encounter queues
+
+Inquiry should not duplicate Reason.
+
+Reason resolves an existing task through investigation when the task is no longer logically necessary.
+
+Inquiry should instead represent the act of noticing, discovering, questioning, or surfacing something that was not already represented by an active task.
+
+The exact engine capability remains unresolved.
+
+Any future Inquiry mechanic must:
+
+* Work on the shared household display
+* Require no hidden participant state
+* Avoid duplicating Reason's Deductive Pruning
+* Avoid duplicating Care or Keeping
+* Preserve the normal `view → perform → complete` interaction
+* Avoid creating additional user-managed workflow solely for the mastery mechanic
+
+Inquiry is therefore intentionally open for further design.
 
 ---
 
-## 15. Composition
+## 18. Composition
 
 Composition Mastery is intentionally deferred.
 
-No additional task-chain, project graph, grouping workflow, or user-managed composition structure should be introduced solely to implement the current theory.
+The theoretical value of recognizing multiple tasks as a unified output is acknowledged, but the current design does not justify introducing additional task-chain, project graph, grouping, or user-managed composition structures solely to implement the mechanic.
 
-A future implementation must preserve the default `view → perform → complete` interaction model.
+A future implementation must preserve the default:
+
+```text
+View → Perform → Complete
+```
+
+Natural relationships may emerge from existing task data, but the participant should not have to construct or maintain a separate composition system to receive the benefit.
+
+---
+
+## 19. Mastery Design Principle
+
+Mastery should remove artificial boundaries rather than introduce new ones.
+
+A mastered Discipline represents demonstrated capability that can increasingly apply across real-world contexts.
+
+Mastery mechanics should therefore:
+
+* Use information the system already has whenever possible
+* Avoid requiring additional user input
+* Avoid creating parallel task-management systems
+* Avoid hiding useful household information behind identity state
+* Avoid inventing work merely to exercise a mastery mechanic
+* Preserve the ordinary task interaction
+* Increase the sophistication of engine interpretation without increasing the complexity of everyday use
+
+The system should become more sophisticated internally as the participant becomes more experienced while remaining just as simple to use.
