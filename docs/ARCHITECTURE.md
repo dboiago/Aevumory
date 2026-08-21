@@ -3,6 +3,7 @@
 ## System Design
 The application operates on a **Thin Client / Smart Server** pattern. An old tablet acts strictly as a rendering engine for a lightweight web dashboard, while a backend container on TrueNAS handles state, polling, scheduling, and game logic.
 
+```text
 ┌──────────────────────────┐   WebSockets / REST   ┌──────────────────────────────┐
 │ Wall Tablet (Frontend)   │ ◄───────────────────► │ TrueNAS Backend (Docker)     │
 │ • Svelte / Alpine.js     │                       │ • Fastify/Go Service         │
@@ -15,7 +16,7 @@ The application operates on a **Thin Client / Smart Server** pattern. An old tab
 │ Memoix Read-Only Bridge      │
 │ (Optional Sync Engine)       │
 └──────────────────────────────┘
-
+```
 
 ## Technology Stack
 * **Frontend:** Svelte (or lightweight vanilla JS/HTML/CSS). Minimal client-side dependencies to ensure high performance on low-end tablet hardware.
