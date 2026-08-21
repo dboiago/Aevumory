@@ -451,43 +451,212 @@ The exact authorization boundaries for mastered task stewardship remain implemen
 
 Composition is not implemented as task grouping, project chaining, or synthesis of unrelated tasks.
 
-The useful part of the original Composition concept is the recognition that a person can complete the day as a whole, even when the day's workload varies significantly.
+The useful expression of Composition is the recognition that a participant can consistently resolve their assigned household responsibilities across days, even when the amount and shape of that work varies significantly.
 
-Composition therefore explores a household-level continuity mechanic based on **completed-day proportion**, not raw task count.
+Composition therefore interprets a universal **Daily Practice Resolution** state rather than introducing a separate task-management structure.
 
 ### Completed Day
 
-A day may qualify as completed when the participant completes a sufficient proportion of the tasks assigned to them for that day.
+At the end of each local calendar day, the engine derives a **Completed Day** percentage from the participant's expected workload for that day.
 
-The threshold is intentionally percentage-based rather than count-based. For example, a qualifying threshold could treat all of these equivalently:
+```text
+Completed Day % =
+    qualifying resolved obligations
+    ────────────────────────────────
+    qualifying expected obligations
+````
 
-* 3 of 4 assigned tasks
-* 1 of 1 assigned task
-* 8 of 10 assigned tasks
+The calculation is evaluated against the state of the day at its boundary. Later changes do not retroactively alter the historical result without an explicit administrative correction.
 
-The exact threshold remains configuration rather than product-law.
+#### Denominator
 
-A day with no assigned tasks does not create additional progress merely because the calendar advanced. The continuity concept recognizes completed responsibility, not passive calendar streaking.
+The denominator includes ordinary work the participant was expected to resolve that day, including:
 
-### Continuity Benefit
+* Core tasks assigned to the participant
+* Scheduled recurring task cycles whose target belongs to that day
+* Other ordinary assigned Practice obligations active for that day
 
-A sustained run of completed days may gradually improve the participant's **reward floor**, meaning the minimum ordinary reward expression for future completed work can rise slightly while continuity is maintained.
+The denominator excludes:
 
-The intended effect is recognition rather than multiplication: someone who consistently handles their responsibilities receives a small persistent-feeling benefit because the system recognizes that reliability.
+* `ad_hoc` tasks
+* Emergency or rescue work
+* `encounter` tasks
+* Other transient work that was not an ordinary expected obligation for the day
 
-The benefit should be percentage-based rather than a flat amount so that it remains proportionate across small and large tasks. A percentage approach also avoids making many trivial tasks disproportionately valuable compared with fewer substantial tasks.
+Unexpected work must never make the participant's normal daily obligations harder to complete.
 
-Exact percentages and the maximum floor increase remain deliberately unresolved for tuning.
+#### Numerator
 
-### Decay and Mastery
+The numerator recognizes obligations that were legitimately resolved during the day.
 
-Continuity is not treated as a conventional streak and carries no punitive failure state.
+Qualifying resolution includes:
 
-A developing participant may lose some or all accumulated continuity after a sufficiently long interruption, subject to the eventual configured decay window.
+* Normal task completion
+* A participant-attributable Deductive Pruning resolution where investigation establishes that the task is unnecessary
+* Other explicitly defined participant-attributable resolution outcomes that satisfy the underlying obligation
 
-Mastery may preserve continuity for a longer recovery window after interruption rather than requiring an immediate restart. The current design direction is a longer mastery grace period, not immunity from decay.
+A qualifying `ad_hoc` or emergency task may contribute to the numerator without increasing the denominator.
 
-The continuity mechanic must never create a requirement to perform arbitrary tasks solely to protect a number.
+A task that was merely deferred does not count as resolved for the original day.
+
+A system-generated `superseded` state does not count as participant completion. Supersession may satisfy the underlying physical need without creating artificial Practice credit for the participant.
+
+### Qualification Threshold
+
+The initial continuity threshold is **75%**.
+
+Examples:
+
+```text
+3 / 4 = 75%     → qualifying day
+1 / 1 = 100%    → qualifying day
+8 / 10 = 80%    → qualifying day
+2 / 3 = 66.7%   → non-qualifying day
+```
+
+No upward rounding is applied to the completion ratio.
+
+The threshold remains engine configuration rather than a permanent product-law.
+
+### Zero-Work Days
+
+A day with no qualifying expected obligations is **neutral**.
+
+```text
+Denominator = 0
+→ no Completed Day
+→ no Continuity progression
+→ no Continuity decay
+→ existing Continuity state remains unchanged
+```
+
+The passage of a calendar day alone never creates or removes Continuity.
+
+### Continuity
+
+A qualifying Completed Day contributes to the participant's **Continuity**.
+
+Continuity is a persistent system state derived from successfully resolved active days. It is not a conventional streak and is not exposed as a punitive daily attendance mechanic.
+
+The initial progression direction is:
+
+```text
+3 qualifying days  → Continuity Level 1
+6 qualifying days  → Continuity Level 2
+9 qualifying days  → Continuity Level 3
+12 qualifying days → Continuity Level 4
+15 qualifying days → Continuity Level 5
+18 qualifying days → Continuity Level 6
+```
+
+The exact level count and progression schedule remain configuration until tuned against real usage.
+
+Qualifying days do not need to be consecutive calendar days. Neutral zero-work days do not interrupt the accumulation.
+
+### Continuity Credit Modifier
+
+Composition interprets Continuity as a small **Credit modifier** applied to the base Credit yield of qualifying work.
+
+The modifier is percentage-based rather than a flat Credit addition.
+
+Conceptually:
+
+```text
+Final Base Credit =
+    Base Credit × (1 + Continuity Credit Modifier)
+```
+
+This produces a proportionate recognition of established reliability:
+
+```text
+0.7 Base Credit × 1.04 = 0.728 Credits
+10 Base Credits × 1.04 = 10.4 Credits
+```
+
+The mechanic therefore preserves the underlying effort relationship rather than creating a fixed reward for every task.
+
+The modifier applies to **Credits only**.
+
+It does not increase Experience, alter task effort, or replace the Base Credit effort anchor.
+
+Initial candidate progression is:
+
+```text
+Continuity Level 1 → +1.0%
+Continuity Level 2 → +2.5%
+Continuity Level 3 → +4.5%
+Continuity Level 4 → +6.5%
+Continuity Level 5 → +8.0%
+Continuity Level 6 → +10.0%
+```
+
+These values are provisional tuning targets.
+
+The modifier is subject to the applicable Credit modifier ceiling and must remain small enough that Continuity never becomes the dominant source of Credits.
+
+### Continuity Decay
+
+Continuity does not decay merely because one day fails to qualify.
+
+For a developing participant, decay begins only after **three consecutive non-qualifying active days**.
+
+Once decay begins, the Continuity Level decreases by one level per subsequent non-qualifying active day until reaching zero.
+
+Example:
+
+```text
+Continuity Level 6
+
+Active Day 1: non-qualifying → Level 6
+Active Day 2: non-qualifying → Level 6
+Active Day 3: non-qualifying → Level 6
+Active Day 4: non-qualifying → Level 5
+Active Day 5: non-qualifying → Level 4
+...
+```
+
+A neutral zero-work day does not advance decay.
+
+Continuity therefore remembers established participation through ordinary interruptions while still allowing prolonged disengagement to reduce the current benefit.
+
+### Mastery Resilience
+
+Composition Mastery does not primarily increase the Credit modifier.
+
+Instead, Mastery makes established Continuity more resilient.
+
+The intended direction is:
+
+* A longer non-qualifying grace period before decay begins
+* A slower decay rate once decay begins
+* No immunity from eventual decay
+* No requirement to maintain arbitrary activity merely to preserve a progression state
+
+Initial target direction:
+
+```text
+Developing:
+3 active non-qualifying days before decay
+1 Continuity Level lost per subsequent non-qualifying day
+
+Mastered:
+7 active non-qualifying days before decay
+1 Continuity Level lost per 3 subsequent non-qualifying active days
+```
+
+These values remain provisional configuration.
+
+### Design Boundaries
+
+Continuity must never:
+
+* Require arbitrary tasks solely to preserve a number
+* Reward task proliferation
+* Reward completing multiple trivial tasks more than fewer substantial tasks on an equivalent completed day
+* Penalize a participant for having no work to perform
+* Treat `ad_hoc`, emergency, or encounter work as additional obligation
+* Generate Experience merely because Continuity exists
+* Become a conventional daily streak mechanic
 
 ### Interaction Model
 
@@ -506,7 +675,7 @@ The participant continues using the normal:
 View → Perform → Complete
 ```
 
-The engine derives the completed-day state from existing task and cycle data.
+The engine derives Daily Practice Resolution and Continuity from existing Task and TaskCycle data at the end of the local calendar day.
 
 Composition therefore adds interpretation to existing household activity rather than adding work for the participant.
 
