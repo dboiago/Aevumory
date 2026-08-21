@@ -16,20 +16,20 @@ Cumulative XP follows:
 
 ```text
 XP(L) = 100 × L²
-````
+```
 
-| Level |     XP | State      |
-| ----: | -----: | ---------- |
-|     1 |      0 | Developing |
-|     2 |    400 | Developing |
-|     3 |    900 | Developing |
-|     4 |  1,600 | Developing |
-|     5 |  2,500 | Developing |
-|     6 |  3,600 | Developing |
-|     7 |  4,900 | Developing |
-|     8 |  6,400 | Developing |
-|     9 |  8,100 | Developing |
-|    10 | 10,000 | Mastered   |
+| Level | XP | State |
+| ----: | --: | ---------- |
+| 1 | 0 | Developing |
+| 2 | 400 | Developing |
+| 3 | 900 | Developing |
+| 4 | 1,600 | Developing |
+| 5 | 2,500 | Developing |
+| 6 | 3,600 | Developing |
+| 7 | 4,900 | Developing |
+| 8 | 6,400 | Developing |
+| 9 | 8,100 | Developing |
+| 10 | 10,000 | Mastered |
 
 Level is derived from cumulative Experience and is never stored as mutable progression state.
 
@@ -408,53 +408,107 @@ The engine does not assume that it can directly evaluate the physical condition 
 
 ---
 
-## 17. Inquiry
+## 17. Inquiry: Household Stewardship
 
-Inquiry's previous hidden-task model is deprecated.
+Inquiry is no longer modeled as a private discovery queue.
 
-The current household model assumes a shared display in which task ownership is represented by visible participant categories or cards rather than authenticated personal interaction state.
+The shared household display does not assume an authenticated active participant, so Inquiry cannot depend on hidden personal tasks, private encounters, or participant-specific interaction state.
 
-The system therefore cannot reliably provide:
+Inquiry instead represents the ability to notice and surface useful work before it becomes an immediate problem.
 
-* Privately visible Inquiry tasks
-* Participant-specific hidden discoveries
-* Interaction attribution based on account identity
-* Personal-only encounter queues
+### Developing Inquiry
 
-Inquiry should not duplicate Reason.
+Task creation is a normal household capability. A participant may add legitimate tasks when they notice something that should be tracked.
 
-Reason resolves an existing task through investigation when the task is no longer logically necessary.
+Tasks may be placed into the household pool or assigned to an appropriate participant using the same visible board model used for ordinary responsibility.
 
-Inquiry should instead represent the act of noticing, discovering, questioning, or surfacing something that was not already represented by an active task.
+Administration may retain the ability to revoke, edit, assign, or correct a task and its reward value.
 
-The exact engine capability remains unresolved.
+### Inquiry Mastery
 
-Any future Inquiry mechanic must:
+Inquiry Mastery grants greater engine-trusted stewardship over newly surfaced work.
 
-* Work on the shared household display
-* Require no hidden participant state
-* Avoid duplicating Reason's Deductive Pruning
-* Avoid duplicating Care or Keeping
-* Preserve the normal `view → perform → complete` interaction
-* Avoid creating additional user-managed workflow solely for the mastery mechanic
+A mastered participant may be permitted to:
 
-Inquiry is therefore intentionally open for further design.
+* Surface legitimate future tasks without treating them as immediate ad-hoc problems
+* Give a task an intentionally long planning horizon when the need is real but not urgent
+* Place newly discovered work into the household pool
+* Assign or suggest responsibility where the shared board makes that responsibility explicit
+
+The capability is about recognizing and organizing latent household work, not about generating arbitrary additional chores.
+
+Inquiry must not duplicate Reason's Deductive Pruning. Reason establishes why an existing task is no longer necessary. Inquiry identifies something that was not already represented as an active task.
+
+Inquiry must also remain distinct from Care and Keeping. An unexpected immediate need belongs to those existing mechanisms; Inquiry concerns useful future awareness and household planning.
+
+No private interaction state, hidden queue, special encounter screen, or additional workflow is required solely for Inquiry.
+
+The exact authorization boundaries for mastered task stewardship remain implementation-tunable. The underlying principle is that demonstrated Inquiry credibility should expand the participant's ability to surface useful household information rather than merely increase a numerical reward.
 
 ---
 
-## 18. Composition
+## 18. Composition: Completion Continuity
 
-Composition Mastery is intentionally deferred.
+Composition is not implemented as task grouping, project chaining, or synthesis of unrelated tasks.
 
-The theoretical value of recognizing multiple tasks as a unified output is acknowledged, but the current design does not justify introducing additional task-chain, project graph, grouping, or user-managed composition structures solely to implement the mechanic.
+The useful part of the original Composition concept is the recognition that a person can complete the day as a whole, even when the day's workload varies significantly.
 
-A future implementation must preserve the default:
+Composition therefore explores a household-level continuity mechanic based on **completed-day proportion**, not raw task count.
+
+### Completed Day
+
+A day may qualify as completed when the participant completes a sufficient proportion of the tasks assigned to them for that day.
+
+The threshold is intentionally percentage-based rather than count-based. For example, a qualifying threshold could treat all of these equivalently:
+
+* 3 of 4 assigned tasks
+* 1 of 1 assigned task
+* 8 of 10 assigned tasks
+
+The exact threshold remains configuration rather than product-law.
+
+A day with no assigned tasks does not create additional progress merely because the calendar advanced. The continuity concept recognizes completed responsibility, not passive calendar streaking.
+
+### Continuity Benefit
+
+A sustained run of completed days may gradually improve the participant's **reward floor**, meaning the minimum ordinary reward expression for future completed work can rise slightly while continuity is maintained.
+
+The intended effect is recognition rather than multiplication: someone who consistently handles their responsibilities receives a small persistent-feeling benefit because the system recognizes that reliability.
+
+The benefit should be percentage-based rather than a flat amount so that it remains proportionate across small and large tasks. A percentage approach also avoids making many trivial tasks disproportionately valuable compared with fewer substantial tasks.
+
+Exact percentages and the maximum floor increase remain deliberately unresolved for tuning.
+
+### Decay and Mastery
+
+Continuity is not treated as a conventional streak and carries no punitive failure state.
+
+A developing participant may lose some or all accumulated continuity after a sufficiently long interruption, subject to the eventual configured decay window.
+
+Mastery may preserve continuity for a longer recovery window after interruption rather than requiring an immediate restart. The current design direction is a longer mastery grace period, not immunity from decay.
+
+The continuity mechanic must never create a requirement to perform arbitrary tasks solely to protect a number.
+
+### Interaction Model
+
+Composition does not require:
+
+* Task chains
+* Project graphs
+* Grouped task objects
+* Additional completion steps
+* Manual composition setup
+* A separate user-facing "streak" workflow
+
+The participant continues using the normal:
 
 ```text
 View → Perform → Complete
 ```
 
-Natural relationships may emerge from existing task data, but the participant should not have to construct or maintain a separate composition system to receive the benefit.
+The engine derives the completed-day state from existing task and cycle data.
+
+Composition therefore adds interpretation to existing household activity rather than adding work for the participant.
 
 ---
 
