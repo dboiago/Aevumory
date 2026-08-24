@@ -51,7 +51,7 @@
 * **Force:** Recognizes legitimate physical recovery after substantial exertion.
 * **Precision:** Expands acceptable timing variance around recurring practice without mutating recurrence anchors.
 * **Reason:** Recognizes investigation that establishes an existing task is unnecessary, with auditable causal evidence and compensating reversal when an authorized correction rejects the result.
-* **Inquiry:** Represents proactive household awareness rather than hidden personal discoveries. A mastered participant may gain greater credibility to surface legitimate future work, add useful tasks, place tasks into the household pool, or assign appropriate responsibility without requiring private task state. Exact authority boundaries remain subject to implementation design.
+* **Inquiry:** Represents proactive household awareness rather than hidden personal discoveries. Task creation is available to everyone. Inquiry Mastery rewards the recognition and surfacing of legitimate future work, particularly work given a meaningful planning horizon such as a week or more, rather than granting exclusive authority to create, assign, or hide tasks.
 * **Synthesis:** Removes artificial limits on the number of legitimate secondary Disciplines recognized by a task.
 * **Making:** Enables exceptional-outcome probability for qualifying Practice where sufficient experience makes an exceptional result plausible.
 * **Craft:** Controls exceptional-outcome magnitude when exceptional practice occurs, primarily affecting Credits and remaining grounded in realistic real-world value.
@@ -62,7 +62,7 @@
 
 ## 6. Key System Protections
 
-* **Pause:** Pause is universally available and never gated by Discipline, level, or Mastery.
+* **Pause:** Pause is universally available and never gated by Discipline, level, or Mastery. A paused day is treated as if it does not exist for progression and daily-resolution purposes: nothing is gained, nothing is lost, and existing state remains unchanged.
 * **Historical Absence:** Internal scheduling records may retain historical absence, but it is never a user-facing failure state or streak breaker.
 * **Superseded:** A cycle may be superseded when another valid real-world condition makes the underlying work unnecessary. Supersession does not fabricate completion or award task Experience/Credits.
 * **Corrective Transactions:** Historical reward transactions are immutable. If an administrative correction reverses an awarded result, the system records a compensating transaction rather than mutating history.
