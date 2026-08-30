@@ -46,7 +46,7 @@ Post-Mastery Experience:
 * Never caps
 * Never decays
 * Is never consumed for maintenance
-* Contributes to The Mark's long-horizon historical weight
+* Contributes to long-term progression history
 * Satisfies the Experience prerequisite for Hybrid eligibility
 
 Post-Mastery Experience does not create an obligation to continue practicing.
@@ -426,16 +426,18 @@ Administration may retain the ability to revoke, edit, assign, or correct a task
 
 ### Inquiry Mastery
 
-Inquiry Mastery grants greater engine-trusted stewardship over newly surfaced work.
+Inquiry Mastery recognizes proactive household awareness through useful future work rather than granting exclusive authority over the household task board.
 
-A mastered participant may be permitted to:
+A mastered participant may be recognized for:
 
-* Surface legitimate future tasks without treating them as immediate ad-hoc problems
-* Give a task an intentionally long planning horizon when the need is real but not urgent
-* Place newly discovered work into the household pool
-* Assign or suggest responsibility where the shared board makes that responsibility explicit
+* Surfacing legitimate future tasks without treating them as immediate ad-hoc problems
+* Giving a task an intentionally long planning horizon when the need is real but not urgent
+* Placing newly discovered work into the household pool
+* Creating useful household tasks that are subsequently completed
 
 The capability is about recognizing and organizing latent household work, not about generating arbitrary additional chores.
+
+The reward is tied to the successful completion of the Inquiry-related task. Creating a task by itself does not mint the ordinary task reward.
 
 Inquiry must not duplicate Reason's Deductive Pruning. Reason establishes why an existing task is no longer necessary. Inquiry identifies something that was not already represented as an active task.
 
@@ -443,7 +445,7 @@ Inquiry must also remain distinct from Care and Keeping. An unexpected immediate
 
 No private interaction state, hidden queue, special encounter screen, or additional workflow is required solely for Inquiry.
 
-The exact authorization boundaries for mastered task stewardship remain implementation-tunable. The underlying principle is that demonstrated Inquiry credibility should expand the participant's ability to surface useful household information rather than merely increase a numerical reward.
+Task creation and responsibility management remain household capabilities rather than exclusive Inquiry powers.
 
 ---
 
@@ -464,7 +466,7 @@ Completed Day % =
     qualifying resolved obligations
     ────────────────────────────────
     qualifying expected obligations
-````
+```
 
 The calculation is evaluated against the state of the day at its boundary. Later changes do not retroactively alter the historical result without an explicit administrative correction.
 
