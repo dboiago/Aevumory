@@ -16,7 +16,7 @@ The normal interaction remains:
 
 ```text
 View → Perform → Complete
-````
+```
 
 Discipline mechanics should resolve around that interaction automatically wherever possible.
 
@@ -27,13 +27,15 @@ Discipline mechanics should resolve around that interaction automatically wherev
 | Layer           | Function                                            |
 | :-------------- | :-------------------------------------------------- |
 | **Core**        | Real-world action through Tasks and Practice        |
-| **Identity**    | Long-horizon development through The Mark           |
+| **Identity**    | Optional long-term household/personal visual identity |
 | **Progression** | Discipline Experience, Levels, and Mastery          |
 | **Economy**     | Spendable Credits and personal Rewards              |
 | **Balancing**   | Restoration and recovery mechanics                  |
 | **Social**      | Shared household responsibility and optional Claims |
 | **Events**      | External reality surfaced when relevant             |
 | **Encounters**  | Optional Aevumory-generated temporary opportunities |
+
+Identity is not currently a progression dependency. The previous Mark system is deferred rather than implemented in another form.
 
 ---
 
@@ -78,17 +80,15 @@ Discipline mechanics should resolve around that interaction automatically wherev
 
 ### Erudite
 
-#### Inquiry — Contextual Discovery
+#### Inquiry — Household Stewardship
 
-**Status:** Deferred
+Inquiry represents the ability to notice and surface useful work before it becomes an immediate problem.
 
-Inquiry should eventually allow Aevumory to surface something genuinely useful that was not previously obvious.
+Task creation is a normal household capability and is available to everyone. Inquiry Mastery does not grant exclusive authority to create, assign, or hide tasks.
 
-The original private/individual hidden-task concept is intentionally rejected for the current shared-screen model.
+The useful mastered expression is proactive recognition of legitimate future work, particularly work given a meaningful planning horizon such as a week or more. The effect is earned when an Inquiry-related task is subsequently completed.
 
-Inquiry mastery should not be artificially restricted to a Domain.
-
-A future implementation must not require personal screen identity merely to make Inquiry useful.
+Inquiry must not depend on hidden personal tasks, private encounters, participant-specific interaction state, or a domain restriction.
 
 #### Reason — Deductive Pruning
 
@@ -104,7 +104,7 @@ Reason XP derives from the underlying task's burden rather than being a fixed un
 
 Pruning produces Reason Experience for the investigation, but no Experience/Credits for work that was not performed.
 
-Administrative reversal is represented by a compensating transaction rather than mutation of the original reward transaction.
+Administrative reversal is represented by a compensating transaction rather than mutation of the original reward transaction. The participant does not retain the reversed reward.
 
 #### Synthesis — Omnipresent Yield
 
@@ -137,7 +137,7 @@ Both use additive modifiers against their respective base economies.
 
 #### Force — Exertion Offset
 
-Mastery recognizes substantial physical exertion as a legitimate reason to reduce ordinary daily expectations and protect recovery.
+Force mastery recognizes substantial physical exertion as a legitimate reason to reduce ordinary daily expectations and protect recovery.
 
 Force does not fabricate Practice for work not performed.
 
@@ -145,7 +145,7 @@ The outcome is recovery flexibility, not artificial Experience.
 
 #### Precision — Cadence Elasticity
 
-Mastery expands acceptable execution windows around recurring tasks without mutating target dates or recurrence anchors.
+Precision mastery expands acceptable execution windows around recurring tasks without mutating target dates or recurrence anchors.
 
 Precision changes the valid execution window, not the underlying schedule.
 
@@ -155,23 +155,29 @@ Precision changes the valid execution window, not the underlying schedule.
 
 #### Making — Exceptional Practice
 
-Mastery enables exceptional-outcome probability for qualifying Form tasks.
+Making mastery enables exceptional-outcome probability for qualifying Practice where sufficient experience makes an exceptional result plausible.
 
-Making governs the probability that a completed qualifying Form task produces an exceptional result.
+Making governs the probability that a completed eligible task produces an exceptional result.
 
 #### Craft — Material Refinement
 
-Craft governs the magnitude of exceptional outcomes after the Making probability check succeeds.
+Craft mastery governs the magnitude of exceptional outcomes after the Making probability check succeeds.
 
-Craft does not inflate ordinary task Experience.
+Craft primarily affects Credits and remains grounded in realistic differences in outcome quality or household value.
 
-#### Composition — Deferred
+#### Composition — Completion Continuity
 
-Composition remains intentionally unresolved.
+Composition interprets Daily Practice Resolution through a bounded Continuity mechanic.
 
-No task-chain, project graph, node tree, or additional workflow should be introduced solely to make Composition Mastery function.
+A qualifying completed day is based on the proportion of ordinary expected responsibilities resolved for that local calendar day, not raw task count. The initial threshold is 75%.
 
-A future Composition mechanic must emerge from ordinary task completion rather than requiring users to construct and maintain a second organizational system.
+Ad-hoc, emergency, and other transient work does not increase the denominator, although qualifying unexpected work may contribute to the numerator.
+
+A day with no ordinary expected work is neutral. It neither advances nor reduces Continuity.
+
+Continuity is not a conventional streak and does not require arbitrary activity to preserve it. Developing participants begin decay only after three consecutive non-qualifying active days. Mastery provides a longer grace period and slower decay rather than immunity.
+
+Composition's benefit is a bounded percentage-based Credit modifier applied to qualifying work. It does not create additional tasks, task chains, project graphs, grouping workflows, or additional completion steps.
 
 ---
 
@@ -192,7 +198,7 @@ Relief is an additional Care recognition, not a transfer of ordinary task reward
 
 #### Order — Maintenance Resonance
 
-Mastery recognizes sustained maintenance as a valuable household practice.
+Order mastery recognizes sustained maintenance as a valuable household practice.
 
 A maintenance relationship can connect smaller upkeep tasks to a larger reset task.
 
@@ -204,7 +210,7 @@ Order does not suppress or rewrite the major task's recurrence merely because ma
 
 #### Renewal — Fresh Start
 
-Mastery converts earned recovery into a temporary improvement in exceptional-outcome probability on the next eligible Practice action.
+Renewal mastery converts earned recovery into a temporary improvement in exceptional-outcome probability on the next eligible Practice action.
 
 Rest does not directly award Experience.
 
@@ -265,7 +271,7 @@ Check complete
 
 The participant should not have to understand or operate the underlying progression engine.
 
-Mechanics such as Momentum, Synthesis, Making, Craft, Renewal, and Order should resolve automatically around ordinary completion.
+Mechanics such as Motion, Synthesis, Making, Craft, Renewal, Order, and Composition should resolve automatically around ordinary completion or daily resolution.
 
 Intentional exceptions include:
 
@@ -273,3 +279,15 @@ Intentional exceptions include:
 * **Deductive Pruning**
 
 Any future mechanic requiring substantial additional interaction must justify that interaction as a real-world activity the participant already needs to manage.
+
+---
+
+## 8. Visual Identity Scope
+
+The previous **Mark** system is deferred from the current product scope.
+
+No procedural morphology engine, seed system, domain-combination renderer, milestone constellation system, or equivalent visual progression infrastructure should be implemented for the current product.
+
+A future personal visual identity may still be valuable because people can become attached to a persistent representation of themselves. For the current product, a user-selected photograph or image is a valid and preferred lightweight direction if a personal image is needed.
+
+Future alternatives may include subtle visual flourishes, borders, framing, or other lightweight progression-adjacent treatments. These are deliberately open for later exploration and must not become a dependency for the current progression engine.
