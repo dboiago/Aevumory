@@ -31,19 +31,20 @@
 * **Progression Curve:** Cumulative XP for Level `L` follows `100 × L²`.
   * Level 1 = 0 XP
   * Level 10 = 10,000 XP and constitutes Mastery
-* **Post-Mastery Experience:** Experience beyond Level 10 never caps, decays, or drains. It contributes to the permanent historical weight of **The Mark** and satisfies the immutable Experience prerequisite for Hybrid eligibility.
+* **Post-Mastery Experience:** Experience beyond Level 10 never caps, decays, or drains. It contributes to long-term progression history and satisfies the immutable Experience prerequisite for Hybrid eligibility.
 * **Experience and Credits:** Experience and Credits are independent progression/economic layers, although both may be awarded from the same completed task.
 * **Level Resolution:** Discipline level is derived from cumulative Experience and is not stored as mutable progression state.
 * **Mastery:** Mastery is permanent once achieved. It never requires maintenance payment, recurring activity, or expenditure of accumulated Experience.
 * **Modifier Classes:** Experience modifiers, exceptional-outcome probability modifiers, exceptional-outcome magnitude modifiers, and Credit modifiers are distinct. They must not be collapsed into a single generic multiplier.
 * **Modifier Caps:** Where bonus ceilings exist, they apply to the relevant modifier class rather than indiscriminately to every economic effect.
 
-## 4. Identity & The Mark
+## 4. Visual Identity
 
-* **The Mark:** The Mark is a long-horizon visual record of personal development and history. It is not a stat sheet, level badge, or literal representation of numerical values.
-* **Morphology:** Early practice may introduce structural complexity; mature practice favors cohesion, compression, and visual economy.
-* **Material:** Material evolution represents accumulated history and dedication over long horizons rather than individual task rewards.
-* **Personal Identity:** The Mark is an evolving personal emblem, not a fictional character class or role.
+* **Current Scope:** No Mark system is part of the current implementation scope.
+* **Reason for Deferral:** The previous Mark concept required a potentially large visual/procedural design and rendering system without a sufficiently compelling low-cost implementation. That complexity is not justified while the core household experience is still being built.
+* **Future Direction:** Aevumory may eventually provide a persistent personal visual identity that users can become attached to. The form is deliberately unresolved and may use user-selected photographs/images, designed symbols, borders, flourishes, or another lightweight representation rather than a procedural progression Mark.
+* **No Progression Dependency:** No current Discipline, Mastery, Experience, Credit, or household mechanic may depend on The Mark existing.
+* **Revisit Later:** The concept of long-term visual identity remains a valid future design area. Any future implementation must justify its complexity against the actual product and should not create an independent visual-engineering project merely to encode progression.
 
 ## 5. Current Mastery Direction
 
