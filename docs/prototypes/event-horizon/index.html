@@ -115,7 +115,7 @@
     </div>
     <div class="row">
       <label for="day">Simulation</label>
-      <input id="day" type="range" min="0" max="504" value="72" step="1">
+      <input id="day" type="range" min="0" max="504.025" value="72" step="0.01">
       <span id="dayValue" class="value"></span>
     </div>
     <div class="row">
@@ -123,7 +123,7 @@
       <input id="settle" type="range" min="4" max="16" value="8" step="1">
       <span id="settleValue" class="value"></span>
     </div>
-    <div class="hint">The Horizon remains seven days wide, but the simulation now passes through three weeks of fixed events. Events enter once, traverse the Horizon, resolve, and disappear instead of wrapping back to the edge.</div>
+    <div class="hint">The Horizon remains seven days wide, but the simulation now passes through three weeks of fixed events. After an event starts, it receives a brief 90-second visual grace period before leaving the display.</div>
   </section>
 </main>
 
@@ -248,10 +248,29 @@ function visual(p, horizonHours, settlingHours) {
   };
 }
 
+const departureGraceHours = 90 / 3600;
+
 function label(simulationHour) {
   const day = Math.floor(simulationHour / 24) + 1;
-  const hour = simulationHour % 24;
-  return 'Day ' + day + ' · ' + String(hour).padStart(2,'0') + 'h';
+  const totalMinutes = Math.round(simulationHour * 60);
+  const hour = Math.floor((totalMinutes % 1440) / 60);
+  const minute = totalMinutes % 60;
+  return 'Day ' + day + ' · ' + String(hour).padStart(2,'0') + ':' + String(minute).padStart(2,'0');
+}
+
+function departureVisual(v, departureProgress) {
+  if (departureProgress <= 0) return v;
+
+  const q = smoothstep(departureProgress);
+  return {
+    ...v,
+    opacity: v.opacity * (1 - q),
+    scale: v.scale * lerp(1, .92, q),
+    size: v.size * lerp(1, .96, q),
+    blur: lerp(v.blur, .85, q),
+    timeOpacity: v.timeOpacity * (1 - q),
+    departureDrift: .014 * q
+  };
 }
 
 function render() {
@@ -264,17 +283,30 @@ function render() {
   const rendered = [];
   nodes.forEach(({event,node}, index) => {
     const hoursUntil = event.occurrenceHour - now;
-    const inHorizon = hoursUntil >= 0 && hoursUntil <= horizonHours;
-    const show = index < visibleCount && inHorizon;
+    const departureProgress = clamp((-hoursUntil) / departureGraceHours);
+    const inDisplayLifetime =
+      hoursUntil <= horizonHours &&
+      hoursUntil >= -departureGraceHours;
+
+    const show = index < visibleCount && inDisplayLifetime;
     node.style.display = show ? 'block' : 'none';
     if (!show) return;
 
-    // p is chronological progress through this event's one and only Horizon.
-    const p = 1 - (hoursUntil / horizonHours);
+    // The event reaches its normal arrival state at start time, then spends
+    // only a short grace period dissolving downward out of the Horizon.
+    const p = clamp(1 - (Math.max(hoursUntil, 0) / horizonHours));
     const pos = trajectory(event,p,horizonHours,settlingHours);
-    const v = visual(p,horizonHours,settlingHours);
+    const baseVisual = visual(p,horizonHours,settlingHours);
+    const v = departureVisual(baseVisual, departureProgress);
 
-    rendered.push({event,node,p,v,x:pos.x,y:pos.y});
+    rendered.push({
+      event,
+      node,
+      p,
+      v,
+      x:pos.x,
+      y:pos.y + v.departureDrift
+    });
   });
 
   rendered.forEach(item => {
