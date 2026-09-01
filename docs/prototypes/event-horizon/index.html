@@ -46,7 +46,7 @@
     transition: none;
     will-change: transform, filter, color;
   }
-  .event.today {
+  .event.immediate {
     white-space:normal; text-align:center;
     font-family: Georgia, "Times New Roman", serif;
     letter-spacing:.01em;
@@ -132,12 +132,12 @@ const events = [
   { id:'morans', title:'Dinner with the Morans', offset:37, family:'right', phase:.61, bias:-.02 },
   { id:'tournament', title:"Alex's tournament", offset:71, family:'left', phase:.83, bias:.025 },
   { id:'train', title:'Train to Montreal', offset:111, family:'right', phase:.29, bias:-.035 },
-  { id:'today', title:'Maya arrives', offset:143, family:'arrival', phase:.5, bias:0 }
+  { id:'maya-arrival', title:'Maya arrives', offset:143, family:'right', phase:.47, bias:.012 }
 ];
 
 const nodes = events.map((event) => {
   const node = document.createElement('div');
-  node.className = 'event' + (event.family === 'arrival' ? ' today' : '');
+  node.className = 'event';
   node.textContent = event.title;
   field.appendChild(node);
   return { event, node };
@@ -179,16 +179,57 @@ function trajectory(event, p) {
   return {x,y};
 }
 
-function visual(p, isToday) {
+function visual(p) {
   const resolve = smoothstep(p);
+  const immediate = p >= .90;
   return {
-    opacity: isToday ? 1 : lerp(.17,.88,resolve),
-    size: isToday ? 1.55 : lerp(.62,1.18,resolve),
-    scale: isToday ? 1 : lerp(.92,1,resolve),
-    blur: isToday ? 0 : lerp(1.5,0,resolve),
-    tracking: isToday ? '.01em' : lerp(.18,.035,resolve).toFixed(3)+'em',
-    weight: isToday ? 500 : Math.round(lerp(300,500,resolve))
+    opacity: lerp(.17, immediate ? 1 : .88, resolve),
+    size: lerp(.62, immediate ? 1.52 : 1.18, resolve),
+    scale: lerp(.92,1,resolve),
+    blur: lerp(1.5,0,resolve),
+    tracking: immediate ? '.01em' : lerp(.18,.035,resolve).toFixed(3)+'em',
+    weight: immediate ? 500 : Math.round(lerp(300,500,resolve)),
+    immediate
   };
+}
+
+// Conservative collision relaxation. Events may overlap slightly, but the
+// renderer prevents complete coincidence and protects the arrival field.
+function resolveCollisions(items) {
+  for (let iteration=0; iteration<10; iteration++) {
+    for (let a=0; a<items.length; a++) {
+      for (let b=a+1; b<items.length; b++) {
+        const A=items[a], B=items[b];
+        const dx=B.x-A.x, dy=B.y-A.y;
+        const horizontal=(A.width+B.width)/2;
+        const vertical=(A.height+B.height)/2;
+        if (Math.abs(dx) >= horizontal || Math.abs(dy) >= vertical) continue;
+
+        const overlapX=horizontal-Math.abs(dx);
+        const overlapY=vertical-Math.abs(dy);
+        // Prefer horizontal separation so the field remains shallow.
+        const separateX=overlapX <= overlapY*1.45;
+        const priorityA=A.p >= .90 ? .35 : 1;
+        const priorityB=B.p >= .90 ? .35 : 1;
+        const total=priorityA+priorityB;
+
+        if (separateX) {
+          const direction=(dx || (A.phase < B.phase ? 1 : -1)) >= 0 ? 1 : -1;
+          A.x -= direction*overlapX*(priorityA/total)*.72;
+          B.x += direction*overlapX*(priorityB/total)*.72;
+        } else {
+          const direction=(dy || (A.phase < B.phase ? 1 : -1)) >= 0 ? 1 : -1;
+          A.y -= direction*overlapY*(priorityA/total)*.58;
+          B.y += direction*overlapY*(priorityB/total)*.58;
+        }
+      }
+    }
+    items.forEach(item => {
+      item.x=clamp(item.x,.045,.955);
+      item.y=clamp(item.y,.79,.945);
+    });
+  }
+  return items;
 }
 
 function label(hoursUntil) {
@@ -198,28 +239,39 @@ function label(hoursUntil) {
 }
 
 function render() {
-  const now = Number(slider.value); // hours into the six-day simulation
+  const now = Number(slider.value);
   value.textContent = label(168-now);
 
+  const rendered = [];
   nodes.forEach(({event,node}, index) => {
-    const age = (now + event.offset) % 168;
-    // Invert so event starts distal and continuously resolves toward arrival.
-    let p = age / 168;
-    // Today event is intentionally the most resolved for default test state.
-    if (event.family === 'arrival') p = Math.max(p, .92);
-
-    // Hide overflow events by selected occupancy test.
     const show = index < visibleCount;
     node.style.display = show ? 'block' : 'none';
     if (!show) return;
 
-    const pos = event.family === 'arrival'
-      ? {x:.5 + event.bias*.1, y:.875}
-      : trajectory(event,p);
-    const v = visual(p, event.family === 'arrival');
+    const age = (now + event.offset) % 168;
+    const p = age / 168;
+    const pos = trajectory(event,p);
+    const v = visual(p);
 
-    node.style.left = (pos.x*100).toFixed(3)+'%';
-    node.style.top = (pos.y*100).toFixed(3)+'%';
+    // Approximate typographic footprint in viewport coordinates. The collision
+    // system is intentionally conservative: partial proximity is allowed.
+    const titleLength = event.title.length;
+    const width = clamp((titleLength * (0.010 + v.size*.0048)), .075, .24);
+    const height = v.immediate ? .052 : .034 + v.size*.008;
+
+    rendered.push({
+      event,node,p,phase:event.phase,v,
+      x:pos.x,y:pos.y,width,height
+    });
+  });
+
+  resolveCollisions(rendered);
+
+  rendered.forEach(item => {
+    const {node,v,x,y}=item;
+    node.classList.toggle('immediate', v.immediate);
+    node.style.left = (x*100).toFixed(3)+'%';
+    node.style.top = (y*100).toFixed(3)+'%';
     node.style.setProperty('--opacity', v.opacity.toFixed(3));
     node.style.setProperty('--size', v.size.toFixed(3));
     node.style.setProperty('--scale', v.scale.toFixed(3));
