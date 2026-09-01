@@ -115,7 +115,7 @@
     </div>
     <div class="row">
       <label for="day">Simulation</label>
-      <input id="day" type="range" min="0" max="168" value="72" step="1">
+      <input id="day" type="range" min="0" max="504" value="72" step="1">
       <span id="dayValue" class="value"></span>
     </div>
     <div class="row">
@@ -123,7 +123,7 @@
       <input id="settle" type="range" min="4" max="16" value="8" step="1">
       <span id="settleValue" class="value"></span>
     </div>
-    <div class="hint">Seven-day Horizon. Distal events begin almost subliminally. The settling control changes how many hours before an event its name begins drifting downward and its time resolves.</div>
+    <div class="hint">The Horizon remains seven days wide, but the simulation now passes through three weeks of fixed events. Events enter once, traverse the Horizon, resolve, and disappear instead of wrapping back to the edge.</div>
   </section>
 </main>
 
@@ -146,11 +146,12 @@ let photo = 'portrait';
 // ageHours = hours since event entered the 6-day horizon.
 // Each event remains continuous even between nominal day labels.
 const events = [
-  { id:'maya', title:'Maya arrives from Vancouver', time:'6:30 PM', offset:0, family:'left', phase:.17, bias:.04, arrivalLane:-.014 },
-  { id:'morans', title:'Dinner with the Morans', time:'7:00 PM', offset:37, family:'right', phase:.61, bias:-.02, arrivalLane:.038 },
-  { id:'tournament', title:"Alex's tournament", time:'9:15 AM', offset:71, family:'left', phase:.83, bias:.025, arrivalLane:.012 },
-  { id:'train', title:'Train to Montreal', time:'2:40 PM', offset:111, family:'right', phase:.29, bias:-.035, arrivalLane:.055 },
-  { id:'maya-arrival', title:'Maya arrives', time:'6:30 PM', offset:143, family:'right', phase:.47, bias:.012, arrivalLane:-.042 }
+  // occurrenceHour is absolute simulation time. Events do not wrap or respawn.
+  { id:'maya', title:'Maya arrives from Vancouver', time:'6:30 PM', occurrenceHour:168, family:'left',  phase:.17, bias:.04,  arrivalLane:-.014, loop:.12 },
+  { id:'morans', title:'Dinner with the Morans', time:'7:00 PM', occurrenceHour:205, family:'right', phase:.61, bias:-.02, arrivalLane:.038,  loop:-.10 },
+  { id:'tournament', title:"Alex's tournament", time:'9:15 AM', occurrenceHour:239, family:'left',  phase:.83, bias:.025, arrivalLane:.012, loop:.14 },
+  { id:'train', title:'Train to Montreal', time:'2:40 PM', occurrenceHour:279, family:'right', phase:.29, bias:-.035, arrivalLane:.055, loop:-.13 },
+  { id:'maya-arrival', title:'Maya arrives', time:'6:30 PM', occurrenceHour:311, family:'right', phase:.47, bias:.012, arrivalLane:-.042, loop:.11 }
 ];
 
 const nodes = events.map((event) => {
@@ -175,97 +176,101 @@ function smoothstep(t){ t=clamp(t); return t*t*(3-2*t); }
 // Deterministic event-specific phase/bias prevents left-right-left-right symmetry.
 function trajectory(event, p, horizonHours, settlingHours) {
   const side = event.family === 'right' ? 1 : -1;
-
-  // Each event owns a deterministic ingress and middle-field character.
-  // The middle is a field, not a shared destination.
-  const distalX = side < 0
-    ? .035 + event.phase*.18 + event.bias*.4
-    : .965 - event.phase*.18 + event.bias*.4;
-  const distalY = .945 - event.phase*.075;
-
-  const middleX = clamp(.23 + event.phase*.54 + event.bias*1.5, .20, .80);
-  const middleY = .755 + Math.sin((event.phase*1.7 + .19)*Math.PI)*.055 + event.arrivalLane*.35;
-
-  const arrivalX = clamp(.42 + event.phase*.16 + event.bias*.55, .36, .64);
-  const arrivalY = .885 + event.arrivalLane;
-
   const settleStart = clamp(1 - settlingHours / horizonHours);
 
-  // Ingress resolves at different rates per event. This deliberately breaks
-  // the obvious shared parabola while remaining deterministic.
-  const inwardEnd = .54 + event.phase*.18;
-  const inward = smoothstep(p / inwardEnd);
-  let x = lerp(distalX, middleX, inward);
+  // Entry points remain peripheral and low, but are individually seeded.
+  const distalX = side < 0
+    ? .035 + event.phase*.17 + event.bias*.5
+    : .965 - event.phase*.17 + event.bias*.5;
+  const distalY = .93 - event.phase*.08;
 
-  const verticalEnd = .38 + event.phase*.16;
-  let y = lerp(distalY, middleY, smoothstep(p / verticalEnd));
+  // The approach field is deliberately a field rather than a convergence point.
+  // Every event reaches a different, but still recognizably central, resting area
+  // before it begins its downward settling.
+  const middleX = clamp(.29 + event.phase*.42 + event.bias*.9, .29, .71);
+  const middleY = clamp(.675 + Math.sin((event.phase*2.2 + .13)*Math.PI)*.070 + event.arrivalLane*.28, .65, .78);
 
-  // A subtle central reservation: events do not all choose the exact visual
-  // centre while approaching. This is not collision avoidance and causes no
-  // reactive jumping; it is part of each event's natural path.
-  const centerPressure = Math.pow(smoothstep((p-.34)/.40), 1.2) * (1-smoothstep((p-settleStart+.04)/.10));
-  const centerOffset = (event.phase-.5) * .075 + event.bias*.8;
-  x += centerOffset * centerPressure;
-  y += Math.abs(event.phase-.5) * .018 * centerPressure;
+  const arrivalX = clamp(.43 + event.phase*.14 + event.bias*.4, .38, .62);
+  const arrivalY = .885 + event.arrivalLane;
 
+  // Normalize the entire pre-settling lifetime. This makes "middle" an actual
+  // destination that is reached before the downward phase begins.
+  const u = clamp(p / settleStart);
+  const ingressRate = .56 + event.phase*.16;
+  const ingress = smoothstep(u / ingressRate);
+
+  let x = lerp(distalX, middleX, ingress);
+  let y = lerp(distalY, middleY, smoothstep(u / (.42 + event.phase*.13)));
+
+  // Nonchalant deterministic wandering. The envelope is zero at entry and at
+  // the middle destination, allowing paths to cross, overshoot and loop without
+  // turning into shared rails or disturbing the eventual middle-field state.
+  const envelope = Math.sin(Math.PI * u);
+  const sweep = Math.sin((u * (2.2 + event.phase*1.35) + event.phase*.73) * Math.PI);
+  const drift = Math.cos((u * (1.35 + event.phase*.85) + event.phase*.41) * Math.PI);
+
+  x += event.loop * envelope * (.95 + event.phase*.35) + sweep * .025 * envelope;
+  y += drift * .020 * envelope + event.bias * .10 * envelope;
+
+  // Settling begins only after the event has completed its approach and reached
+  // its middle-field state. No early vertical shortcut into the arrival field.
   if (p > settleStart) {
     const q = smoothstep((p - settleStart) / (1 - settleStart));
-    x = lerp(x, arrivalX, q);
-    y = lerp(y, arrivalY, q);
+    x = lerp(middleX, arrivalX, q);
+    y = lerp(middleY, arrivalY, q);
   }
 
-  // Low-amplitude deterministic motion avoids rails without introducing
-  // random render-to-render movement.
-  x += Math.sin((p*6.1 + event.phase*11.7))*0.010*(1-p);
-  y += Math.cos((p*5.2 + event.phase*8.3))*0.006*(1-p);
-
-  return {x:clamp(x,.035,.965), y:clamp(y,.72,.95)};
+  return {x:clamp(x,.035,.965), y:clamp(y,.64,.95)};
 }
 
 function visual(p, horizonHours, settlingHours) {
   const settleStart = clamp(1 - settlingHours / horizonHours);
 
-  // Deliberately slow early resolution. At the edge of the Horizon the event
-  // should read more like atmospheric texture than legible interface text.
-  const readable = smoothstep((p-.08)/.82);
-  const timeRevealStart = settleStart + (1 - settleStart) * .34;
-  const timeProgress = smoothstep((p - timeRevealStart) / (1 - timeRevealStart));
+  // Distal events are intentionally atmospheric rather than readable.
+  const readable = smoothstep((p-.15)/.85);
+  const settleProgress = clamp((p - settleStart) / (1 - settleStart));
+
+  // Time belongs to the latter part of the actual downward/imminent phase.
+  // It cannot resolve while an event is still approaching the middle field.
+  const timeProgress = smoothstep((settleProgress-.46)/.54);
 
   return {
-    opacity: lerp(.09, .98, Math.pow(readable, .92)),
-    size: lerp(.24, 1.46, Math.pow(p, .64)),
-    scale: lerp(.76, 1, smoothstep((p-.04)/.96)),
-    blur: lerp(2.2, 0, Math.pow(p, .82)),
-    tracking: lerp(.27, .012, Math.pow(p, .72)).toFixed(3)+'em',
-    weight: Math.round(lerp(260, 500, Math.pow(p, .90))),
+    opacity: lerp(.10, .98, Math.pow(readable, 1.08)),
+    size: lerp(.20, 1.46, Math.pow(p, .72)),
+    scale: lerp(.70, 1, smoothstep((p-.08)/.92)),
+    blur: lerp(2.2, 0, Math.pow(p, .92)),
+    tracking: lerp(.29, .012, Math.pow(p, .76)).toFixed(3)+'em',
+    weight: Math.round(lerp(255, 500, Math.pow(p, .94))),
     timeOpacity: lerp(0, .84, timeProgress),
-    timeScale: lerp(.84, 1, timeProgress),
+    timeScale: lerp(.82, 1, timeProgress),
     timeRise: lerp(-.38, 0, timeProgress).toFixed(3)+'em',
-    imminent: timeProgress
+    imminent: settleProgress
   };
 }
 
-function label(hoursUntil) {
-  if (hoursUntil <= 0) return 'Now';
-  if (hoursUntil < 24) return Math.ceil(hoursUntil) + 'h';
-  return Math.ceil(hoursUntil/24) + 'd';
+function label(simulationHour) {
+  const day = Math.floor(simulationHour / 24) + 1;
+  const hour = simulationHour % 24;
+  return 'Day ' + day + ' · ' + String(hour).padStart(2,'0') + 'h';
 }
 
 function render() {
   const now = Number(slider.value);
   const horizonHours = 168;
   const settlingHours = Number(settle.value);
-  value.textContent = label(horizonHours-now);
+  value.textContent = label(now);
   settleValue.textContent = settlingHours + 'h';
 
   const rendered = [];
   nodes.forEach(({event,node}, index) => {
-    const show = index < visibleCount;
+    const hoursUntil = event.occurrenceHour - now;
+    const inHorizon = hoursUntil >= 0 && hoursUntil <= horizonHours;
+    const show = index < visibleCount && inHorizon;
     node.style.display = show ? 'block' : 'none';
     if (!show) return;
 
-    const age = (now + event.offset) % horizonHours;
-    const p = age / horizonHours;
+    // p is chronological progress through this event's one and only Horizon.
+    const p = 1 - (hoursUntil / horizonHours);
     const pos = trajectory(event,p,horizonHours,settlingHours);
     const v = visual(p,horizonHours,settlingHours);
 
