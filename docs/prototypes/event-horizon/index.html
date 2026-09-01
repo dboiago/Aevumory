@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aevumory · Event Horizon Prototype</title>
+<style>
+  :root {
+    --metadata-opacity: .38;
+    --safe-bottom: clamp(22px, 2.4vw, 42px);
+    --safe-right: clamp(24px, 3vw, 54px);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: #111; color: #eee;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  #horizon {
+    position: relative; width: 100vw; height: 100vh; overflow: hidden;
+    isolation: isolate; background: #171716 center / cover no-repeat;
+  }
+  #horizon::before {
+    content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background: linear-gradient(to bottom, rgba(0,0,0,.02) 0%, rgba(0,0,0,.03) 65%, rgba(0,0,0,.18) 100%);
+  }
+  #horizon::after {
+    content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    box-shadow: inset 0 0 clamp(36px, 6vw, 110px) rgba(0,0,0,.12);
+  }
+  #field {
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+  }
+  .event {
+    position:absolute; left:0; top:0; max-width:min(38vw, 460px);
+    color:rgba(255,255,255,var(--opacity));
+    font-size:clamp(10px, calc(8px + var(--size) * 1vw), 25px);
+    font-weight:var(--weight);
+    letter-spacing:var(--tracking);
+    line-height:1.15;
+    white-space:nowrap;
+    filter: blur(var(--blur));
+    text-shadow: 0 1px 12px rgba(0,0,0,.18);
+    transform: translate(-50%,-50%) scale(var(--scale));
+    transform-origin:center;
+    transition: none;
+    will-change: transform, filter, color;
+  }
+  .event.today {
+    white-space:normal; text-align:center;
+    font-family: Georgia, "Times New Roman", serif;
+    letter-spacing:.01em;
+    text-shadow: 0 2px 20px rgba(0,0,0,.24);
+  }
+  #metadata {
+    position:absolute; right:var(--safe-right); bottom:var(--safe-bottom); z-index:3;
+    color:rgba(255,255,255,var(--metadata-opacity));
+    font-size:clamp(10px, 1.15vw, 18px);
+    font-weight:400; letter-spacing:.12em; white-space:nowrap;
+    transition: opacity 600ms ease;
+    text-shadow:0 1px 10px rgba(0,0,0,.2);
+  }
+  #controls {
+    position:absolute; left:18px; top:18px; z-index:10; width:min(390px, calc(100vw - 36px));
+    padding:14px; border-radius:12px; background:rgba(12,12,12,.76);
+    backdrop-filter: blur(14px); color:#eee; font-size:13px;
+    opacity:.16; transition:opacity .2s ease;
+  }
+  #controls:hover, #controls:focus-within { opacity:1; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+  .row label { min-width:74px; color:#bdbdbd; }
+  button {
+    border:1px solid rgba(255,255,255,.18); background:#222; color:#eee; border-radius:7px;
+    padding:6px 9px; cursor:pointer; font:inherit;
+  }
+  button.active { background:#e9e5dc; color:#171717; }
+  input[type="range"] { flex:1; min-width:170px; }
+  .value { width:56px; text-align:right; color:#bdbdbd; font-variant-numeric:tabular-nums; }
+  .hint { margin-top:9px; color:#8e8e8e; font-size:11px; line-height:1.4; }
+  @media (max-width:700px) {
+    #controls { opacity:.82; }
+    .event { white-space:normal; max-width:42vw; }
+  }
+</style>
+</head>
+<body>
+<main id="horizon">
+  <div id="field"></div>
+  <div id="metadata">Monday · 7:42 PM · 21°C</div>
+
+  <section id="controls" aria-label="Prototype controls">
+    <div class="row">
+      <label>Photo</label>
+      <button data-photo="portrait" class="active">Portrait</button>
+      <button data-photo="landscape">Landscape</button>
+      <button data-photo="interior">Interior</button>
+    </div>
+    <div class="row">
+      <label>Events</label>
+      <button data-count="0">0</button>
+      <button data-count="1">1</button>
+      <button data-count="3">3</button>
+      <button data-count="5" class="active">5</button>
+    </div>
+    <div class="row">
+      <label for="day">Time horizon</label>
+      <input id="day" type="range" min="0" max="168" value="72" step="1">
+      <span id="dayValue" class="value"></span>
+    </div>
+    <div class="hint">The slider continuously advances all events through the six-day horizon. Positions, opacity, size, blur, tracking and weight resolve continuously rather than changing at day boundaries.</div>
+  </section>
+</main>
+
+<script>
+const photos = {
+  portrait: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=2400&q=88',
+  landscape: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2400&q=88',
+  interior: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=2400&q=88'
+};
+
+const horizon = document.querySelector('#horizon');
+const field = document.querySelector('#field');
+const slider = document.querySelector('#day');
+const value = document.querySelector('#dayValue');
+let visibleCount = 5;
+let photo = 'portrait';
+
+// ageHours = hours since event entered the 6-day horizon.
+// Each event remains continuous even between nominal day labels.
+const events = [
+  { id:'maya', title:'Maya arrives from Vancouver', offset:0, family:'left', phase:.17, bias:.04 },
+  { id:'morans', title:'Dinner with the Morans', offset:37, family:'right', phase:.61, bias:-.02 },
+  { id:'tournament', title:"Alex's tournament", offset:71, family:'left', phase:.83, bias:.025 },
+  { id:'train', title:'Train to Montreal', offset:111, family:'right', phase:.29, bias:-.035 },
+  { id:'today', title:'Maya arrives', offset:143, family:'arrival', phase:.5, bias:0 }
+];
+
+const nodes = events.map((event) => {
+  const node = document.createElement('div');
+  node.className = 'event' + (event.family === 'arrival' ? ' today' : '');
+  node.textContent = event.title;
+  field.appendChild(node);
+  return { event, node };
+});
+
+function clamp(v, a=0, b=1) { return Math.max(a, Math.min(b, v)); }
+function lerp(a,b,t){ return a + (b-a)*t; }
+function smoothstep(t){ t=clamp(t); return t*t*(3-2*t); }
+
+// Low-left and low-right ingress curves. Curves are intentionally asymmetric.
+// Deterministic event-specific phase/bias prevents left-right-left-right symmetry.
+function trajectory(event, p) {
+  // p: 0 distal -> 1 arrival
+  const ease = smoothstep(p);
+  const side = event.family === 'right' ? 1 : -1;
+  const distalX = side < 0 ? .065 + event.phase*.12 : .935 - event.phase*.13;
+  const approachX = .33 + event.phase*.34 + event.bias;
+  const arrivalX = .5 + event.bias*.25;
+
+  // Gentle parabola: events rise slightly while resolving, then settle toward the arrival line
+  const distalY = .925 - event.phase*.055;
+  const midY = .815 + Math.sin((event.phase+.13)*Math.PI)*.035;
+  const arrivalY = .875 + event.bias*.18;
+
+  let x, y;
+  if (ease < .78) {
+    const q = ease/.78;
+    x = lerp(distalX, approachX, smoothstep(q));
+    y = lerp(distalY, midY, smoothstep(q));
+  } else {
+    const q = (ease-.78)/.22;
+    x = lerp(approachX, arrivalX, smoothstep(q));
+    y = lerp(midY, arrivalY, smoothstep(q));
+  }
+
+  // tiny deterministic drift, not random animation
+  x += Math.sin((p*5.3 + event.phase*9))*0.007*(1-p);
+  y += Math.cos((p*4.1 + event.phase*7))*0.004*(1-p);
+  return {x,y};
+}
+
+function visual(p, isToday) {
+  const resolve = smoothstep(p);
+  return {
+    opacity: isToday ? 1 : lerp(.17,.88,resolve),
+    size: isToday ? 1.55 : lerp(.62,1.18,resolve),
+    scale: isToday ? 1 : lerp(.92,1,resolve),
+    blur: isToday ? 0 : lerp(1.5,0,resolve),
+    tracking: isToday ? '.01em' : lerp(.18,.035,resolve).toFixed(3)+'em',
+    weight: isToday ? 500 : Math.round(lerp(300,500,resolve))
+  };
+}
+
+function label(hoursUntil) {
+  if (hoursUntil <= 0) return 'Today';
+  if (hoursUntil < 24) return 'Tomorrow';
+  return Math.ceil(hoursUntil/24) + ' days';
+}
+
+function render() {
+  const now = Number(slider.value); // hours into the six-day simulation
+  value.textContent = label(168-now);
+
+  nodes.forEach(({event,node}, index) => {
+    const age = (now + event.offset) % 168;
+    // Invert so event starts distal and continuously resolves toward arrival.
+    let p = age / 168;
+    // Today event is intentionally the most resolved for default test state.
+    if (event.family === 'arrival') p = Math.max(p, .92);
+
+    // Hide overflow events by selected occupancy test.
+    const show = index < visibleCount;
+    node.style.display = show ? 'block' : 'none';
+    if (!show) return;
+
+    const pos = event.family === 'arrival'
+      ? {x:.5 + event.bias*.1, y:.875}
+      : trajectory(event,p);
+    const v = visual(p, event.family === 'arrival');
+
+    node.style.left = (pos.x*100).toFixed(3)+'%';
+    node.style.top = (pos.y*100).toFixed(3)+'%';
+    node.style.setProperty('--opacity', v.opacity.toFixed(3));
+    node.style.setProperty('--size', v.size.toFixed(3));
+    node.style.setProperty('--scale', v.scale.toFixed(3));
+    node.style.setProperty('--blur', v.blur.toFixed(2)+'px');
+    node.style.setProperty('--tracking', v.tracking);
+    node.style.setProperty('--weight', v.weight);
+  });
+}
+
+function setPhoto(name) {
+  photo=name;
+  horizon.style.backgroundImage = "url('"+photos[name]+"')";
+  document.querySelectorAll('[data-photo]').forEach(b=>b.classList.toggle('active', b.dataset.photo===name));
+}
+
+document.querySelectorAll('[data-photo]').forEach(button => button.addEventListener('click',()=>setPhoto(button.dataset.photo)));
+document.querySelectorAll('[data-count]').forEach(button => button.addEventListener('click',()=>{
+  visibleCount=Number(button.dataset.count);
+  document.querySelectorAll('[data-count]').forEach(b=>b.classList.toggle('active', Number(b.dataset.count)===visibleCount));
+  render();
+}));
+slider.addEventListener('input', render);
+
+setPhoto(photo);
+render();
+</script>
+</body>
+</html>
