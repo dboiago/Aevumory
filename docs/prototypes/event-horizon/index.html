@@ -40,18 +40,17 @@
     line-height:1.15;
     white-space:nowrap;
     filter: blur(var(--blur));
-    text-shadow: 0 1px 12px rgba(0,0,0,.18);
+    /* Soft local separation, not an outline. This keeps white type readable
+       over lighter photography without introducing a UI treatment. */
+    text-shadow:
+      0 1px 3px rgba(0,0,0,.42),
+      0 0 10px rgba(0,0,0,.18);
     transform: translate(-50%,-50%) scale(var(--scale));
     transform-origin:center;
     transition: none;
     will-change: transform, filter, color;
   }
-  .event.immediate {
-    white-space:normal; text-align:center;
-    font-family: Georgia, "Times New Roman", serif;
-    letter-spacing:.01em;
-    text-shadow: 0 2px 20px rgba(0,0,0,.24);
-  }
+
   #metadata {
     position:absolute; right:var(--safe-right); bottom:var(--safe-bottom); z-index:3;
     color:rgba(255,255,255,var(--metadata-opacity));
@@ -181,54 +180,43 @@ function trajectory(event, p) {
 
 function visual(p) {
   const resolve = smoothstep(p);
-  const immediate = p >= .90;
   return {
-    opacity: lerp(.17, immediate ? 1 : .88, resolve),
-    size: lerp(.62, immediate ? 1.52 : 1.18, resolve),
+    opacity: lerp(.17,1,resolve),
+    size: lerp(.62,1.52,resolve),
     scale: lerp(.92,1,resolve),
     blur: lerp(1.5,0,resolve),
-    tracking: immediate ? '.01em' : lerp(.18,.035,resolve).toFixed(3)+'em',
-    weight: immediate ? 500 : Math.round(lerp(300,500,resolve)),
-    immediate
+    tracking: lerp(.18,.01,resolve).toFixed(3)+'em',
+    weight: Math.round(lerp(300,500,resolve))
   };
 }
 
-// Conservative collision relaxation. Events may overlap slightly, but the
-// renderer prevents complete coincidence and protects the arrival field.
-function resolveCollisions(items) {
-  for (let iteration=0; iteration<10; iteration++) {
-    for (let a=0; a<items.length; a++) {
-      for (let b=a+1; b<items.length; b++) {
-        const A=items[a], B=items[b];
-        const dx=B.x-A.x, dy=B.y-A.y;
-        const horizontal=(A.width+B.width)/2;
-        const vertical=(A.height+B.height)/2;
-        if (Math.abs(dx) >= horizontal || Math.abs(dy) >= vertical) continue;
+// Only intervene for severe near-coincidence. This is a continuous, capped
+// nudge rather than collision resolution, so trajectories retain their organic
+// paths and may still partially overlap.
+function resolveSevereCoincidence(items) {
+  for (let a=0; a<items.length; a++) {
+    for (let b=a+1; b<items.length; b++) {
+      const A=items[a], B=items[b];
+      const dx=B.x-A.x, dy=B.y-A.y;
+      const distance=Math.hypot(dx,dy);
+      const threshold=.018;
+      if (distance >= threshold) continue;
 
-        const overlapX=horizontal-Math.abs(dx);
-        const overlapY=vertical-Math.abs(dy);
-        // Prefer horizontal separation so the field remains shallow.
-        const separateX=overlapX <= overlapY*1.45;
-        const priorityA=A.p >= .90 ? .35 : 1;
-        const priorityB=B.p >= .90 ? .35 : 1;
-        const total=priorityA+priorityB;
-
-        if (separateX) {
-          const direction=(dx || (A.phase < B.phase ? 1 : -1)) >= 0 ? 1 : -1;
-          A.x -= direction*overlapX*(priorityA/total)*.72;
-          B.x += direction*overlapX*(priorityB/total)*.72;
-        } else {
-          const direction=(dy || (A.phase < B.phase ? 1 : -1)) >= 0 ? 1 : -1;
-          A.y -= direction*overlapY*(priorityA/total)*.58;
-          B.y += direction*overlapY*(priorityB/total)*.58;
-        }
-      }
+      const t=smoothstep((threshold-distance)/threshold);
+      const directionX=distance > .0001 ? dx/distance : (A.phase < B.phase ? 1 : -1);
+      const directionY=distance > .0001 ? dy/distance : 0;
+      // Maximum displacement is intentionally tiny: 0.55% of viewport.
+      const nudge=.0055*t;
+      A.x-=directionX*nudge;
+      B.x+=directionX*nudge;
+      A.y-=directionY*nudge*.35;
+      B.y+=directionY*nudge*.35;
     }
-    items.forEach(item => {
-      item.x=clamp(item.x,.045,.955);
-      item.y=clamp(item.y,.79,.945);
-    });
   }
+  items.forEach(item => {
+    item.x=clamp(item.x,.045,.955);
+    item.y=clamp(item.y,.79,.945);
+  });
   return items;
 }
 
@@ -256,20 +244,16 @@ function render() {
     // Approximate typographic footprint in viewport coordinates. The collision
     // system is intentionally conservative: partial proximity is allowed.
     const titleLength = event.title.length;
-    const width = clamp((titleLength * (0.010 + v.size*.0048)), .075, .24);
-    const height = v.immediate ? .052 : .034 + v.size*.008;
-
     rendered.push({
       event,node,p,phase:event.phase,v,
-      x:pos.x,y:pos.y,width,height
+      x:pos.x,y:pos.y
     });
   });
 
-  resolveCollisions(rendered);
+  resolveSevereCoincidence(rendered);
 
   rendered.forEach(item => {
     const {node,v,x,y}=item;
-    node.classList.toggle('immediate', v.immediate);
     node.style.left = (x*100).toFixed(3)+'%';
     node.style.top = (y*100).toFixed(3)+'%';
     node.style.setProperty('--opacity', v.opacity.toFixed(3));
