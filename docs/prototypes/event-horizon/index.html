@@ -127,11 +127,11 @@ let photo = 'portrait';
 // ageHours = hours since event entered the 6-day horizon.
 // Each event remains continuous even between nominal day labels.
 const events = [
-  { id:'maya', title:'Maya arrives from Vancouver', offset:0, family:'left', phase:.17, bias:.04 },
-  { id:'morans', title:'Dinner with the Morans', offset:37, family:'right', phase:.61, bias:-.02 },
-  { id:'tournament', title:"Alex's tournament", offset:71, family:'left', phase:.83, bias:.025 },
-  { id:'train', title:'Train to Montreal', offset:111, family:'right', phase:.29, bias:-.035 },
-  { id:'maya-arrival', title:'Maya arrives', offset:143, family:'right', phase:.47, bias:.012 }
+  { id:'maya', title:'Maya arrives from Vancouver', offset:0, family:'left', phase:.17, bias:.04, arrivalLane:-.014 },
+  { id:'morans', title:'Dinner with the Morans', offset:37, family:'right', phase:.61, bias:-.02, arrivalLane:.038 },
+  { id:'tournament', title:"Alex's tournament", offset:71, family:'left', phase:.83, bias:.025, arrivalLane:.012 },
+  { id:'train', title:'Train to Montreal', offset:111, family:'right', phase:.29, bias:-.035, arrivalLane:.055 },
+  { id:'maya-arrival', title:'Maya arrives', offset:143, family:'right', phase:.47, bias:.012, arrivalLane:-.042 }
 ];
 
 const nodes = events.map((event) => {
@@ -150,29 +150,38 @@ function smoothstep(t){ t=clamp(t); return t*t*(3-2*t); }
 // Deterministic event-specific phase/bias prevents left-right-left-right symmetry.
 function trajectory(event, p) {
   // p: 0 distal -> 1 arrival
-  const ease = smoothstep(p);
+  // The trajectory deliberately has three phases:
+  // edge ingress -> inward resolution -> slow downward settling.
+  // The last phase gives approaching/current events room without pushing them
+  // through abrupt collision avoidance.
   const side = event.family === 'right' ? 1 : -1;
   const distalX = side < 0 ? .065 + event.phase*.12 : .935 - event.phase*.13;
-  const approachX = .33 + event.phase*.34 + event.bias;
-  const arrivalX = .5 + event.bias*.25;
+  const approachX = .31 + event.phase*.38 + event.bias;
+  const arrivalX = .44 + event.phase*.12 + event.bias*.35;
 
-  // Gentle parabola: events rise slightly while resolving, then settle toward the arrival line
-  const distalY = .925 - event.phase*.055;
-  const midY = .815 + Math.sin((event.phase+.13)*Math.PI)*.035;
-  const arrivalY = .875 + event.bias*.18;
+  const distalY = .925 - event.phase*.045;
+  const apexY = .795 + Math.sin((event.phase+.13)*Math.PI)*.028;
+  const arrivalY = .875 + event.arrivalLane;
 
   let x, y;
-  if (ease < .78) {
-    const q = ease/.78;
-    x = lerp(distalX, approachX, smoothstep(q));
-    y = lerp(distalY, midY, smoothstep(q));
-  } else {
-    const q = (ease-.78)/.22;
-    x = lerp(approachX, arrivalX, smoothstep(q));
-    y = lerp(midY, arrivalY, smoothstep(q));
+
+  // Horizontal convergence remains late. Events can occupy the field before
+  // they begin to resolve toward the lower-middle arrival area.
+  const inward = smoothstep(p/.72);
+  x = lerp(distalX, approachX, inward);
+  if (p > .72) {
+    x = lerp(approachX, arrivalX, smoothstep((p-.72)/.28));
   }
 
-  // tiny deterministic drift, not random animation
+  // The vertical path peaks in the open middle of the active field, then
+  // continuously settles downward as relevance increases.
+  const rise = smoothstep(p/.52);
+  y = lerp(distalY, apexY, rise);
+  if (p > .52) {
+    y = lerp(apexY, arrivalY, smoothstep((p-.52)/.48));
+  }
+
+  // Tiny deterministic variation keeps paths from reading as mirrored rails.
   x += Math.sin((p*5.3 + event.phase*9))*0.007*(1-p);
   y += Math.cos((p*4.1 + event.phase*7))*0.004*(1-p);
   return {x,y};
@@ -190,35 +199,9 @@ function visual(p) {
   };
 }
 
-// Only intervene for severe near-coincidence. This is a continuous, capped
-// nudge rather than collision resolution, so trajectories retain their organic
-// paths and may still partially overlap.
-function resolveSevereCoincidence(items) {
-  for (let a=0; a<items.length; a++) {
-    for (let b=a+1; b<items.length; b++) {
-      const A=items[a], B=items[b];
-      const dx=B.x-A.x, dy=B.y-A.y;
-      const distance=Math.hypot(dx,dy);
-      const threshold=.018;
-      if (distance >= threshold) continue;
-
-      const t=smoothstep((threshold-distance)/threshold);
-      const directionX=distance > .0001 ? dx/distance : (A.phase < B.phase ? 1 : -1);
-      const directionY=distance > .0001 ? dy/distance : 0;
-      // Maximum displacement is intentionally tiny: 0.55% of viewport.
-      const nudge=.0055*t;
-      A.x-=directionX*nudge;
-      B.x+=directionX*nudge;
-      A.y-=directionY*nudge*.35;
-      B.y+=directionY*nudge*.35;
-    }
-  }
-  items.forEach(item => {
-    item.x=clamp(item.x,.045,.955);
-    item.y=clamp(item.y,.79,.945);
-  });
-  return items;
-}
+// Deliberately no general collision solver. Natural trajectories are allowed
+// to approach and partially overlap. Spatial separation comes from the gradual
+// downward settling of more immediate events rather than corrective jumps.
 
 function label(hoursUntil) {
   if (hoursUntil <= 0) return 'Today';
@@ -249,8 +232,6 @@ function render() {
       x:pos.x,y:pos.y
     });
   });
-
-  resolveSevereCoincidence(rendered);
 
   rendered.forEach(item => {
     const {node,v,x,y}=item;
