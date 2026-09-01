@@ -175,55 +175,73 @@ function smoothstep(t){ t=clamp(t); return t*t*(3-2*t); }
 // Deterministic event-specific phase/bias prevents left-right-left-right symmetry.
 function trajectory(event, p, horizonHours, settlingHours) {
   const side = event.family === 'right' ? 1 : -1;
-  const distalX = side < 0 ? .055 + event.phase*.12 : .945 - event.phase*.13;
-  const approachX = .31 + event.phase*.38 + event.bias;
-  const arrivalX = .44 + event.phase*.12 + event.bias*.35;
 
-  const distalY = .932 - event.phase*.038;
-  const middleY = .785 + Math.sin((event.phase+.13)*Math.PI)*.035;
+  // Each event owns a deterministic ingress and middle-field character.
+  // The middle is a field, not a shared destination.
+  const distalX = side < 0
+    ? .035 + event.phase*.18 + event.bias*.4
+    : .965 - event.phase*.18 + event.bias*.4;
+  const distalY = .945 - event.phase*.075;
+
+  const middleX = clamp(.23 + event.phase*.54 + event.bias*1.5, .20, .80);
+  const middleY = .755 + Math.sin((event.phase*1.7 + .19)*Math.PI)*.055 + event.arrivalLane*.35;
+
+  const arrivalX = clamp(.42 + event.phase*.16 + event.bias*.55, .36, .64);
   const arrivalY = .885 + event.arrivalLane;
 
   const settleStart = clamp(1 - settlingHours / horizonHours);
-  const inwardEnd = Math.min(.72, settleStart * .82);
 
+  // Ingress resolves at different rates per event. This deliberately breaks
+  // the obvious shared parabola while remaining deterministic.
+  const inwardEnd = .54 + event.phase*.18;
   const inward = smoothstep(p / inwardEnd);
-  let x = lerp(distalX, approachX, inward);
-  let y = lerp(distalY, middleY, smoothstep(p / .48));
+  let x = lerp(distalX, middleX, inward);
 
-  // Events spend most of their visual life in the middle field. Only the
-  // configured imminence window begins the downward settling.
+  const verticalEnd = .38 + event.phase*.16;
+  let y = lerp(distalY, middleY, smoothstep(p / verticalEnd));
+
+  // A subtle central reservation: events do not all choose the exact visual
+  // centre while approaching. This is not collision avoidance and causes no
+  // reactive jumping; it is part of each event's natural path.
+  const centerPressure = Math.pow(smoothstep((p-.34)/.40), 1.2) * (1-smoothstep((p-settleStart+.04)/.10));
+  const centerOffset = (event.phase-.5) * .075 + event.bias*.8;
+  x += centerOffset * centerPressure;
+  y += Math.abs(event.phase-.5) * .018 * centerPressure;
+
   if (p > settleStart) {
     const q = smoothstep((p - settleStart) / (1 - settleStart));
     x = lerp(x, arrivalX, q);
     y = lerp(y, arrivalY, q);
   }
 
-  x += Math.sin((p*5.3 + event.phase*9))*0.007*(1-p);
-  y += Math.cos((p*4.1 + event.phase*7))*0.004*(1-p);
-  return {x,y};
+  // Low-amplitude deterministic motion avoids rails without introducing
+  // random render-to-render movement.
+  x += Math.sin((p*6.1 + event.phase*11.7))*0.010*(1-p);
+  y += Math.cos((p*5.2 + event.phase*8.3))*0.006*(1-p);
+
+  return {x:clamp(x,.035,.965), y:clamp(y,.72,.95)};
 }
 
 function visual(p, horizonHours, settlingHours) {
-  const resolve = smoothstep(p);
   const settleStart = clamp(1 - settlingHours / horizonHours);
-  const imminent = smoothstep((p - settleStart) / (1 - settleStart));
 
-  // The distal state is intentionally closer to texture than useful text.
-  // It becomes readable through accumulated scale and contrast.
-  const timeRevealStart = settleStart + (1 - settleStart) * .22;
+  // Deliberately slow early resolution. At the edge of the Horizon the event
+  // should read more like atmospheric texture than legible interface text.
+  const readable = smoothstep((p-.08)/.82);
+  const timeRevealStart = settleStart + (1 - settleStart) * .34;
   const timeProgress = smoothstep((p - timeRevealStart) / (1 - timeRevealStart));
 
   return {
-    opacity: lerp(.12, .98, Math.pow(resolve, .82)),
-    size: lerp(.36, 1.46, Math.pow(p, .72)),
-    scale: lerp(.82, 1, smoothstep(p)),
-    blur: lerp(1.65, 0, Math.pow(p, .72)),
-    tracking: lerp(.22, .012, Math.pow(p, .78)).toFixed(3)+'em',
-    weight: Math.round(lerp(280, 500, Math.pow(p, .88))),
+    opacity: lerp(.09, .98, Math.pow(readable, .92)),
+    size: lerp(.24, 1.46, Math.pow(p, .64)),
+    scale: lerp(.76, 1, smoothstep((p-.04)/.96)),
+    blur: lerp(2.2, 0, Math.pow(p, .82)),
+    tracking: lerp(.27, .012, Math.pow(p, .72)).toFixed(3)+'em',
+    weight: Math.round(lerp(260, 500, Math.pow(p, .90))),
     timeOpacity: lerp(0, .84, timeProgress),
-    timeScale: lerp(.88, 1, timeProgress),
-    timeRise: lerp(-.32, 0, timeProgress).toFixed(3)+'em',
-    imminent
+    timeScale: lerp(.84, 1, timeProgress),
+    timeRise: lerp(-.38, 0, timeProgress).toFixed(3)+'em',
+    imminent: timeProgress
   };
 }
 
