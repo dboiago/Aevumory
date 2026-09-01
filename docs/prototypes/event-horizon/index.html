@@ -37,8 +37,9 @@
     font-size:clamp(10px, calc(8px + var(--size) * 1vw), 25px);
     font-weight:var(--weight);
     letter-spacing:var(--tracking);
-    line-height:1.15;
+    line-height:1.08;
     white-space:nowrap;
+    text-align:center;
     filter: blur(var(--blur));
     /* Soft local separation, not an outline. This keeps white type readable
        over lighter photography without introducing a UI treatment. */
@@ -49,6 +50,17 @@
     transform-origin:center;
     transition: none;
     will-change: transform, filter, color;
+  }
+  .event-title { display:block; }
+  .event-time {
+    display:block;
+    margin-top:.18em;
+    font-size:.68em;
+    font-weight:400;
+    letter-spacing:.08em;
+    opacity:var(--time-opacity);
+    transform:translateY(var(--time-rise)) scale(var(--time-scale));
+    transform-origin:center top;
   }
 
   #metadata {
@@ -102,11 +114,16 @@
       <button data-count="5" class="active">5</button>
     </div>
     <div class="row">
-      <label for="day">Time horizon</label>
+      <label for="day">Simulation</label>
       <input id="day" type="range" min="0" max="168" value="72" step="1">
       <span id="dayValue" class="value"></span>
     </div>
-    <div class="hint">The slider continuously advances all events through the six-day horizon. Positions, opacity, size, blur, tracking and weight resolve continuously rather than changing at day boundaries.</div>
+    <div class="row">
+      <label for="settle">Settling</label>
+      <input id="settle" type="range" min="4" max="16" value="8" step="1">
+      <span id="settleValue" class="value"></span>
+    </div>
+    <div class="hint">Seven-day Horizon. Distal events begin almost subliminally. The settling control changes how many hours before an event its name begins drifting downward and its time resolves.</div>
   </section>
 </main>
 
@@ -121,23 +138,31 @@ const horizon = document.querySelector('#horizon');
 const field = document.querySelector('#field');
 const slider = document.querySelector('#day');
 const value = document.querySelector('#dayValue');
+const settle = document.querySelector('#settle');
+const settleValue = document.querySelector('#settleValue');
 let visibleCount = 5;
 let photo = 'portrait';
 
 // ageHours = hours since event entered the 6-day horizon.
 // Each event remains continuous even between nominal day labels.
 const events = [
-  { id:'maya', title:'Maya arrives from Vancouver', offset:0, family:'left', phase:.17, bias:.04, arrivalLane:-.014 },
-  { id:'morans', title:'Dinner with the Morans', offset:37, family:'right', phase:.61, bias:-.02, arrivalLane:.038 },
-  { id:'tournament', title:"Alex's tournament", offset:71, family:'left', phase:.83, bias:.025, arrivalLane:.012 },
-  { id:'train', title:'Train to Montreal', offset:111, family:'right', phase:.29, bias:-.035, arrivalLane:.055 },
-  { id:'maya-arrival', title:'Maya arrives', offset:143, family:'right', phase:.47, bias:.012, arrivalLane:-.042 }
+  { id:'maya', title:'Maya arrives from Vancouver', time:'6:30 PM', offset:0, family:'left', phase:.17, bias:.04, arrivalLane:-.014 },
+  { id:'morans', title:'Dinner with the Morans', time:'7:00 PM', offset:37, family:'right', phase:.61, bias:-.02, arrivalLane:.038 },
+  { id:'tournament', title:"Alex's tournament", time:'9:15 AM', offset:71, family:'left', phase:.83, bias:.025, arrivalLane:.012 },
+  { id:'train', title:'Train to Montreal', time:'2:40 PM', offset:111, family:'right', phase:.29, bias:-.035, arrivalLane:.055 },
+  { id:'maya-arrival', title:'Maya arrives', time:'6:30 PM', offset:143, family:'right', phase:.47, bias:.012, arrivalLane:-.042 }
 ];
 
 const nodes = events.map((event) => {
   const node = document.createElement('div');
   node.className = 'event';
-  node.textContent = event.title;
+  const title = document.createElement('span');
+  title.className = 'event-title';
+  title.textContent = event.title;
+  const time = document.createElement('span');
+  time.className = 'event-time';
+  time.textContent = event.time;
+  node.append(title, time);
   field.appendChild(node);
   return { event, node };
 });
@@ -148,70 +173,72 @@ function smoothstep(t){ t=clamp(t); return t*t*(3-2*t); }
 
 // Low-left and low-right ingress curves. Curves are intentionally asymmetric.
 // Deterministic event-specific phase/bias prevents left-right-left-right symmetry.
-function trajectory(event, p) {
-  // p: 0 distal -> 1 arrival
-  // The trajectory deliberately has three phases:
-  // edge ingress -> inward resolution -> slow downward settling.
-  // The last phase gives approaching/current events room without pushing them
-  // through abrupt collision avoidance.
+function trajectory(event, p, horizonHours, settlingHours) {
   const side = event.family === 'right' ? 1 : -1;
-  const distalX = side < 0 ? .065 + event.phase*.12 : .935 - event.phase*.13;
+  const distalX = side < 0 ? .055 + event.phase*.12 : .945 - event.phase*.13;
   const approachX = .31 + event.phase*.38 + event.bias;
   const arrivalX = .44 + event.phase*.12 + event.bias*.35;
 
-  const distalY = .925 - event.phase*.045;
-  const apexY = .795 + Math.sin((event.phase+.13)*Math.PI)*.028;
-  const arrivalY = .875 + event.arrivalLane;
+  const distalY = .932 - event.phase*.038;
+  const middleY = .785 + Math.sin((event.phase+.13)*Math.PI)*.035;
+  const arrivalY = .885 + event.arrivalLane;
 
-  let x, y;
+  const settleStart = clamp(1 - settlingHours / horizonHours);
+  const inwardEnd = Math.min(.72, settleStart * .82);
 
-  // Horizontal convergence remains late. Events can occupy the field before
-  // they begin to resolve toward the lower-middle arrival area.
-  const inward = smoothstep(p/.72);
-  x = lerp(distalX, approachX, inward);
-  if (p > .72) {
-    x = lerp(approachX, arrivalX, smoothstep((p-.72)/.28));
+  const inward = smoothstep(p / inwardEnd);
+  let x = lerp(distalX, approachX, inward);
+  let y = lerp(distalY, middleY, smoothstep(p / .48));
+
+  // Events spend most of their visual life in the middle field. Only the
+  // configured imminence window begins the downward settling.
+  if (p > settleStart) {
+    const q = smoothstep((p - settleStart) / (1 - settleStart));
+    x = lerp(x, arrivalX, q);
+    y = lerp(y, arrivalY, q);
   }
 
-  // The vertical path peaks in the open middle of the active field, then
-  // continuously settles downward as relevance increases.
-  const rise = smoothstep(p/.52);
-  y = lerp(distalY, apexY, rise);
-  if (p > .52) {
-    y = lerp(apexY, arrivalY, smoothstep((p-.52)/.48));
-  }
-
-  // Tiny deterministic variation keeps paths from reading as mirrored rails.
   x += Math.sin((p*5.3 + event.phase*9))*0.007*(1-p);
   y += Math.cos((p*4.1 + event.phase*7))*0.004*(1-p);
   return {x,y};
 }
 
-function visual(p) {
+function visual(p, horizonHours, settlingHours) {
   const resolve = smoothstep(p);
+  const settleStart = clamp(1 - settlingHours / horizonHours);
+  const imminent = smoothstep((p - settleStart) / (1 - settleStart));
+
+  // The distal state is intentionally closer to texture than useful text.
+  // It becomes readable through accumulated scale and contrast.
+  const timeRevealStart = settleStart + (1 - settleStart) * .22;
+  const timeProgress = smoothstep((p - timeRevealStart) / (1 - timeRevealStart));
+
   return {
-    opacity: lerp(.17,1,resolve),
-    size: lerp(.62,1.52,resolve),
-    scale: lerp(.92,1,resolve),
-    blur: lerp(1.5,0,resolve),
-    tracking: lerp(.18,.01,resolve).toFixed(3)+'em',
-    weight: Math.round(lerp(300,500,resolve))
+    opacity: lerp(.12, .98, Math.pow(resolve, .82)),
+    size: lerp(.36, 1.46, Math.pow(p, .72)),
+    scale: lerp(.82, 1, smoothstep(p)),
+    blur: lerp(1.65, 0, Math.pow(p, .72)),
+    tracking: lerp(.22, .012, Math.pow(p, .78)).toFixed(3)+'em',
+    weight: Math.round(lerp(280, 500, Math.pow(p, .88))),
+    timeOpacity: lerp(0, .84, timeProgress),
+    timeScale: lerp(.88, 1, timeProgress),
+    timeRise: lerp(-.32, 0, timeProgress).toFixed(3)+'em',
+    imminent
   };
 }
 
-// Deliberately no general collision solver. Natural trajectories are allowed
-// to approach and partially overlap. Spatial separation comes from the gradual
-// downward settling of more immediate events rather than corrective jumps.
-
 function label(hoursUntil) {
-  if (hoursUntil <= 0) return 'Today';
-  if (hoursUntil < 24) return 'Tomorrow';
-  return Math.ceil(hoursUntil/24) + ' days';
+  if (hoursUntil <= 0) return 'Now';
+  if (hoursUntil < 24) return Math.ceil(hoursUntil) + 'h';
+  return Math.ceil(hoursUntil/24) + 'd';
 }
 
 function render() {
   const now = Number(slider.value);
-  value.textContent = label(168-now);
+  const horizonHours = 168;
+  const settlingHours = Number(settle.value);
+  value.textContent = label(horizonHours-now);
+  settleValue.textContent = settlingHours + 'h';
 
   const rendered = [];
   nodes.forEach(({event,node}, index) => {
@@ -219,18 +246,12 @@ function render() {
     node.style.display = show ? 'block' : 'none';
     if (!show) return;
 
-    const age = (now + event.offset) % 168;
-    const p = age / 168;
-    const pos = trajectory(event,p);
-    const v = visual(p);
+    const age = (now + event.offset) % horizonHours;
+    const p = age / horizonHours;
+    const pos = trajectory(event,p,horizonHours,settlingHours);
+    const v = visual(p,horizonHours,settlingHours);
 
-    // Approximate typographic footprint in viewport coordinates. The collision
-    // system is intentionally conservative: partial proximity is allowed.
-    const titleLength = event.title.length;
-    rendered.push({
-      event,node,p,phase:event.phase,v,
-      x:pos.x,y:pos.y
-    });
+    rendered.push({event,node,p,v,x:pos.x,y:pos.y});
   });
 
   rendered.forEach(item => {
@@ -243,6 +264,9 @@ function render() {
     node.style.setProperty('--blur', v.blur.toFixed(2)+'px');
     node.style.setProperty('--tracking', v.tracking);
     node.style.setProperty('--weight', v.weight);
+    node.style.setProperty('--time-opacity', v.timeOpacity.toFixed(3));
+    node.style.setProperty('--time-scale', v.timeScale.toFixed(3));
+    node.style.setProperty('--time-rise', v.timeRise);
   });
 }
 
@@ -259,6 +283,7 @@ document.querySelectorAll('[data-count]').forEach(button => button.addEventListe
   render();
 }));
 slider.addEventListener('input', render);
+settle.addEventListener('input', render);
 
 setPhoto(photo);
 render();
