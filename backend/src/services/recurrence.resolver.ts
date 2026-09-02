@@ -71,7 +71,6 @@ function resolveTimedStarts(
 ): Temporal.PlainDateTime[] {
   const anchor = Temporal.PlainDateTime.from(event.schedule.local_start);
   const rule = event.recurrence!;
-  const duration = Temporal.PlainDateTime.from(event.schedule.local_end).since(anchor);
   const until = rule.until ? Temporal.PlainDate.from(rule.until) : undefined;
   const results: Temporal.PlainDateTime[] = [];
 
@@ -79,9 +78,6 @@ function resolveTimedStarts(
     results.push(anchor.with({ year: date.year, month: date.month, day: date.day }));
   }
 
-  // A long event may begin before the local window date but still intersect it.
-  // The final absolute-window filter handles that boundary precisely.
-  void duration;
   return dedupeDateTimes(results);
 }
 
@@ -164,7 +160,7 @@ function recurrenceDates(
             results.push(date);
           }
         } catch {
-          // Invalid calendar dates, such as February 31, simply have no occurrence.
+          // Invalid calendar dates, such as February 31, have no occurrence.
         }
         monthIndex += 1;
         month = anchorMonth.add({ months: monthIndex * rule.interval });
@@ -232,8 +228,8 @@ function buildOccurrence(
   }
 
   const startLocal = Temporal.PlainDateTime.from(localStart);
-  const endLocal = Temporal.PlainDateTime.from(event.schedule.local_end);
-  const duration = endLocal.since(Temporal.PlainDateTime.from(event.schedule.local_start));
+  const duration = Temporal.PlainDateTime.from(event.schedule.local_end)
+    .since(Temporal.PlainDateTime.from(event.schedule.local_start));
   const start = Temporal.ZonedDateTime.from({
     timeZone: event.timezone,
     year: startLocal.year,
