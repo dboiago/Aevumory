@@ -16,7 +16,13 @@ export class FixtureTaskBoardStore {
     if (!task) throw new Error(`Task not found: ${action.taskId}`);
 
     if (action.kind === 'complete') {
-      task.status = 'completed';
+      if (task.status === 'completed') {
+        task.status = 'pending';
+        task.completionReward = undefined;
+      } else {
+        task.status = 'completed';
+        task.completionReward = structuredClone(task.reward);
+      }
     } else {
       task.responsibleUserId = action.responsibleUserId;
       task.assignment = action.responsibleUserId ? 'individual' : 'household';
