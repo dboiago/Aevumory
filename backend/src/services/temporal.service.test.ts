@@ -38,7 +38,7 @@ describe('DefaultTemporalService.listOccurrencesInWindow', () => {
 
     const occurrences = await service.listOccurrencesInWindow({
       starts_at: '2026-09-07T00:00:00Z',
-      ends_at: '2026-09-15T00:00:00Z',
+      ends_at: '2026-09-16T00:00:00Z',
     });
 
     expect(occurrences.map((occurrence) => occurrence.local_start_date))
@@ -86,7 +86,7 @@ describe('DefaultTemporalService.listOccurrencesInWindow', () => {
 
     const occurrences = await service.listOccurrencesInWindow({
       starts_at: '2026-09-07T00:00:00Z',
-      ends_at: '2026-09-15T00:00:00Z',
+      ends_at: '2026-09-16T00:00:00Z',
     });
 
     expect(occurrences).toHaveLength(2);
@@ -134,7 +134,7 @@ describe('DefaultTemporalService.listOccurrencesInWindow', () => {
 
     const occurrences = await service.listOccurrencesInWindow({
       starts_at: '2026-09-07T00:00:00Z',
-      ends_at: '2026-09-15T00:00:00Z',
+      ends_at: '2026-09-16T00:00:00Z',
     });
 
     expect(occurrences.map((occurrence) => occurrence.local_start_date))
