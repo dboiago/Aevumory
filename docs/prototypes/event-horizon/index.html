@@ -32,7 +32,7 @@
     position:absolute; inset:0; z-index:1; pointer-events:none;
   }
   .event {
-    position:absolute; left:0; top:0; max-width:min(38vw, 460px);
+    position:absolute; left:0px; top:0px; max-width:min(38vw, 460px);
     color:rgba(255,255,255,var(--opacity));
     font-size:clamp(10px, var(--font-size, 14px), 25px);
     font-weight:var(--weight);
@@ -336,9 +336,15 @@ function render() {
     const rawY = pos.y + (Number.isFinite(v.departureDrift) ? v.departureDrift : 0);
     const safeY = Number.isFinite(rawY) ? clamp(rawY, .64, .97) : .78;
 
-    node.style.left = (safeX*100).toFixed(3)+'%';
-    node.style.top = (safeY*100).toFixed(3)+'%';
-    node.style.setProperty('--font-size', (10 + v.size * 10).toFixed(2)+'px');
+    // Use concrete field pixels in the prototype. This avoids any browser-specific
+    // interaction between percentage positioning, transforms and custom properties.
+    const rect = field.getBoundingClientRect();
+    const pxX = Math.round(safeX * rect.width);
+    const pxY = Math.round(safeY * rect.height);
+
+    node.style.left = pxX + 'px';
+    node.style.top = pxY + 'px';
+    node.style.fontSize = Math.max(10, Math.min(25, 10 + v.size * 10)).toFixed(2)+'px';
     node.style.setProperty('--opacity', v.opacity.toFixed(3));
     node.style.setProperty('--size', v.size.toFixed(3));
     node.style.setProperty('--scale', v.scale.toFixed(3));
