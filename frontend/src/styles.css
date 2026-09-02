@@ -1,6 +1,6 @@
 :root {
   font-family: var(--font-body, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-  color: var(--text-main);
+  color: var(--text-primary);
   background: var(--bg-primary);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -14,15 +14,17 @@
  * configuration there without changing component selectors. Components must
  * continue to consume semantic tokens rather than introducing colour literals.
  */
+[data-theme="overgrown"],
 [data-theme="overgrown-dark"] {
   --bg-primary: #0a0d0b;
   --bg-surface: #161a17;
   --bg-surface-hover: #1d231f;
   --border-subtle: #27332b;
   --border-active: #3e5245;
-  --text-main: #e2ece6;
-  --text-secondary: #a7b8ad;
-  --text-muted: #7e9487;
+  /* Primary is intentionally the distinctive reading colour; muted remains legible metadata. */
+  --text-primary: #c29a53;
+  --text-muted: #e2ece6;
+  --text-soft: #a7b8ad;
   --accent-primary: #c29a53;
   --accent-alert: #b84a39;
   --accent-success: #4e8b65;
@@ -42,7 +44,7 @@
   --action-primary-border: var(--border-active);
   --action-resolved-bg: color-mix(in srgb, var(--bg-primary) 70%, var(--bg-surface));
   --action-resolved-border: var(--border-resolved);
-  --action-resolved-text: var(--text-secondary);
+  --action-resolved-text: var(--text-soft);
   --ambient-text: rgb(255 255 255 / 38%);
   --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
   --font-body: Inter, sans-serif, system-ui;
@@ -51,15 +53,16 @@
   --radius-badge: 999px;
 }
 
+[data-theme="nebula"],
 [data-theme="solar-flare"] {
   --bg-primary: #120d0a;
   --bg-surface: #241914;
   --bg-surface-hover: #33231c;
   --border-subtle: #402d23;
   --border-active: #664838;
-  --text-main: #f5ece8;
-  --text-secondary: #bca69b;
-  --text-muted: #a88f80;
+  --text-primary: #e67e22;
+  --text-muted: #f5ece8;
+  --text-soft: #bca69b;
   --accent-primary: #e67e22;
   --accent-alert: #d35400;
   --accent-success: #27ae60;
@@ -79,11 +82,93 @@
   --action-primary-border: var(--border-active);
   --action-resolved-bg: color-mix(in srgb, var(--bg-primary) 70%, var(--bg-surface));
   --action-resolved-border: var(--border-resolved);
-  --action-resolved-text: var(--text-secondary);
+  --action-resolved-text: var(--text-soft);
   --ambient-text: rgb(255 255 255 / 38%);
   --font-heading: "Space Grotesk", sans-serif;
   --font-body: Inter, sans-serif, system-ui;
   --font-mono: "Fira Code", monospace;
+}
+
+
+/*
+ * Additional theme palettes are defined here temporarily while the settings
+ * domain does not yet own theme registration and selection.
+ * Theme names describe Aevumory's visual character, not a light/dark variant.
+ */
+[data-theme="vernal"] {
+  --bg-primary: #f8f9f7;
+  --bg-surface: #c7b5c0;
+  --bg-surface-hover: #b8a3b0;
+  --border-subtle: #594a40;
+  --border-active: #9a77bd;
+  --text-primary: #212b25;
+  --text-muted: #594a40;
+  --text-soft: #6d625b;
+  --accent-primary: #9a77bd;
+  --accent-alert: #b84a39;
+  --accent-success: #212b25;
+  --accent-warning: #9a77bd;
+  --overlay-black-subtle: rgb(0 0 0 / 1%);
+  --overlay-black-soft: rgb(0 0 0 / 2%);
+  --overlay-black-strong: rgb(0 0 0 / 8%);
+  --overlay-black-edge: rgb(0 0 0 / 7%);
+  --overlay-black-shadow: rgb(0 0 0 / 22%);
+  --overlay-black-glow: rgb(0 0 0 / 12%);
+  --overlay-white-soft: rgb(255 255 255 / 24%);
+  --overlay-white-complete: rgb(255 255 255 / 16%);
+  --surface-resolved: color-mix(in srgb, var(--bg-primary) 58%, var(--bg-surface));
+  --border-resolved: color-mix(in srgb, var(--border-subtle) 58%, var(--bg-primary));
+  --text-resolved: color-mix(in srgb, var(--text-soft) 70%, var(--bg-primary));
+  --action-primary-bg: color-mix(in srgb, var(--bg-surface) 86%, var(--bg-primary));
+  --action-primary-hover-bg: var(--bg-surface-hover);
+  --action-primary-border: var(--border-active);
+  --action-resolved-bg: color-mix(in srgb, var(--bg-primary) 72%, var(--bg-surface));
+  --action-resolved-border: var(--border-resolved);
+  --action-resolved-text: var(--text-soft);
+  --ambient-text: rgb(33 43 37 / 55%);
+  --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
+  --font-body: Inter, sans-serif, system-ui;
+  --font-mono: "Fira Code", monospace;
+  --radius-card: 8px;
+  --radius-badge: 999px;
+}
+
+[data-theme="maritime"] {
+  --bg-primary: #ebeded;
+  --bg-surface: #a9baba;
+  --bg-surface-hover: #9baeae;
+  --border-subtle: #696761;
+  --border-active: #6d9da1;
+  --text-primary: #343330;
+  --text-muted: #696761;
+  --text-soft: #7c807b;
+  --accent-primary: #6d9da1;
+  --accent-alert: #c86d51;
+  --accent-success: #6d9da1;
+  --accent-warning: #f7de97;
+  --overlay-black-subtle: rgb(0 0 0 / 1%);
+  --overlay-black-soft: rgb(0 0 0 / 2%);
+  --overlay-black-strong: rgb(0 0 0 / 8%);
+  --overlay-black-edge: rgb(0 0 0 / 7%);
+  --overlay-black-shadow: rgb(0 0 0 / 22%);
+  --overlay-black-glow: rgb(0 0 0 / 12%);
+  --overlay-white-soft: rgb(255 255 255 / 24%);
+  --overlay-white-complete: rgb(255 255 255 / 16%);
+  --surface-resolved: color-mix(in srgb, var(--bg-primary) 58%, var(--bg-surface));
+  --border-resolved: color-mix(in srgb, var(--border-subtle) 58%, var(--bg-primary));
+  --text-resolved: color-mix(in srgb, var(--text-soft) 70%, var(--bg-primary));
+  --action-primary-bg: color-mix(in srgb, var(--bg-surface) 86%, var(--bg-primary));
+  --action-primary-hover-bg: var(--bg-surface-hover);
+  --action-primary-border: var(--border-active);
+  --action-resolved-bg: color-mix(in srgb, var(--bg-primary) 72%, var(--bg-surface));
+  --action-resolved-border: var(--border-resolved);
+  --action-resolved-text: var(--text-soft);
+  --ambient-text: rgb(52 51 48 / 55%);
+  --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
+  --font-body: Inter, sans-serif, system-ui;
+  --font-mono: "Fira Code", monospace;
+  --radius-card: 8px;
+  --radius-badge: 999px;
 }
 
 /*
@@ -97,9 +182,9 @@
   --bg-surface-hover: #2d2d2d;
   --border-subtle: #3a3a3a;
   --border-active: #5a5a5a;
-  --text-main: #e8d5c4;
-  --text-secondary: #b7aaa0;
+  --text-primary: #e8d5c4;
   --text-muted: #9b9b9b;
+  --text-soft: #b7aaa0;
   --accent-primary: #e8b4a0;
   --accent-alert: #a88fa8;
   --accent-success: #8fa88f;
@@ -119,7 +204,7 @@
   --action-primary-border: var(--border-active);
   --action-resolved-bg: color-mix(in srgb, var(--bg-primary) 70%, var(--bg-surface));
   --action-resolved-border: var(--border-resolved);
-  --action-resolved-text: var(--text-secondary);
+  --action-resolved-text: var(--text-soft);
   --ambient-text: rgb(255 255 255 / 38%);
   --font-heading: Inter, sans-serif, system-ui;
   --font-body: Inter, sans-serif, system-ui;
@@ -226,7 +311,7 @@ select {
 .task-board {
   min-height: 100vh;
   overflow: auto;
-  color: var(--text-main);
+  color: var(--text-primary);
   background: var(--bg-primary);
   padding: clamp(32px, 5vw, 72px) clamp(24px, 6vw, 96px);
 }
@@ -284,7 +369,7 @@ select {
 
 .task-column-heading h2 {
   margin: 0;
-  color: var(--text-main);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: .1em;
@@ -292,7 +377,7 @@ select {
 }
 
 .task-column-heading span {
-  color: var(--text-secondary);
+  color: var(--text-soft);
   font-size: 12px;
 }
 
@@ -366,7 +451,7 @@ select {
 
 .task-card h3 {
   margin: 8px 0 0;
-  color: var(--text-main);
+  color: var(--text-primary);
   font-size: 17px;
   font-weight: 500;
   line-height: 1.25;
@@ -391,7 +476,7 @@ select {
   padding: 3px 8px;
   border: 1px solid var(--border-subtle);
   border-radius: 7px;
-  color: var(--text-secondary);
+  color: var(--text-soft);
   background: var(--bg-surface);
   font-size: 9px;
   font-weight: 700;
@@ -414,7 +499,7 @@ select {
 }
 
 .task-reward {
-  color: var(--text-secondary);
+  color: var(--text-soft);
   font-size: 11px;
   letter-spacing: .04em;
   white-space: nowrap;
@@ -456,7 +541,7 @@ select {
 
 .task-card-completed .task-complete:hover {
   border-color: var(--border-active);
-  color: var(--text-main);
+  color: var(--text-primary);
 }
 
 .sr-only {
