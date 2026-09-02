@@ -1,23 +1,71 @@
 :root {
-  --text-main: #e2ece6;
-  --text-secondary: #a7b8ad;
-  --text-muted: #91a398;
-  --bg-primary: #0a0d0b;
-  --bg-surface: #141a16;
-  --bg-surface-hover: #1d2721;
-  --border-subtle: #2d3b32;
-  --border-active: #52685a;
-  --accent-primary: #c29a53;
-  --domain-kinetic: #a87b63;
-  --domain-erudite: #7f92aa;
-  --domain-form: #9b8a6c;
-  --domain-keeping: #78977f;
-
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-body, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   color: var(--text-main);
   background: var(--bg-primary);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+/*
+ * Temporary frontend theme definitions
+ *
+ * The application does not yet have a user-facing theme/settings layer. Keep
+ * the current theme values here until that layer exists, then move the theme
+ * configuration there without changing component selectors. Components must
+ * continue to consume semantic tokens rather than introducing colour literals.
+ */
+[data-theme="overgrown-dark"] {
+  --bg-primary: #0a0d0b;
+  --bg-surface: #141a16;
+  --bg-surface-hover: #1c241f;
+  --border-subtle: #27332b;
+  --border-active: #3e5245;
+  --text-main: #e2ece6;
+  --text-secondary: #a7b8ad;
+  --text-muted: #7e9487;
+  --accent-primary: #c29a53;
+  --accent-alert: #b84a39;
+  --accent-success: #4e8b65;
+  --overlay-black-subtle: rgb(0 0 0 / 2%);
+  --overlay-black-soft: rgb(0 0 0 / 3%);
+  --overlay-black-strong: rgb(0 0 0 / 18%);
+  --overlay-black-edge: rgb(0 0 0 / 12%);
+  --overlay-black-shadow: rgb(0 0 0 / 42%);
+  --overlay-black-glow: rgb(0 0 0 / 18%);
+  --overlay-white-soft: rgb(255 255 255 / 2.5%);
+  --overlay-white-complete: rgb(255 255 255 / 3.5%);
+  --ambient-text: rgb(255 255 255 / 38%);
+  --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
+  --font-body: Inter, sans-serif, system-ui;
+  --font-mono: "Fira Code", monospace;
+  --radius-card: 8px;
+  --radius-badge: 999px;
+}
+
+[data-theme="solar-flare"] {
+  --bg-primary: #120d0a;
+  --bg-surface: #241914;
+  --bg-surface-hover: #33231c;
+  --border-subtle: #402d23;
+  --border-active: #664838;
+  --text-main: #f5ece8;
+  --text-secondary: #bca69b;
+  --text-muted: #a88f80;
+  --accent-primary: #e67e22;
+  --accent-alert: #d35400;
+  --accent-success: #27ae60;
+  --overlay-black-subtle: rgb(0 0 0 / 2%);
+  --overlay-black-soft: rgb(0 0 0 / 3%);
+  --overlay-black-strong: rgb(0 0 0 / 18%);
+  --overlay-black-edge: rgb(0 0 0 / 12%);
+  --overlay-black-shadow: rgb(0 0 0 / 42%);
+  --overlay-black-glow: rgb(0 0 0 / 18%);
+  --overlay-white-soft: rgb(255 255 255 / 2.5%);
+  --overlay-white-complete: rgb(255 255 255 / 3.5%);
+  --ambient-text: rgb(255 255 255 / 38%);
+  --font-heading: "Space Grotesk", sans-serif;
+  --font-body: Inter, sans-serif, system-ui;
+  --font-mono: "Fira Code", monospace;
 }
 
 * {
@@ -50,7 +98,7 @@ select {
   overflow: hidden;
   isolation: isolate;
   background:
-    linear-gradient(to bottom, rgba(0, 0, 0, .02) 0%, rgba(0, 0, 0, .03) 65%, rgba(0, 0, 0, .18) 100%),
+    linear-gradient(to bottom, var(--overlay-black-subtle) 0%, var(--overlay-black-soft) 65%, var(--overlay-black-strong) 100%),
     url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=2400&q=88') center / cover no-repeat;
 }
 
@@ -60,7 +108,7 @@ select {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 clamp(36px, 6vw, 110px) rgba(0, 0, 0, .12);
+  box-shadow: inset 0 0 clamp(36px, 6vw, 110px) var(--overlay-black-edge);
 }
 
 .horizon-field {
@@ -73,7 +121,7 @@ select {
 .horizon-event {
   position: absolute;
   max-width: min(38vw, 460px);
-  color: rgba(255, 255, 255, var(--opacity));
+  color: var(--ambient-text);
   font-size: var(--font-size, 14px);
   font-weight: var(--weight);
   letter-spacing: var(--tracking);
@@ -81,7 +129,7 @@ select {
   white-space: nowrap;
   text-align: center;
   filter: blur(var(--blur));
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .42), 0 0 10px rgba(0, 0, 0, .18);
+  text-shadow: 0 1px 3px var(--overlay-black-shadow), 0 0 10px var(--overlay-black-glow);
   transform: translate(-50%, -50%) scale(var(--scale));
   transform-origin: center;
   will-change: transform, filter, color;
@@ -107,12 +155,12 @@ select {
   right: clamp(24px, 3vw, 54px);
   bottom: clamp(22px, 2.4vw, 42px);
   z-index: 3;
-  color: rgba(255, 255, 255, .38);
+  color: var(--ambient-text);
   font-size: clamp(10px, 1.15vw, 18px);
   font-weight: 400;
   letter-spacing: .12em;
   white-space: nowrap;
-  text-shadow: 0 1px 10px rgba(0, 0, 0, .2);
+  text-shadow: 0 1px 10px var(--overlay-black-glow);
   pointer-events: none;
   transition: opacity 600ms ease;
 }
@@ -164,7 +212,7 @@ select {
 }
 
 .task-column-drag-over {
-  background: rgba(255, 255, 255, .025);
+  background: var(--overlay-white-soft);
   box-shadow: inset 0 0 0 1px var(--border-active);
 }
 
@@ -203,7 +251,7 @@ select {
   min-height: 126px;
   padding: 18px;
   border: 1px solid var(--border-subtle);
-  border-radius: 9px;
+  border-radius: var(--radius-card, 8px);
   background: var(--bg-surface);
   cursor: grab;
   transition: border-color 160ms ease, background 160ms ease, opacity 160ms ease, transform 160ms ease;
@@ -228,7 +276,7 @@ select {
 
 .task-card-completed {
   opacity: .62;
-  background: rgba(255, 255, 255, .035);
+  background: var(--overlay-white-complete);
 }
 
 .task-card-completed:hover {
@@ -284,30 +332,12 @@ select {
   padding: 3px 8px;
   border: 1px solid currentColor;
   border-radius: 7px;
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-}
-
-.task-domain-kinetic .task-domain {
-  color: var(--domain-kinetic);
-  background: color-mix(in srgb, var(--domain-kinetic) 10%, transparent);
-}
-
-.task-domain-erudite .task-domain {
-  color: var(--domain-erudite);
-  background: color-mix(in srgb, var(--domain-erudite) 10%, transparent);
-}
-
-.task-domain-form .task-domain {
-  color: var(--domain-form);
-  background: color-mix(in srgb, var(--domain-form) 10%, transparent);
-}
-
-.task-domain-keeping .task-domain {
-  color: var(--domain-keeping);
-  background: color-mix(in srgb, var(--domain-keeping) 10%, transparent);
 }
 
 .task-card-actions {
@@ -345,7 +375,7 @@ select {
 
 .task-complete:hover {
   border-color: var(--accent-primary);
-  background: rgba(194, 154, 83, .08);
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
 }
 
 .task-complete:focus-visible {
