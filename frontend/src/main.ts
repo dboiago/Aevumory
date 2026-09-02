@@ -1,30 +1,15 @@
 import './styles.css';
-import {
-  horizonPosition,
-  horizonVisual,
-  type HorizonEvent,
-} from './horizon';
+import { horizonPosition, horizonVisual, type HorizonEvent } from './horizon';
 import { FixtureTaskBoardQuery } from './tasks';
 import { FixtureTaskBoardStore } from './task-board';
 import { FixtureTemporalQuery, type TemporalOccurrence } from './temporal';
 
 type AmbientContext =
-  | {
-      kind: 'ordinary';
-      date: string;
-      time: string;
-      weather: string;
-    }
-  | {
-      kind: 'transient';
-      message: string;
-    };
+  | { kind: 'ordinary'; date: string; time: string; weather: string }
+  | { kind: 'transient'; message: string };
 
 const root = document.querySelector<HTMLDivElement>('#app');
-
-if (!root) {
-  throw new Error('Aevumory application root was not found');
-}
+if (!root) throw new Error('Aevumory application root was not found');
 
 let context: AmbientContext = {
   kind: 'ordinary',
@@ -40,7 +25,7 @@ const taskBoardQuery = new FixtureTaskBoardQuery();
 void render(root);
 window.addEventListener('hashchange', () => void render(root));
 
-aasync function render(target: HTMLDivElement): Promise<void> {
+async function render(target: HTMLDivElement): Promise<void> {
   if (window.location.hash === '#tasks') {
     const state = await taskBoardQuery.getBoard();
     renderTaskBoard(target, new FixtureTaskBoardStore(state));
@@ -159,13 +144,9 @@ function renderTaskCard(
           <option value="">Household</option>
           ${assigneeOptions}
         </select>
-        <button
-          type="button"
-          class="task-complete"
-          data-action="complete"
-          data-task-id="${task.id}"
-          ${completed ? 'disabled' : ''}
-        >${completed ? 'Done' : 'Complete'}</button>
+        <button type="button" class="task-complete" data-action="complete" data-task-id="${task.id}" ${completed ? 'disabled' : ''}>
+          ${completed ? 'Done' : 'Complete'}
+        </button>
       </div>
     </article>
   `;
@@ -173,18 +154,10 @@ function renderTaskCard(
 
 function renderAmbientContext(value: AmbientContext): string {
   if (value.kind === 'transient') {
-    return `
-      <aside class="ambient-context ambient-context-transient" aria-live="polite">
-        <span class="ambient-message">${escapeHtml(value.message)}</span>
-      </aside>
-    `;
+    return `<aside class="ambient-context ambient-context-transient" aria-live="polite"><span class="ambient-message">${escapeHtml(value.message)}</span></aside>`;
   }
 
-  return `
-    <aside class="ambient-context" aria-label="Current household context">
-      <span class="ambient-message">${escapeHtml(value.date)} · ${escapeHtml(value.time)} · ${escapeHtml(value.weather)}</span>
-    </aside>
-  `;
+  return `<aside class="ambient-context" aria-label="Current household context"><span class="ambient-message">${escapeHtml(value.date)} · ${escapeHtml(value.time)} · ${escapeHtml(value.weather)}</span></aside>`;
 }
 
 function renderOccurrences(occurrences: TemporalOccurrence[]): string {
@@ -203,36 +176,20 @@ function toHorizonEvent(occurrence: TemporalOccurrence): HorizonEvent {
 function renderOccurrence(event: HorizonEvent): string {
   const position = horizonPosition(event, now);
   const visual = horizonVisual(event, now);
-
   const style = [
-    `left:${(position.x * 100).toFixed(3)}%`,
-    `top:${(position.y * 100).toFixed(3)}%`,
-    `--opacity:${visual.opacity.toFixed(3)}`,
-    `--font-size:${Math.max(10, Math.min(25, 10 + visual.size * 10)).toFixed(2)}px`,
-    `--scale:${visual.scale.toFixed(3)}`,
-    `--blur:${visual.blur.toFixed(2)}px`,
-    `--tracking:${visual.tracking}`,
-    `--weight:${visual.weight}`,
-    `--time-opacity:${visual.timeOpacity.toFixed(3)}`,
-    `--time-scale:${visual.timeScale.toFixed(3)}`,
+    `left:${(position.x * 100).toFixed(3)}%`, `top:${(position.y * 100).toFixed(3)}%`,
+    `--opacity:${visual.opacity.toFixed(3)}`, `--font-size:${Math.max(10, Math.min(25, 10 + visual.size * 10)).toFixed(2)}px`,
+    `--scale:${visual.scale.toFixed(3)}`, `--blur:${visual.blur.toFixed(2)}px`, `--tracking:${visual.tracking}`,
+    `--weight:${visual.weight}`, `--time-opacity:${visual.timeOpacity.toFixed(3)}`, `--time-scale:${visual.timeScale.toFixed(3)}`,
     `--time-rise:${visual.timeRise}`,
   ].join(';');
 
-  return `
-    <article class="horizon-event" style="${style}">
-      <span class="horizon-event-title">${escapeHtml(event.title)}</span>
-      <span class="horizon-event-time">${escapeHtml(event.timeLabel)}</span>
-    </article>
-  `;
+  return `<article class="horizon-event" style="${style}"><span class="horizon-event-title">${escapeHtml(event.title)}</span><span class="horizon-event-time">${escapeHtml(event.timeLabel)}</span></article>`;
 }
 
 function formatTime(value?: string): string {
   if (!value) return 'All day';
-  return new Intl.DateTimeFormat('en-CA', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat('en-CA', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
 }
 
 function offsetForTimezone(timezone: string): string {
@@ -241,10 +198,5 @@ function offsetForTimezone(timezone: string): string {
 }
 
 function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
