@@ -1,0 +1,110 @@
+:root {
+  font-family: var(--font-body);
+  color: var(--text-main);
+  background: var(--bg-primary);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+[data-theme="overgrown-dark"] {
+  --bg-primary: #0A0D0B;
+  --bg-surface: #141A16;
+  --border-subtle: #27332B;
+  --text-main: #E2ECE6;
+  --text-muted: #7E9487;
+  --accent-primary: #C29A53;
+  --font-heading: 'Cinzel', 'Trajan Pro', serif, system-ui;
+  --font-body: 'Inter', sans-serif, system-ui;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.ambient-shell {
+  position: relative;
+  min-height: 100vh;
+  padding: clamp(2rem, 5vw, 5rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    radial-gradient(circle at 72% 42%, rgba(194, 154, 83, 0.07), transparent 34rem),
+    var(--bg-primary);
+}
+
+.ambient-context {
+  display: grid;
+  gap: 0.45rem;
+  width: max-content;
+  max-width: 100%;
+}
+
+.date,
+.weather,
+.eyebrow {
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.date {
+  font-size: clamp(0.8rem, 1.1vw, 1rem);
+}
+
+.time {
+  font-family: var(--font-heading);
+  font-size: clamp(3rem, 8vw, 8rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.weather {
+  font-size: clamp(0.75rem, 1vw, 0.9rem);
+}
+
+.horizon {
+  align-self: center;
+  width: min(70rem, 100%);
+  min-height: 18rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+}
+
+.empty-state {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: clamp(1rem, 1.5vw, 1.35rem);
+  font-weight: 300;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
