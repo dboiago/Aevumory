@@ -6,11 +6,17 @@ import {
 } from './horizon';
 import { FixtureTemporalQuery, type TemporalOccurrence } from './temporal';
 
-type AmbientContext = {
-  date: string;
-  time: string;
-  weather: string;
-};
+type AmbientContext =
+  | {
+      kind: 'ordinary';
+      date: string;
+      time: string;
+      weather: string;
+    }
+  | {
+      kind: 'transient';
+      message: string;
+    };
 
 const root = document.querySelector<HTMLDivElement>('#app');
 
@@ -18,7 +24,10 @@ if (!root) {
   throw new Error('Aevumory application root was not found');
 }
 
-const context: AmbientContext = {
+// Presentation state only. Household signals can replace this state later
+// without changing the Event Horizon or temporal model
+let context: AmbientContext = {
+  kind: 'ordinary',
   date: 'Wednesday, September 2',
   time: '18:00',
   weather: 'Clear · 18°',
@@ -41,12 +50,26 @@ async function render(target: HTMLDivElement): Promise<void> {
         ${renderOccurrences(occurrences)}
       </div>
 
-      <aside class="ambient-metadata" aria-label="Current household context">
-        <time class="ambient-date">${context.date}</time>
-        <time class="ambient-time">${context.time}</time>
-        <span class="ambient-weather">${context.weather}</span>
-      </aside>
+      ${renderAmbientContext(context)}
     </main>
+  `;
+}
+
+function renderAmbientContext(value: AmbientContext): string {
+  if (value.kind === 'transient') {
+    return `
+      <aside class="ambient-context ambient-context-transient" aria-live="polite">
+        <span class="ambient-message">${escapeHtml(value.message)}</span>
+      </aside>
+    `;
+  }
+
+  return `
+    <aside class="ambient-context ambient-context-ordinary" aria-label="Current household context">
+      <time class="ambient-date">${escapeHtml(value.date)}</time>
+      <time class="ambient-time">${escapeHtml(value.time)}</time>
+      <span class="ambient-weather">${escapeHtml(value.weather)}</span>
+    </aside>
   `;
 }
 
