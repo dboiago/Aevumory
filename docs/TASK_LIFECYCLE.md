@@ -12,9 +12,9 @@ TaskCycle
 ExecutionEvent
       ↓
 RewardTransaction
-      ↓
-The Mark
-````
+```
+
+The task lifecycle does not depend on a visual identity or progression-adjacent presentation system. The previous Mark system is deferred and is not a lifecycle stage.
 
 Execution state and runtime availability are separate concerns.
 
@@ -253,13 +253,13 @@ Relief is an additional conditional Care recognition and does not create a separ
 
 ## 9. Inquiry
 
-Inquiry Mastery is currently unresolved.
+Inquiry represents proactive household stewardship: noticing and surfacing useful work before it becomes an immediate problem.
 
-The original hidden-personal-task concept depended on knowing which participant was interacting with a private display. The current household display is intentionally shared and does not require an authenticated active user.
+Task creation is a normal household capability and is available to everyone. Inquiry Mastery does not grant exclusive authority to create, assign, or hide tasks.
 
-Do not introduce personal hidden-task infrastructure solely to preserve this concept.
+The useful mastered expression is proactive recognition of legitimate future work, particularly work given a meaningful planning horizon such as a week or more. The effect is earned when an Inquiry-related task is subsequently completed.
 
-Inquiry should remain available for later redesign around genuinely useful household-context discovery.
+Inquiry must not depend on hidden personal tasks, private encounters, participant-specific interaction state, or a domain restriction.
 
 ---
 
