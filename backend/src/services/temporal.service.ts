@@ -1,3 +1,4 @@
+import { Temporal } from '@js-temporal/polyfill';
 import type {
   EventOccurrence,
   HouseholdEvent,
@@ -8,6 +9,12 @@ import type {
   TemporalEventQuery,
   TemporalRepository,
 } from '../repositories/temporal.repository';
+import { resolveEventOccurrences } from './recurrence.resolver';
+
+export interface OccurrenceWindow {
+  starts_at: string;
+  ends_at: string;
+}
 
 export interface TemporalService {
   getSource(source_id: string): Promise<TemporalSource | null>;
@@ -20,6 +27,7 @@ export interface TemporalService {
 
   getOccurrence(occurrence_id: string): Promise<EventOccurrence | null>;
   listOccurrences(query?: OccurrenceQuery): Promise<EventOccurrence[]>;
+  listOccurrencesInWindow(window: OccurrenceWindow): Promise<EventOccurrence[]>;
   saveOccurrence(occurrence: EventOccurrence): Promise<void>;
   deleteOccurrence(occurrence_id: string): Promise<void>;
 }
@@ -59,6 +67,52 @@ export class DefaultTemporalService implements TemporalService {
     return this.repository.listOccurrences(query);
   }
 
+  async listOccurrencesInWindow(window: OccurrenceWindow): Promise<EventOccurrence[]> {
+    const windowStart = Temporal.Instant.from(window.starts_at);
+    const windowEnd = Temporal.Instant.from(window.ends_at);
+
+    if (Temporal.Instant.compare(windowEnd, windowStart) <= 0) {
+      throw new Error('Occurrence query window must end after it starts');
+    }
+
+    const events = await this.repository.listEvents({ status: 'active' });
+    const results: EventOccurrence[] = [];
+
+    for (const event of events) {
+      const persisted = await this.repository.listOccurrences({
+        event_id: event.event_id,
+        include_cancelled: true,
+      });
+
+      if (!event.recurrence && persisted.length > 0) {
+        results.push(
+          ...persisted.filter((occurrence) =>
+            occurrence.status !== 'cancelled' &&
+            occurrenceIntersectsWindow(occurrence, event, windowStart, windowEnd)),
+        );
+        continue;
+      }
+
+      const generated = resolveEventOccurrences(event, window);
+      const persistedByKey = new Map(
+        persisted.map((occurrence) => [occurrenceMatchKey(occurrence), occurrence]),
+      );
+
+      for (const occurrence of generated) {
+        const persistedOccurrence = persistedByKey.get(occurrenceMatchKey(occurrence));
+        if (persistedOccurrence) {
+          if (persistedOccurrence.status !== 'cancelled') {
+            results.push(persistedOccurrence);
+          }
+        } else {
+          results.push(occurrence);
+        }
+      }
+    }
+
+    return results.sort(compareOccurrences);
+  }
+
   saveOccurrence(occurrence: EventOccurrence) {
     return this.repository.saveOccurrence(occurrence);
   }
@@ -66,4 +120,45 @@ export class DefaultTemporalService implements TemporalService {
   deleteOccurrence(occurrence_id: string) {
     return this.repository.deleteOccurrence(occurrence_id);
   }
+}
+
+function occurrenceMatchKey(occurrence: EventOccurrence): string {
+  return occurrence.recurrence_instance_key ?? occurrence.occurrence_id;
+}
+
+function occurrenceIntersectsWindow(
+  occurrence: EventOccurrence,
+  event: HouseholdEvent,
+  windowStart: Temporal.Instant,
+  windowEnd: Temporal.Instant,
+): boolean {
+  if (event.schedule.kind === 'all_day') {
+    const start = Temporal.PlainDate.from(occurrence.local_start_date)
+      .toZonedDateTime({ timeZone: occurrence.timezone });
+    const end = Temporal.PlainDate.from(occurrence.local_end_date)
+      .toZonedDateTime({ timeZone: occurrence.timezone });
+
+    return Temporal.Instant.compare(start.toInstant(), windowEnd) < 0 &&
+      Temporal.Instant.compare(end.toInstant(), windowStart) > 0;
+  }
+
+  if (!occurrence.starts_at || !occurrence.ends_at) return false;
+
+  return Temporal.Instant.compare(Temporal.Instant.from(occurrence.starts_at), windowEnd) < 0 &&
+    Temporal.Instant.compare(Temporal.Instant.from(occurrence.ends_at), windowStart) > 0;
+}
+
+function compareOccurrences(a: EventOccurrence, b: EventOccurrence): number {
+  if (a.starts_at && b.starts_at) {
+    return Temporal.Instant.compare(
+      Temporal.Instant.from(a.starts_at),
+      Temporal.Instant.from(b.starts_at),
+    );
+  }
+
+  if (a.local_start_date !== b.local_start_date) {
+    return a.local_start_date < b.local_start_date ? -1 : 1;
+  }
+
+  return a.occurrence_id.localeCompare(b.occurrence_id);
 }
