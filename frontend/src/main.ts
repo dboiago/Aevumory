@@ -49,10 +49,11 @@ async function render(target: HTMLDivElement): Promise<void> {
 
 function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): void {
   const state = store.getState();
+  const todaysTasks = state.tasks.filter(isTaskForToday);
   const participantSections = state.participants
-    .map((participant) => renderParticipantColumn(participant.id, participant.name, state.tasks))
+    .map((participant) => renderParticipantColumn(participant.id, participant.name, todaysTasks))
     .join('');
-  const householdTasks = state.tasks.filter((task) => task.assignment === 'household');
+  const householdTasks = todaysTasks.filter((task) => task.assignment === 'household');
 
   target.innerHTML = `
     <main class="task-board" aria-label="Aevumory Task Board">
@@ -118,6 +119,10 @@ function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): 
       renderTaskBoard(target, store);
     });
   });
+}
+
+function isTaskForToday(task: ReturnType<FixtureTaskBoardStore['getState']>['tasks'][number]): boolean {
+  return !task.dueAt || task.dueAt.startsWith(now.slice(0, 10));
 }
 
 function renderParticipantColumn(
