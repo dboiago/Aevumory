@@ -96,9 +96,9 @@ function formatTime(value?: string): string {
   if (!value) return 'All day';
 
   return new Intl.DateTimeFormat('en-CA', {
-    hour: 'numeric',
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true,
+    hour12: false,
   }).format(new Date(value));
 }
 
