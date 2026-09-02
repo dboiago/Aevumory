@@ -115,7 +115,7 @@
     </div>
     <div class="row">
       <label for="day">Simulation</label>
-      <input id="day" type="range" min="0" max="504.025" value="72" step="0.01">
+      <input id="day" type="range" min="0" max="504.10" value="72" step="0.0025">
       <span id="dayValue" class="value"></span>
     </div>
     <div class="row">
@@ -123,7 +123,12 @@
       <input id="settle" type="range" min="4" max="16" value="8" step="1">
       <span id="settleValue" class="value"></span>
     </div>
-    <div class="hint">The Horizon remains seven days wide, but the simulation now passes through three weeks of fixed events. After an event starts, it receives a brief 90-second visual grace period before leaving the display.</div>
+    <div class="row">
+      <label for="departure">Departure</label>
+      <input id="departure" type="range" min="1" max="5" value="3" step=".5">
+      <span id="departureValue" class="value"></span>
+    </div>
+    <div class="hint">The Horizon remains seven days wide, but the simulation now passes through three weeks of fixed events. After an event starts, it receives a configurable short visual grace period before leaving the display. The finer simulation step makes that departure practical to inspect.</div>
   </section>
 </main>
 
@@ -140,18 +145,28 @@ const slider = document.querySelector('#day');
 const value = document.querySelector('#dayValue');
 const settle = document.querySelector('#settle');
 const settleValue = document.querySelector('#settleValue');
+const departure = document.querySelector('#departure');
+const departureValue = document.querySelector('#departureValue');
 let visibleCount = 5;
 let photo = 'portrait';
 
 // ageHours = hours since event entered the 6-day horizon.
 // Each event remains continuous even between nominal day labels.
 const events = [
-  // occurrenceHour is absolute simulation time. Events do not wrap or respawn.
-  { id:'maya', title:'Maya arrives from Vancouver', time:'6:30 PM', occurrenceHour:168, family:'left',  phase:.17, bias:.04,  arrivalLane:-.014, loop:.12 },
-  { id:'morans', title:'Dinner with the Morans', time:'7:00 PM', occurrenceHour:205, family:'right', phase:.61, bias:-.02, arrivalLane:.038,  loop:-.10 },
-  { id:'tournament', title:"Alex's tournament", time:'9:15 AM', occurrenceHour:239, family:'left',  phase:.83, bias:.025, arrivalLane:.012, loop:.14 },
-  { id:'train', title:'Train to Montreal', time:'2:40 PM', occurrenceHour:279, family:'right', phase:.29, bias:-.035, arrivalLane:.055, loop:-.13 },
-  { id:'maya-arrival', title:'Maya arrives', time:'6:30 PM', occurrenceHour:311, family:'right', phase:.47, bias:.012, arrivalLane:-.042, loop:.11 }
+  // occurrenceHour is absolute simulation time. Day 1 begins at 00:00.
+  // Each occurrence hour intentionally matches the displayed event clock time.
+  { id:'maya', title:'Maya arrives from Vancouver', time:'6:30 PM', occurrenceHour:186.5, family:'left', phase:.17, bias:.04, arrivalLane:-.014, loop:.12 },
+  { id:'morans', title:'Dinner with the Morans', time:'7:00 PM', occurrenceHour:259, family:'right', phase:.61, bias:-.02, arrivalLane:.038, loop:-.10 },
+  { id:'tournament', title:"Alex's tournament", time:'9:15 AM', occurrenceHour:297.25, family:'left', phase:.83, bias:.025, arrivalLane:.012, loop:.14 },
+  { id:'train', title:'Train to Montreal', time:'2:40 PM', occurrenceHour:350.6667, family:'right', phase:.29, bias:-.035, arrivalLane:.055, loop:-.13 },
+  { id:'maya-arrival', title:'Maya arrives', time:'6:30 PM', occurrenceHour:378.5, family:'right', phase:.47, bias:.012, arrivalLane:-.042, loop:.11 },
+
+  // Additional fixed occurrences exist only to make the three-week simulation
+  // useful. They enter once and never wrap or respawn.
+  { id:'garden', title:'Garden project', time:'10:00 AM', occurrenceHour:418, family:'left', phase:.34, bias:-.028, arrivalLane:.020, loop:-.09 },
+  { id:'parents', title:'Parents visiting', time:'1:00 PM', occurrenceHour:445, family:'right', phase:.72, bias:.018, arrivalLane:-.020, loop:.13 },
+  { id:'concert', title:'Concert downtown', time:'8:00 PM', occurrenceHour:476, family:'left', phase:.54, bias:.031, arrivalLane:.046, loop:-.12 },
+  { id:'checkout', title:'Hotel checkout', time:'11:00 AM', occurrenceHour:491, family:'right', phase:.23, bias:-.041, arrivalLane:.006, loop:.10 }
 ];
 
 const nodes = events.map((event) => {
@@ -248,14 +263,13 @@ function visual(p, horizonHours, settlingHours) {
   };
 }
 
-const departureGraceHours = 90 / 3600;
-
 function label(simulationHour) {
   const day = Math.floor(simulationHour / 24) + 1;
-  const totalMinutes = Math.round(simulationHour * 60);
-  const hour = Math.floor((totalMinutes % 1440) / 60);
-  const minute = totalMinutes % 60;
-  return 'Day ' + day + ' · ' + String(hour).padStart(2,'0') + ':' + String(minute).padStart(2,'0');
+  const totalSeconds = Math.round(simulationHour * 3600);
+  const hour = Math.floor((totalSeconds % 86400) / 3600);
+  const minute = Math.floor((totalSeconds % 3600) / 60);
+  const second = totalSeconds % 60;
+  return 'Day ' + day + ' · ' + String(hour).padStart(2,'0') + ':' + String(minute).padStart(2,'0') + ':' + String(second).padStart(2,'0');
 }
 
 function departureVisual(v, departureProgress) {
@@ -277,42 +291,46 @@ function render() {
   const now = Number(slider.value);
   const horizonHours = 168;
   const settlingHours = Number(settle.value);
+  const departureGraceHours = (Number(departure.value) * 60) / 3600;
+
   value.textContent = label(now);
   settleValue.textContent = settlingHours + 'h';
+  departureValue.textContent = departure.value + 'm';
 
-  const rendered = [];
-  nodes.forEach(({event,node}, index) => {
+  // Choose from events currently inhabiting the display lifetime, rather than
+  // permanently limiting visibility to the first N dummy records.
+  const candidates = nodes
+    .map(({event,node}) => {
+      const hoursUntil = event.occurrenceHour - now;
+      return {event,node,hoursUntil};
+    })
+    .filter(({hoursUntil}) =>
+      hoursUntil <= horizonHours &&
+      hoursUntil >= -departureGraceHours
+    )
+    .sort((a,b) => a.event.occurrenceHour - b.event.occurrenceHour);
+
+  const active = new Set(candidates.slice(0, visibleCount).map(({event}) => event.id));
+
+  nodes.forEach(({event,node}) => {
+    if (!active.has(event.id)) {
+      node.style.display = 'none';
+      return;
+    }
+
     const hoursUntil = event.occurrenceHour - now;
     const departureProgress = clamp((-hoursUntil) / departureGraceHours);
-    const inDisplayLifetime =
-      hoursUntil <= horizonHours &&
-      hoursUntil >= -departureGraceHours;
-
-    const show = index < visibleCount && inDisplayLifetime;
-    node.style.display = show ? 'block' : 'none';
-    if (!show) return;
+    node.style.display = 'block';
 
     // The event reaches its normal arrival state at start time, then spends
-    // only a short grace period dissolving downward out of the Horizon.
+    // only the selected grace period dissolving downward out of the Horizon.
     const p = clamp(1 - (Math.max(hoursUntil, 0) / horizonHours));
     const pos = trajectory(event,p,horizonHours,settlingHours);
     const baseVisual = visual(p,horizonHours,settlingHours);
     const v = departureVisual(baseVisual, departureProgress);
 
-    rendered.push({
-      event,
-      node,
-      p,
-      v,
-      x:pos.x,
-      y:pos.y + v.departureDrift
-    });
-  });
-
-  rendered.forEach(item => {
-    const {node,v,x,y}=item;
-    node.style.left = (x*100).toFixed(3)+'%';
-    node.style.top = (y*100).toFixed(3)+'%';
+    node.style.left = (pos.x*100).toFixed(3)+'%';
+    node.style.top = ((pos.y + v.departureDrift)*100).toFixed(3)+'%';
     node.style.setProperty('--opacity', v.opacity.toFixed(3));
     node.style.setProperty('--size', v.size.toFixed(3));
     node.style.setProperty('--scale', v.scale.toFixed(3));
@@ -339,6 +357,7 @@ document.querySelectorAll('[data-count]').forEach(button => button.addEventListe
 }));
 slider.addEventListener('input', render);
 settle.addEventListener('input', render);
+departure.addEventListener('input', render);
 
 setPhoto(photo);
 render();
