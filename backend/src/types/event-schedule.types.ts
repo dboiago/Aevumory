@@ -1,11 +1,11 @@
 export interface TimedEventSchedule {
-  all_day: false;
+  kind: 'timed';
   local_start: string;
   local_end: string;
 }
 
 export interface AllDayEventSchedule {
-  all_day: true;
+  kind: 'all_day';
   local_start_date: string;
   local_end_date: string;
 }
