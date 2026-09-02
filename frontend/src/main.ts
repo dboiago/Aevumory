@@ -50,7 +50,7 @@ async function render(target: HTMLDivElement): Promise<void> {
 function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): void {
   const state = store.getState();
   const participantSections = state.participants
-    .map((participant) => renderParticipantColumn(participant.id, participant.name, state.tasks, state.participants))
+    .map((participant) => renderParticipantColumn(participant.id, participant.name, state.tasks))
     .join('');
   const householdTasks = state.tasks.filter((task) => task.assignment === 'household');
 
@@ -61,37 +61,60 @@ function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): 
           <p class="eyebrow">Household</p>
           <h1>Tasks</h1>
         </div>
-        <a class="surface-link" href="#">Event Horizon</a>
       </header>
       <section class="task-columns" aria-label="Household responsibilities">
         ${participantSections}
-        <section class="task-column task-column-household">
-          <div class="task-column-heading">
-            <h2>Household</h2>
-            <span>${householdTasks.filter((task) => task.status === 'pending').length}</span>
-          </div>
-          <div class="task-list">
-            ${householdTasks.map((task) => renderTaskCard(task, state.participants)).join('')}
-          </div>
-        </section>
+        ${renderTaskColumn('Household', undefined, householdTasks)}
       </section>
     </main>
   `;
 
-  target.querySelectorAll<HTMLButtonElement>('[data-action="complete"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      store.apply({ kind: 'complete', taskId: button.dataset.taskId ?? '' });
+  target.querySelectorAll<HTMLElement>('[data-task-id]').forEach((card) => {
+    card.addEventListener('dragstart', (event) => {
+      const dataTransfer = event.dataTransfer;
+      if (!dataTransfer) return;
+      dataTransfer.effectAllowed = 'move';
+      dataTransfer.setData('text/task-id', card.dataset.taskId ?? '');
+      card.classList.add('task-card-dragging');
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('task-card-dragging');
+      target.querySelectorAll('.task-column-drag-over').forEach((column) => column.classList.remove('task-column-drag-over'));
+    });
+  });
+
+  target.querySelectorAll<HTMLElement>('[data-drop-target]').forEach((column) => {
+    column.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+      column.classList.add('task-column-drag-over');
+    });
+
+    column.addEventListener('dragleave', (event) => {
+      if (!column.contains(event.relatedTarget as Node | null)) {
+        column.classList.remove('task-column-drag-over');
+      }
+    });
+
+    column.addEventListener('drop', (event) => {
+      event.preventDefault();
+      column.classList.remove('task-column-drag-over');
+      const taskId = event.dataTransfer?.getData('text/task-id');
+      if (!taskId) return;
+
+      store.apply({
+        kind: 'assign',
+        taskId,
+        responsibleUserId: column.dataset.dropTarget || undefined,
+      });
       renderTaskBoard(target, store);
     });
   });
 
-  target.querySelectorAll<HTMLSelectElement>('[data-action="assign"]').forEach((select) => {
-    select.addEventListener('change', () => {
-      store.apply({
-        kind: 'assign',
-        taskId: select.dataset.taskId ?? '',
-        responsibleUserId: select.value || undefined,
-      });
+  target.querySelectorAll<HTMLButtonElement>('[data-action="complete"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      store.apply({ kind: 'complete', taskId: button.dataset.taskId ?? '' });
       renderTaskBoard(target, store);
     });
   });
@@ -101,20 +124,27 @@ function renderParticipantColumn(
   participantId: string,
   participantName: string,
   tasks: ReturnType<FixtureTaskBoardStore['getState']>['tasks'],
-  participants: ReturnType<FixtureTaskBoardStore['getState']>['participants'],
 ): string {
   const participantTasks = tasks.filter(
     (task) => task.assignment === 'individual' && task.responsibleUserId === participantId,
   );
 
+  return renderTaskColumn(participantName, participantId, participantTasks);
+}
+
+function renderTaskColumn(
+  heading: string,
+  participantId: string | undefined,
+  tasks: ReturnType<FixtureTaskBoardStore['getState']>['tasks'],
+): string {
   return `
-    <section class="task-column">
+    <section class="task-column" data-drop-target="${participantId ?? ''}">
       <div class="task-column-heading">
-        <h2>${escapeHtml(participantName)}</h2>
-        <span>${participantTasks.filter((task) => task.status === 'pending').length}</span>
+        <h2>${escapeHtml(heading)}</h2>
+        <span>${tasks.filter((task) => task.status === 'pending').length}</span>
       </div>
       <div class="task-list">
-        ${participantTasks.map((task) => renderTaskCard(task, participants)).join('')}
+        ${tasks.map((task) => renderTaskCard(task)).join('')}
       </div>
     </section>
   `;
@@ -122,34 +152,44 @@ function renderParticipantColumn(
 
 function renderTaskCard(
   task: ReturnType<FixtureTaskBoardStore['getState']>['tasks'][number],
-  participants: ReturnType<FixtureTaskBoardStore['getState']>['participants'],
 ): string {
   const completed = task.status === 'completed';
-  const assigneeOptions = participants
-    .map(
-      (participant) =>
-        `<option value="${participant.id}" ${task.responsibleUserId === participant.id ? 'selected' : ''}>${escapeHtml(participant.name)}</option>`,
-    )
-    .join('');
+  const reward = task.completionReward;
+  const rewardLabel = reward
+    ? `${reward.experience} XP · ${reward.credits} credits${reward.exceptional ? ' · Exceptional' : ''}`
+    : '';
 
   return `
-    <article class="task-card ${completed ? 'task-card-completed' : ''}">
+    <article class="task-card ${completed ? 'task-card-completed' : ''}" draggable="true" data-task-id="${task.id}" tabindex="0" title="Drag to change responsibility">
       <div class="task-card-main">
-        <span class="task-domain">${task.domain}</span>
+        <div class="task-card-meta">
+          <span class="task-domain">${escapeHtml(task.domain)}</span>
+          ${task.dueAt ? `<time datetime="${escapeHtml(task.dueAt)}">${escapeHtml(formatTaskDue(task.dueAt))}</time>` : ''}
+        </div>
         <h3>${escapeHtml(task.title)}</h3>
       </div>
       <div class="task-card-actions">
-        <label class="sr-only" for="assignee-${task.id}">Responsible participant</label>
-        <select id="assignee-${task.id}" data-action="assign" data-task-id="${task.id}">
-          <option value="">Household</option>
-          ${assigneeOptions}
-        </select>
-        <button type="button" class="task-complete" data-action="complete" data-task-id="${task.id}" ${completed ? 'disabled' : ''}>
+        ${reward ? `<span class="task-reward ${reward.exceptional ? 'task-reward-exceptional' : ''}" aria-label="Reward earned">${escapeHtml(rewardLabel)}</span>` : ''}
+        <button type="button" class="task-complete" data-action="complete" data-task-id="${task.id}" aria-label="${completed ? 'Mark task as not done' : 'Mark task as done'}">
           ${completed ? 'Done' : 'Complete'}
         </button>
       </div>
     </article>
   `;
+}
+
+function formatTaskDue(value: string): string {
+  const date = new Date(value);
+  const sameDay = value.startsWith(now.slice(0, 10));
+  const time = new Intl.DateTimeFormat('en-CA', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+
+  if (sameDay) return `Today · ${time}`;
+
+  return `${new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' }).format(date)} · ${time}`;
 }
 
 function renderAmbientContext(value: AmbientContext): string {
