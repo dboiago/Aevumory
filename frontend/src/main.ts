@@ -21,15 +21,15 @@ const context: AmbientContext = {
 
 const temporalQuery = new FixtureTemporalQuery();
 
-void render();
+void render(root);
 
-async function render(): Promise<void> {
+async function render(target: HTMLDivElement): Promise<void> {
   const occurrences = await temporalQuery.listOccurrencesInWindow({
     starts_at: '2026-09-02T18:00:00-04:00',
     ends_at: '2026-09-09T18:00:00-04:00',
   });
 
-  root.innerHTML = `
+  target.innerHTML = `
     <section class="ambient-shell">
       <header class="ambient-context" aria-label="Current household context">
         <time class="date">${context.date}</time>
