@@ -158,21 +158,28 @@ function renderTaskCard(
   const rewardLabel = reward
     ? `${reward.experience} XP · ${reward.credits} credits${reward.exceptional ? ' · Exceptional' : ''}`
     : '';
+  const metadata = [
+    task.dueAt ? formatTaskDue(task.dueAt) : '',
+    ...(task.indicators ?? []),
+  ].filter(Boolean);
+  const completionLabel = task.completedAt ? `Done · ${formatTaskTime(task.completedAt)}` : '';
 
   return `
-    <article class="task-card ${completed ? 'task-card-completed' : ''}" draggable="true" data-task-id="${task.id}" tabindex="0" title="Drag to change responsibility">
+    <article class="task-card task-domain-${task.domain} ${completed ? 'task-card-completed' : ''}" draggable="true" data-task-id="${task.id}" tabindex="0" title="Drag to change responsibility">
       <div class="task-card-main">
         <div class="task-card-meta">
-          <span class="task-domain">${escapeHtml(task.domain)}</span>
-          ${task.dueAt ? `<time datetime="${escapeHtml(task.dueAt)}">${escapeHtml(formatTaskDue(task.dueAt))}</time>` : ''}
+          ${completed && completionLabel ? `<time class="task-completion-meta" datetime="${escapeHtml(task.completedAt ?? '')}">${escapeHtml(completionLabel)}</time>` : metadata.length ? `<span class="task-context">${escapeHtml(metadata.join(' · '))}</span>` : ''}
         </div>
         <h3>${escapeHtml(task.title)}</h3>
       </div>
-      <div class="task-card-actions">
-        ${reward ? `<span class="task-reward ${reward.exceptional ? 'task-reward-exceptional' : ''}" aria-label="Reward earned">${escapeHtml(rewardLabel)}</span>` : ''}
-        <button type="button" class="task-complete" data-action="complete" data-task-id="${task.id}" aria-label="${completed ? 'Mark task as not done' : 'Mark task as done'}">
-          ${completed ? 'Done' : 'Complete'}
-        </button>
+      <div class="task-card-footer">
+        <span class="task-domain" aria-label="Domain">${escapeHtml(task.domain)}</span>
+        <div class="task-card-actions">
+          ${reward ? `<span class="task-reward ${reward.exceptional ? 'task-reward-exceptional' : ''}" aria-label="Reward earned">${escapeHtml(rewardLabel)}</span>` : ''}
+          <button type="button" class="task-complete" data-action="complete" data-task-id="${task.id}" aria-label="${completed ? 'Mark task as not done' : 'Mark task as done'}">
+            ${completed ? 'Done' : 'Complete'}
+          </button>
+        </div>
       </div>
     </article>
   `;
@@ -187,9 +194,17 @@ function formatTaskDue(value: string): string {
     hour12: false,
   }).format(date);
 
-  if (sameDay) return `Today · ${time}`;
+  if (sameDay) return time;
 
   return `${new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric' }).format(date)} · ${time}`;
+}
+
+function formatTaskTime(value: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(value));
 }
 
 function renderAmbientContext(value: AmbientContext): string {
