@@ -23,8 +23,10 @@ export type TaskBoardItem = {
   responsibleUserId?: string;
   status: TaskStatus;
   dueAt?: string;
+  indicators?: string[];
   reward: TaskReward;
   completionReward?: TaskReward;
+  completedAt?: string;
 };
 
 export type TaskBoardState = {
@@ -45,7 +47,8 @@ const fixtureState: TaskBoardState = {
       assignment: 'individual',
       responsibleUserId: 'participant:one',
       status: 'pending',
-      dueAt: '2026-09-03T19:00:00-04:00',
+      dueAt: '2026-09-02T19:00:00-04:00',
+      indicators: ['Recurring'],
       reward: { experience: 18, credits: 4 },
     },
     {
@@ -55,6 +58,7 @@ const fixtureState: TaskBoardState = {
       assignment: 'household',
       status: 'pending',
       dueAt: '2026-09-02T20:00:00-04:00',
+      indicators: ['Priority'],
       reward: { experience: 12, credits: 3 },
     },
     {
@@ -64,7 +68,7 @@ const fixtureState: TaskBoardState = {
       assignment: 'individual',
       responsibleUserId: 'participant:two',
       status: 'pending',
-      dueAt: '2026-09-03T18:30:00-04:00',
+      dueAt: '2026-09-02T18:30:00-04:00',
       reward: { experience: 25, credits: 5 },
     },
     {
@@ -74,6 +78,7 @@ const fixtureState: TaskBoardState = {
       assignment: 'household',
       status: 'pending',
       dueAt: '2026-09-04T13:00:00-04:00',
+      indicators: ['Priority'],
       reward: { experience: 42, credits: 8 },
     },
     {
@@ -83,8 +88,10 @@ const fixtureState: TaskBoardState = {
       assignment: 'household',
       status: 'completed',
       dueAt: '2026-09-02T18:00:00-04:00',
+      indicators: ['Maintenance', 'Recurring'],
       reward: { experience: 10, credits: 2 },
       completionReward: { experience: 10, credits: 2 },
+      completedAt: '2026-09-02T18:00:00-04:00',
     },
   ],
 };
