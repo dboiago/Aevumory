@@ -197,13 +197,26 @@ function trajectory(event, p, horizonHours, settlingHours) {
   const distalX = side < 0
     ? .035 + event.phase*.17 + event.bias*.5
     : .965 - event.phase*.17 + event.bias*.5;
-  const distalY = .93 - event.phase*.08;
+  // Ingress occupies a broader lower field. Events should not appear to enter
+  // from one shared height or immediately crowd the middle.
+  const distalY = clamp(
+    .80 + event.phase * .13 + event.arrivalLane * .35 + event.bias * .25,
+    .79,
+    .94
+  );
 
   // The approach field is deliberately a field rather than a convergence point.
   // Every event reaches a different, but still recognizably central, resting area
   // before it begins its downward settling.
   const middleX = clamp(.29 + event.phase*.42 + event.bias*.9, .29, .71);
-  const middleY = clamp(.675 + Math.sin((event.phase*2.2 + .13)*Math.PI)*.070 + event.arrivalLane*.28, .65, .78);
+  const middleY = clamp(
+    .645 +
+    Math.sin((event.phase * 2.2 + .13) * Math.PI) * .085 +
+    event.arrivalLane * .55 +
+    event.bias * .18,
+    .61,
+    .79
+  );
 
   const arrivalX = clamp(.43 + event.phase*.14 + event.bias*.4, .38, .62);
   const arrivalY = .885 + event.arrivalLane;
@@ -225,7 +238,7 @@ function trajectory(event, p, horizonHours, settlingHours) {
   const drift = Math.cos((u * (1.35 + event.phase*.85) + event.phase*.41) * Math.PI);
 
   x += event.loop * envelope * (.95 + event.phase*.35) + sweep * .025 * envelope;
-  y += drift * .020 * envelope + event.bias * .10 * envelope;
+  y += drift * (.018 + event.phase * .010) * envelope + event.bias * .10 * envelope;
 
   // Settling begins only after the event has completed its approach and reached
   // its middle-field state. No early vertical shortcut into the arrival field.
