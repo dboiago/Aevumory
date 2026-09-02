@@ -91,11 +91,64 @@ body {
   font-size: 0.7rem;
 }
 
+.occurrence-list {
+  display: grid;
+  gap: 1rem;
+  width: min(42rem, 100%);
+}
+
+.occurrence {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border-subtle);
+  background: rgba(20, 26, 22, 0.72);
+  text-align: left;
+}
+
+.occurrence h2,
+.occurrence p {
+  margin: 0;
+}
+
+.occurrence h2 {
+  font-family: var(--font-heading);
+  font-size: clamp(1.25rem, 2.4vw, 2rem);
+  font-weight: 400;
+}
+
+.occurrence p,
+.occurrence-location {
+  color: var(--text-muted);
+  font-size: clamp(0.8rem, 1vw, 0.95rem);
+}
+
+.occurrence p {
+  margin-top: 0.4rem;
+}
+
+.occurrence-location {
+  white-space: nowrap;
+}
+
 .empty-state {
   margin: 0;
   color: var(--text-muted);
   font-size: clamp(1rem, 1.5vw, 1.35rem);
   font-weight: 300;
+}
+
+@media (max-width: 640px) {
+  .occurrence {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .occurrence-location {
+    white-space: normal;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
