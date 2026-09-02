@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { InMemoryTemporalRepository } from './temporal.repository.memory';
 
 describe('InMemoryTemporalRepository', () => {
