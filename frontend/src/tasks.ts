@@ -4,6 +4,12 @@ export type TaskAssignment = 'individual' | 'household';
 
 export type TaskStatus = 'pending' | 'completed';
 
+export type TaskReward = {
+  experience: number;
+  credits: number;
+  exceptional?: boolean;
+};
+
 export type HouseholdParticipant = {
   id: string;
   name: string;
@@ -16,6 +22,9 @@ export type TaskBoardItem = {
   assignment: TaskAssignment;
   responsibleUserId?: string;
   status: TaskStatus;
+  dueAt?: string;
+  reward: TaskReward;
+  completionReward?: TaskReward;
 };
 
 export type TaskBoardState = {
@@ -36,6 +45,8 @@ const fixtureState: TaskBoardState = {
       assignment: 'individual',
       responsibleUserId: 'participant:one',
       status: 'pending',
+      dueAt: '2026-09-03T19:00:00-04:00',
+      reward: { experience: 18, credits: 4 },
     },
     {
       id: 'task:groceries',
@@ -43,6 +54,8 @@ const fixtureState: TaskBoardState = {
       domain: 'keeping',
       assignment: 'household',
       status: 'pending',
+      dueAt: '2026-09-02T20:00:00-04:00',
+      reward: { experience: 12, credits: 3 },
     },
     {
       id: 'task:practice',
@@ -51,6 +64,17 @@ const fixtureState: TaskBoardState = {
       assignment: 'individual',
       responsibleUserId: 'participant:two',
       status: 'pending',
+      dueAt: '2026-09-03T18:30:00-04:00',
+      reward: { experience: 25, credits: 5 },
+    },
+    {
+      id: 'task:airport',
+      title: 'Pick up Maya from the airport',
+      domain: 'kinetic',
+      assignment: 'household',
+      status: 'pending',
+      dueAt: '2026-09-04T13:00:00-04:00',
+      reward: { experience: 42, credits: 8 },
     },
     {
       id: 'task:recycling',
@@ -58,6 +82,9 @@ const fixtureState: TaskBoardState = {
       domain: 'keeping',
       assignment: 'household',
       status: 'completed',
+      dueAt: '2026-09-02T18:00:00-04:00',
+      reward: { experience: 10, credits: 2 },
+      completionReward: { experience: 10, credits: 2 },
     },
   ],
 };
