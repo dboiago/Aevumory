@@ -89,9 +89,7 @@ function resolveAllDayStarts(
   const anchor = Temporal.PlainDate.from(event.schedule.local_start_date);
   const rule = event.recurrence!;
   const until = rule.until ? Temporal.PlainDate.from(rule.until) : undefined;
-  const results = recurrenceDates(anchor, windowStart, windowEnd, rule, until);
-
-  return dedupeDates(results);
+  return dedupeDates(recurrenceDates(anchor, windowStart, windowEnd, rule, until));
 }
 
 function recurrenceDates(
@@ -101,6 +99,8 @@ function recurrenceDates(
   rule: RecurrenceRule,
   until?: Temporal.PlainDate,
 ): Temporal.PlainDate[] {
+  if (until && Temporal.PlainDate.compare(until, anchor) < 0) return [];
+
   const results: Temporal.PlainDate[] = [];
   const searchStart = windowStart.subtract({ days: 1 });
   const searchEnd = windowEnd.add({ days: 1 });
@@ -134,7 +134,7 @@ function recurrenceDates(
           const date = week.add({ days: weekday - 1 });
           if (Temporal.PlainDate.compare(date, searchStart) < 0 ||
               Temporal.PlainDate.compare(date, searchEnd) > 0) continue;
-          if (until && Temporal.PlainDate.compare(date, until) > 0) continue;
+          if (until && Temporal.PlainDate.compare(date, until) > 0) return results;
           results.push(date);
         }
         weekIndex += 1;
@@ -154,9 +154,9 @@ function recurrenceDates(
       while (Temporal.PlainDate.compare(month, searchEnd) <= 0) {
         try {
           const date = month.with({ day });
+          if (until && Temporal.PlainDate.compare(date, until) > 0) break;
           if (Temporal.PlainDate.compare(date, searchStart) >= 0 &&
-              Temporal.PlainDate.compare(date, searchEnd) <= 0 &&
-              (!until || Temporal.PlainDate.compare(date, until) <= 0)) {
+              Temporal.PlainDate.compare(date, searchEnd) <= 0) {
             results.push(date);
           }
         } catch {
@@ -178,9 +178,9 @@ function recurrenceDates(
       while (Temporal.PlainDate.compare(year, searchEnd) <= 0) {
         try {
           const date = year.with({ month: anchor.month, day: anchor.day });
+          if (until && Temporal.PlainDate.compare(date, until) > 0) break;
           if (Temporal.PlainDate.compare(date, searchStart) >= 0 &&
-              Temporal.PlainDate.compare(date, searchEnd) <= 0 &&
-              (!until || Temporal.PlainDate.compare(date, until) <= 0)) {
+              Temporal.PlainDate.compare(date, searchEnd) <= 0) {
             results.push(date);
           }
         } catch {
