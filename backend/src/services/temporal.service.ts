@@ -98,19 +98,22 @@ export class DefaultTemporalService implements TemporalService {
         persisted.map((occurrence) => [occurrenceMatchKey(occurrence), occurrence]),
       );
 
-      for (const occurrence of generated) {
-        const persistedOccurrence = persistedByKey.get(occurrenceMatchKey(occurrence));
-        if (persistedOccurrence) {
-          if (persistedOccurrence.status !== 'cancelled') {
-            results.push(persistedOccurrence);
-          }
-        } else {
+      // Persisted recurrence instances are authoritative, including when a
+      // provider moved the instance outside the generated recurrence window.
+      for (const occurrence of persisted) {
+        if (occurrence.status !== 'cancelled' &&
+            occurrenceIntersectsWindow(occurrence, event, windowStart, windowEnd)) {
           results.push(occurrence);
         }
       }
+
+      for (const occurrence of generated) {
+        if (persistedByKey.has(occurrenceMatchKey(occurrence))) continue;
+        results.push(occurrence);
+      }
     }
 
-    return results.sort(compareOccurrences);
+    return dedupeOccurrences(results).sort(compareOccurrences);
   }
 
   saveOccurrence(occurrence: EventOccurrence) {
@@ -146,6 +149,10 @@ function occurrenceIntersectsWindow(
 
   return Temporal.Instant.compare(Temporal.Instant.from(occurrence.starts_at), windowEnd) < 0 &&
     Temporal.Instant.compare(Temporal.Instant.from(occurrence.ends_at), windowStart) > 0;
+}
+
+function dedupeOccurrences(occurrences: EventOccurrence[]): EventOccurrence[] {
+  return [...new Map(occurrences.map((occurrence) => [occurrence.occurrence_id, occurrence])).values()];
 }
 
 function compareOccurrences(a: EventOccurrence, b: EventOccurrence): number {
