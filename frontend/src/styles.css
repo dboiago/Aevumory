@@ -369,7 +369,7 @@ select {
 
 .task-column-heading h2 {
   margin: 0;
-  color: var(--text-primary);
+  color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: .1em;
@@ -377,7 +377,7 @@ select {
 }
 
 .task-column-heading span {
-  color: var(--text-soft);
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -401,7 +401,7 @@ select {
 }
 
 .task-card:hover {
-  border-color: var(--border-active);
+  border-color: var(--accent-primary);
   background: var(--bg-surface-hover);
 }
 
