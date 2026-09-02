@@ -259,6 +259,7 @@ function visual(p, horizonHours, settlingHours) {
     timeOpacity: lerp(0, .84, timeProgress),
     timeScale: lerp(.82, 1, timeProgress),
     timeRise: lerp(-.38, 0, timeProgress).toFixed(3)+'em',
+    departureDrift: 0,
     imminent: settleProgress
   };
 }
