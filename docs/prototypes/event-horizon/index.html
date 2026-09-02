@@ -34,7 +34,7 @@
   .event {
     position:absolute; left:0; top:0; max-width:min(38vw, 460px);
     color:rgba(255,255,255,var(--opacity));
-    font-size:clamp(10px, calc(8px + var(--size) * 1vw), 25px);
+    font-size:clamp(10px, var(--font-size, 14px), 25px);
     font-weight:var(--weight);
     letter-spacing:var(--tracking);
     line-height:1.08;
@@ -330,8 +330,15 @@ function render() {
     const baseVisual = visual(p,horizonHours,settlingHours);
     const v = departureVisual(baseVisual, departureProgress);
 
-    node.style.left = (pos.x*100).toFixed(3)+'%';
-    node.style.top = ((pos.y + v.departureDrift)*100).toFixed(3)+'%';
+    // Keep the prototype fail-safe while trajectory parameters are being tuned.
+    // A bad visual parameter must never place an otherwise valid event off-screen.
+    const safeX = Number.isFinite(pos.x) ? clamp(pos.x, .035, .965) : .50;
+    const rawY = pos.y + (Number.isFinite(v.departureDrift) ? v.departureDrift : 0);
+    const safeY = Number.isFinite(rawY) ? clamp(rawY, .64, .97) : .78;
+
+    node.style.left = (safeX*100).toFixed(3)+'%';
+    node.style.top = (safeY*100).toFixed(3)+'%';
+    node.style.setProperty('--font-size', (10 + v.size * 10).toFixed(2)+'px');
     node.style.setProperty('--opacity', v.opacity.toFixed(3));
     node.style.setProperty('--size', v.size.toFixed(3));
     node.style.setProperty('--scale', v.scale.toFixed(3));
