@@ -15,13 +15,7 @@
  * ============================================================================
  */
 
-// ----------------------------------------------------------------------------
-// SOURCES
-// ----------------------------------------------------------------------------
-
-export type TemporalSourceKind =
-  | 'local'
-  | 'external';
+export type TemporalSourceKind = 'local' | 'external';
 
 export type TemporalSyncStatus =
   | 'never_synced'
@@ -32,21 +26,14 @@ export type TemporalSyncStatus =
 
 export interface TemporalSource {
   source_id: string;
-
   kind: TemporalSourceKind;
   name: string;
   enabled: boolean;
-
   sync_status: TemporalSyncStatus;
   last_synced_at?: string;
-
   created_at: string;
   updated_at: string;
 }
-
-// ----------------------------------------------------------------------------
-// EXTERNAL LINEAGE
-// ----------------------------------------------------------------------------
 
 export interface ExternalEventIdentity {
   /** Provider identifier, such as a calendar vendor or integration name. */
@@ -55,16 +42,9 @@ export interface ExternalEventIdentity {
   /** Identifier assigned to the event by the external provider. */
   external_event_id: string;
 
-  /**
-   * Optional provider/account lineage. This is not a household participant
-   * identity and must not be used as the Aevumory event identifier.
-   */
+  /** Optional provider/account lineage. */
   external_account_id?: string;
 }
-
-// ----------------------------------------------------------------------------
-// RECURRENCE
-// ----------------------------------------------------------------------------
 
 export type RecurrenceFrequency =
   | 'daily'
@@ -82,22 +62,15 @@ export interface RecurrenceRule {
   /** Calendar day 1–31 where applicable. */
   by_month_day?: number;
 
-  /** Inclusive recurrence boundary. */
+  /** Inclusive recurrence boundary, represented as a local calendar date. */
   until?: string;
 }
 
-// ----------------------------------------------------------------------------
-// HOUSEHOLD EVENT
-// ----------------------------------------------------------------------------
+export type HouseholdEventRelevance = 'ordinary' | 'meaningful';
 
-export type HouseholdEventRelevance =
-  | 'ordinary'
-  | 'meaningful';
+export type HouseholdEventSignificance = 'low' | 'normal' | 'high';
 
-export type HouseholdEventSignificance =
-  | 'low'
-  | 'normal'
-  | 'high';
+export type HouseholdEventStatus = 'active' | 'cancelled';
 
 export interface HouseholdEvent {
   event_id: string;
@@ -106,11 +79,12 @@ export interface HouseholdEvent {
   title: string;
   description?: string;
   location?: string;
+  status: HouseholdEventStatus;
 
   /** True when the event has no meaningful time-of-day component. */
   all_day: boolean;
 
-  /** IANA timezone identifier used to interpret local temporal values. */
+  /** IANA timezone used for local temporal interpretation and recurrence. */
   timezone: string;
 
   relevance: HouseholdEventRelevance;
@@ -123,24 +97,22 @@ export interface HouseholdEvent {
   updated_at: string;
 }
 
-// ----------------------------------------------------------------------------
-// OCCURRENCES
-// ----------------------------------------------------------------------------
-
-export type EventOccurrenceStatus =
-  | 'scheduled'
-  | 'cancelled';
+export type EventOccurrenceStatus = 'scheduled' | 'cancelled';
 
 export interface EventOccurrence {
   occurrence_id: string;
   event_id: string;
 
-  /** Resolved start/end instants represented as ISO 8601 timestamps. */
-  starts_at: string;
+  /** Required for timed occurrences; omitted for all-day occurrences. */
+  starts_at?: string;
   ends_at?: string;
 
-  /** Local household date corresponding to starts_at in the event timezone. */
-  local_date: string;
+  /** Inclusive start date in the event timezone. */
+  local_start_date: string;
+
+  /** Exclusive end date for all-day events; same date as start for timed events. */
+  local_end_date: string;
+
   timezone: string;
 
   /** Stable identity for a recurrence instance, when applicable. */
