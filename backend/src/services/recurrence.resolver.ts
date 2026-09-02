@@ -19,7 +19,7 @@ export function resolveEventOccurrences(
   const windowStart = Temporal.Instant.from(window.starts_at);
   const windowEnd = Temporal.Instant.from(window.ends_at);
 
-  if (windowEnd <= windowStart) {
+  if (Temporal.Instant.compare(windowEnd, windowStart) <= 0) {
     throw new Error('Recurrence resolution window must end after it starts');
   }
 
@@ -270,11 +270,12 @@ function occurrenceIntersectsWindow(
       .toZonedDateTime({ timeZone: event.timezone });
     const end = Temporal.PlainDate.from(occurrence.local_end_date)
       .toZonedDateTime({ timeZone: event.timezone });
-    return start.toInstant() < windowEnd && end.toInstant() > windowStart;
+    return Temporal.Instant.compare(start.toInstant(), windowEnd) < 0 &&
+      Temporal.Instant.compare(end.toInstant(), windowStart) > 0;
   }
 
-  return Temporal.Instant.from(occurrence.starts_at!) < windowEnd &&
-    Temporal.Instant.from(occurrence.ends_at!) > windowStart;
+  return Temporal.Instant.compare(Temporal.Instant.from(occurrence.starts_at!), windowEnd) < 0 &&
+    Temporal.Instant.compare(Temporal.Instant.from(occurrence.ends_at!), windowStart) > 0;
 }
 
 function dedupeDates(values: Temporal.PlainDate[]): Temporal.PlainDate[] {
