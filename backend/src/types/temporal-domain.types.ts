@@ -15,6 +15,8 @@
  * ============================================================================
  */
 
+import type { EventSchedule } from './event-schedule.types';
+
 export type TemporalSourceKind = 'local' | 'external';
 
 export type TemporalSyncStatus =
@@ -81,14 +83,14 @@ export interface HouseholdEvent {
   location?: string;
   status: HouseholdEventStatus;
 
-  /** True when the event has no meaningful time-of-day component. */
-  all_day: boolean;
-
   /** IANA timezone used for local temporal interpretation and recurrence. */
   timezone: string;
 
   relevance: HouseholdEventRelevance;
   significance: HouseholdEventSignificance;
+
+  /** The temporal anchor from which occurrences are resolved. */
+  schedule: EventSchedule;
 
   recurrence?: RecurrenceRule;
   external_identity?: ExternalEventIdentity;
@@ -119,4 +121,6 @@ export interface EventOccurrence {
   recurrence_instance_key?: string;
 
   status: EventOccurrenceStatus;
+  created_at: string;
+  updated_at: string;
 }
