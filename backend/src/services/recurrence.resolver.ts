@@ -32,18 +32,21 @@ export function resolveEventOccurrences(
 
   validateRecurrence(event.recurrence);
 
-  const occurrences: EventOccurrence[] = [];
   const localWindowStart = windowStart.toZonedDateTimeISO(event.timezone);
   const localWindowEnd = windowEnd.toZonedDateTimeISO(event.timezone);
 
-  for (const localStart of recurrenceStarts(event, localWindowStart, localWindowEnd)) {
-    const occurrence = buildOccurrence(event, localStart);
-    if (occurrenceIntersectsWindow(occurrence, event, windowStart, windowEnd)) {
-      occurrences.push(occurrence);
-    }
-  }
+  const starts = event.schedule.kind === 'timed'
+    ? resolveTimedStarts(event, localWindowStart.toPlainDate(), localWindowEnd.toPlainDate())
+    : resolveAllDayStarts(event, localWindowStart.toPlainDate(), localWindowEnd.toPlainDate());
 
-  return occurrences;
+  return starts
+    .map((start) => buildOccurrence(event, start))
+    .filter((occurrence) => occurrenceIntersectsWindow(
+      occurrence,
+      event,
+      windowStart,
+      windowEnd,
+    ));
 }
 
 function validateRecurrence(rule: RecurrenceRule): void {
@@ -61,136 +64,140 @@ function validateRecurrence(rule: RecurrenceRule): void {
   }
 }
 
-function recurrenceStarts(
+function resolveTimedStarts(
   event: HouseholdEvent,
-  windowStart: Temporal.ZonedDateTime,
-  windowEnd: Temporal.ZonedDateTime,
-): Temporal.PlainDateTime[] | Temporal.PlainDate[] {
-  if (event.schedule.kind === 'all_day') {
-    return allDayRecurrenceStarts(event, windowStart.toPlainDate(), windowEnd.toPlainDate());
-  }
-
-  return timedRecurrenceStarts(
-    event,
-    Temporal.PlainDateTime.from(event.schedule.local_start),
-    windowStart.toPlainDateTime(),
-    windowEnd.toPlainDateTime(),
-  );
-}
-
-function timedRecurrenceStarts(
-  event: HouseholdEvent,
-  anchor: Temporal.PlainDateTime,
-  windowStart: Temporal.PlainDateTime,
-  windowEnd: Temporal.PlainDateTime,
+  windowStart: Temporal.PlainDate,
+  windowEnd: Temporal.PlainDate,
 ): Temporal.PlainDateTime[] {
+  const anchor = Temporal.PlainDateTime.from(event.schedule.local_start);
   const rule = event.recurrence!;
-  const results: Temporal.PlainDateTime[] = [];
-  const duration = event.schedule.kind === 'timed'
-    ? Temporal.PlainDateTime.from(event.schedule.local_end).since(anchor)
-    : Temporal.Duration.from({});
-
-  let date = anchor.toPlainDate();
-  const lastDate = windowEnd.toPlainDate().add({ days: 1 });
+  const duration = Temporal.PlainDateTime.from(event.schedule.local_end).since(anchor);
   const until = rule.until ? Temporal.PlainDate.from(rule.until) : undefined;
+  const results: Temporal.PlainDateTime[] = [];
 
-  while (Temporal.PlainDate.compare(date, lastDate) <= 0) {
-    if (until && Temporal.PlainDate.compare(date, until) > 0) break;
-
-    for (const candidateDate of matchingDatesForPeriod(anchor.toPlainDate(), date, rule)) {
-      const candidate = anchor.with({
-        year: candidateDate.year,
-        month: candidateDate.month,
-        day: candidateDate.day,
-      });
-
-      if (Temporal.PlainDateTime.compare(candidate, windowEnd) < 0 &&
-          Temporal.PlainDateTime.compare(candidate.add(duration), windowStart) > 0) {
-        results.push(candidate);
-      }
-    }
-
-    date = nextPeriodDate(date, rule);
+  for (const date of recurrenceDates(anchor.toPlainDate(), windowStart, windowEnd, rule, until)) {
+    results.push(anchor.with({ year: date.year, month: date.month, day: date.day }));
   }
 
+  // A long event may begin before the local window date but still intersect it.
+  // The final absolute-window filter handles that boundary precisely.
+  void duration;
   return dedupeDateTimes(results);
 }
 
-function allDayRecurrenceStarts(
+function resolveAllDayStarts(
   event: HouseholdEvent,
   windowStart: Temporal.PlainDate,
   windowEnd: Temporal.PlainDate,
 ): Temporal.PlainDate[] {
+  const anchor = Temporal.PlainDate.from(event.schedule.local_start_date);
   const rule = event.recurrence!;
-  const anchor = Temporal.PlainDate.from(event.schedule.kind === 'all_day'
-    ? event.schedule.local_start_date
-    : event.schedule.local_start);
-  const results: Temporal.PlainDate[] = [];
-  const lastDate = windowEnd.add({ days: 1 });
   const until = rule.until ? Temporal.PlainDate.from(rule.until) : undefined;
-
-  let date = anchor;
-  while (Temporal.PlainDate.compare(date, lastDate) <= 0) {
-    if (until && Temporal.PlainDate.compare(date, until) > 0) break;
-
-    for (const candidate of matchingDatesForPeriod(anchor, date, rule)) {
-      if (Temporal.PlainDate.compare(candidate, windowEnd) <= 0 &&
-          Temporal.PlainDate.compare(candidate, windowStart) >= 0) {
-        results.push(candidate);
-      }
-    }
-
-    date = nextPeriodDate(date, rule);
-  }
+  const results = recurrenceDates(anchor, windowStart, windowEnd, rule, until);
 
   return dedupeDates(results);
 }
 
-function matchingDatesForPeriod(
+function recurrenceDates(
   anchor: Temporal.PlainDate,
-  periodDate: Temporal.PlainDate,
+  windowStart: Temporal.PlainDate,
+  windowEnd: Temporal.PlainDate,
   rule: RecurrenceRule,
+  until?: Temporal.PlainDate,
 ): Temporal.PlainDate[] {
-  switch (rule.frequency) {
-    case 'daily':
-      return [periodDate];
-    case 'weekly': {
-      const weekdays = rule.by_weekday ?? [anchor.dayOfWeek];
-      const weekStart = periodDate.subtract({ days: periodDate.dayOfWeek - 1 });
-      const anchorWeekStart = anchor.subtract({ days: anchor.dayOfWeek - 1 });
-      const weeks = anchorWeekStart.until(weekStart).days / 7;
-      if (!Number.isInteger(weeks) || weeks < 0 || weeks % rule.interval !== 0) return [];
-      return weekdays.map((day) => weekStart.add({ days: day - 1 }));
-    }
-    case 'monthly': {
-      const months = anchor.until(periodDate, { largestUnit: 'months' }).months;
-      if (months < 0 || months % rule.interval !== 0) return [];
-      const day = rule.by_month_day ?? anchor.day;
-      try {
-        return [periodDate.with({ day })];
-      } catch {
-        return [];
-      }
-    }
-    case 'yearly': {
-      const years = anchor.until(periodDate, { largestUnit: 'years' }).years;
-      if (years < 0 || years % rule.interval !== 0) return [];
-      try {
-        return [periodDate.with({ month: anchor.month, day: anchor.day })];
-      } catch {
-        return [];
-      }
-    }
-  }
-}
+  const results: Temporal.PlainDate[] = [];
+  const searchStart = windowStart.subtract({ days: 1 });
+  const searchEnd = windowEnd.add({ days: 1 });
 
-function nextPeriodDate(date: Temporal.PlainDate, rule: RecurrenceRule): Temporal.PlainDate {
   switch (rule.frequency) {
-    case 'daily': return date.add({ days: 1 });
-    case 'weekly': return date.add({ days: 7 });
-    case 'monthly': return date.add({ months: 1 });
-    case 'yearly': return date.add({ years: 1 });
+    case 'daily': {
+      let date = anchor;
+      if (Temporal.PlainDate.compare(date, searchStart) < 0) {
+        const days = anchor.until(searchStart, { largestUnit: 'days' }).days;
+        date = anchor.add({ days: Math.floor(days / rule.interval) * rule.interval });
+      }
+
+      while (Temporal.PlainDate.compare(date, searchEnd) <= 0) {
+        if (until && Temporal.PlainDate.compare(date, until) > 0) break;
+        if (Temporal.PlainDate.compare(date, searchStart) >= 0) results.push(date);
+        date = date.add({ days: rule.interval });
+      }
+      break;
+    }
+
+    case 'weekly': {
+      const anchorWeek = anchor.subtract({ days: anchor.dayOfWeek - 1 });
+      const firstWeek = searchStart.subtract({ days: searchStart.dayOfWeek - 1 });
+      const weeksFromAnchor = anchorWeek.until(firstWeek, { largestUnit: 'weeks' }).weeks;
+      let weekIndex = Math.max(0, Math.floor(weeksFromAnchor / rule.interval));
+      let week = anchorWeek.add({ weeks: weekIndex * rule.interval });
+      const weekdays = rule.by_weekday ?? [anchor.dayOfWeek];
+
+      while (Temporal.PlainDate.compare(week, searchEnd) <= 0) {
+        for (const weekday of weekdays) {
+          const date = week.add({ days: weekday - 1 });
+          if (Temporal.PlainDate.compare(date, searchStart) < 0 ||
+              Temporal.PlainDate.compare(date, searchEnd) > 0) continue;
+          if (until && Temporal.PlainDate.compare(date, until) > 0) continue;
+          results.push(date);
+        }
+        weekIndex += 1;
+        week = anchorWeek.add({ weeks: weekIndex * rule.interval });
+      }
+      break;
+    }
+
+    case 'monthly': {
+      const anchorMonth = anchor.with({ day: 1 });
+      const firstMonth = searchStart.with({ day: 1 });
+      const monthsFromAnchor = anchorMonth.until(firstMonth, { largestUnit: 'months' }).months;
+      let monthIndex = Math.max(0, Math.floor(monthsFromAnchor / rule.interval));
+      let month = anchorMonth.add({ months: monthIndex * rule.interval });
+      const day = rule.by_month_day ?? anchor.day;
+
+      while (Temporal.PlainDate.compare(month, searchEnd) <= 0) {
+        try {
+          const date = month.with({ day });
+          if (Temporal.PlainDate.compare(date, searchStart) >= 0 &&
+              Temporal.PlainDate.compare(date, searchEnd) <= 0 &&
+              (!until || Temporal.PlainDate.compare(date, until) <= 0)) {
+            results.push(date);
+          }
+        } catch {
+          // Invalid calendar dates, such as February 31, simply have no occurrence.
+        }
+        monthIndex += 1;
+        month = anchorMonth.add({ months: monthIndex * rule.interval });
+      }
+      break;
+    }
+
+    case 'yearly': {
+      const anchorYear = anchor.with({ month: 1, day: 1 });
+      const firstYear = searchStart.with({ month: 1, day: 1 });
+      const yearsFromAnchor = anchorYear.until(firstYear, { largestUnit: 'years' }).years;
+      let yearIndex = Math.max(0, Math.floor(yearsFromAnchor / rule.interval));
+      let year = anchorYear.add({ years: yearIndex * rule.interval });
+
+      while (Temporal.PlainDate.compare(year, searchEnd) <= 0) {
+        try {
+          const date = year.with({ month: anchor.month, day: anchor.day });
+          if (Temporal.PlainDate.compare(date, searchStart) >= 0 &&
+              Temporal.PlainDate.compare(date, searchEnd) <= 0 &&
+              (!until || Temporal.PlainDate.compare(date, until) <= 0)) {
+            results.push(date);
+          }
+        } catch {
+          // Invalid calendar dates, such as February 29 in a non-leap year, have no occurrence.
+        }
+        yearIndex += 1;
+        year = anchorYear.add({ years: yearIndex * rule.interval });
+      }
+      break;
+    }
   }
+
+  return results;
 }
 
 function resolveSingleOccurrence(event: HouseholdEvent): EventOccurrence {
@@ -224,20 +231,21 @@ function buildOccurrence(
     };
   }
 
+  const startLocal = Temporal.PlainDateTime.from(localStart);
+  const endLocal = Temporal.PlainDateTime.from(event.schedule.local_end);
+  const duration = endLocal.since(Temporal.PlainDateTime.from(event.schedule.local_start));
   const start = Temporal.ZonedDateTime.from({
     timeZone: event.timezone,
-    year: localStart.year,
-    month: localStart.month,
-    day: localStart.day,
-    hour: localStart.hour,
-    minute: localStart.minute,
-    second: localStart.second,
-    millisecond: localStart.millisecond,
-    microsecond: localStart.microsecond,
-    nanosecond: localStart.nanosecond,
+    year: startLocal.year,
+    month: startLocal.month,
+    day: startLocal.day,
+    hour: startLocal.hour,
+    minute: startLocal.minute,
+    second: startLocal.second,
+    millisecond: startLocal.millisecond,
+    microsecond: startLocal.microsecond,
+    nanosecond: startLocal.nanosecond,
   });
-  const duration = Temporal.PlainDateTime.from(event.schedule.local_end)
-    .since(Temporal.PlainDateTime.from(event.schedule.local_start));
   const end = start.add(duration);
 
   return {
