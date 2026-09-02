@@ -37,8 +37,8 @@
   --surface-resolved: #111512;
   --border-resolved: #1e2721;
   --text-resolved: #5a6e63;
-  --action-primary-bg: color-mix(in srgb, var(--accent-success) 14%, var(--bg-surface));
-  --action-primary-hover-bg: color-mix(in srgb, var(--accent-success) 22%, var(--bg-surface-hover));
+  --action-primary-bg: color-mix(in srgb, var(--bg-surface) 82%, var(--bg-primary));
+  --action-primary-hover-bg: var(--bg-surface-hover);
   --action-primary-border: var(--border-active);
   --action-resolved-bg: color-mix(in srgb, var(--bg-primary) 70%, var(--bg-surface));
   --action-resolved-border: var(--border-resolved);
@@ -74,14 +74,54 @@
   --surface-resolved: color-mix(in srgb, var(--bg-primary) 72%, var(--bg-surface));
   --border-resolved: color-mix(in srgb, var(--border-subtle) 72%, var(--bg-primary));
   --text-resolved: color-mix(in srgb, var(--text-muted) 72%, var(--bg-primary));
-  --action-primary-bg: color-mix(in srgb, var(--accent-success) 14%, var(--bg-surface));
-  --action-primary-hover-bg: color-mix(in srgb, var(--accent-success) 22%, var(--bg-surface-hover));
+  --action-primary-bg: color-mix(in srgb, var(--bg-surface) 82%, var(--bg-primary));
+  --action-primary-hover-bg: var(--bg-surface-hover);
   --action-primary-border: var(--border-active);
   --action-resolved-bg: color-mix(in srgb, var(--bg-primary) 70%, var(--bg-surface));
   --action-resolved-border: var(--border-resolved);
   --action-resolved-text: var(--text-secondary);
   --ambient-text: rgb(255 255 255 / 38%);
   --font-heading: "Space Grotesk", sans-serif;
+  --font-body: Inter, sans-serif, system-ui;
+  --font-mono: "Fira Code", monospace;
+}
+
+/*
+ * Fun cross-project theme option, intentionally based on Memoix's dark
+ * palette rather than its application structure. This remains a temporary
+ * theme definition until a user-facing theme/settings layer owns selection.
+ */
+[data-theme="memoix"] {
+  --bg-primary: #1a1a1a;
+  --bg-surface: #242424;
+  --bg-surface-hover: #2d2d2d;
+  --border-subtle: #3a3a3a;
+  --border-active: #5a5a5a;
+  --text-main: #e8d5c4;
+  --text-secondary: #b7aaa0;
+  --text-muted: #9b9b9b;
+  --accent-primary: #e8b4a0;
+  --accent-alert: #a88fa8;
+  --accent-success: #8fa88f;
+  --overlay-black-subtle: rgb(0 0 0 / 2%);
+  --overlay-black-soft: rgb(0 0 0 / 3%);
+  --overlay-black-strong: rgb(0 0 0 / 18%);
+  --overlay-black-edge: rgb(0 0 0 / 12%);
+  --overlay-black-shadow: rgb(0 0 0 / 42%);
+  --overlay-black-glow: rgb(0 0 0 / 18%);
+  --overlay-white-soft: rgb(255 255 255 / 2.5%);
+  --overlay-white-complete: rgb(255 255 255 / 3.5%);
+  --surface-resolved: #202020;
+  --border-resolved: #303030;
+  --text-resolved: #77706a;
+  --action-primary-bg: color-mix(in srgb, var(--bg-surface) 82%, var(--bg-primary));
+  --action-primary-hover-bg: var(--bg-surface-hover);
+  --action-primary-border: var(--border-active);
+  --action-resolved-bg: color-mix(in srgb, var(--bg-primary) 70%, var(--bg-surface));
+  --action-resolved-border: var(--border-resolved);
+  --action-resolved-text: var(--text-secondary);
+  --ambient-text: rgb(255 255 255 / 38%);
+  --font-heading: Inter, sans-serif, system-ui;
   --font-body: Inter, sans-serif, system-ui;
   --font-mono: "Fira Code", monospace;
 }
@@ -349,14 +389,20 @@ select {
   align-items: center;
   min-height: 25px;
   padding: 3px 8px;
-  border: 1px solid currentColor;
+  border: 1px solid var(--border-subtle);
   border-radius: 7px;
-  color: var(--accent-primary);
-  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+  color: var(--text-secondary);
+  background: var(--bg-surface);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
+}
+
+.task-card-completed .task-domain {
+  border-color: var(--border-resolved);
+  color: var(--text-resolved);
+  background: var(--surface-resolved);
 }
 
 .task-card-actions {
@@ -393,7 +439,7 @@ select {
 }
 
 .task-complete:hover {
-  border-color: var(--accent-primary);
+  border-color: var(--border-active);
   background: var(--action-primary-hover-bg);
 }
 
@@ -409,7 +455,7 @@ select {
 }
 
 .task-card-completed .task-complete:hover {
-  border-color: var(--accent-primary);
+  border-color: var(--border-active);
   color: var(--text-main);
 }
 
