@@ -65,10 +65,8 @@ function renderAmbientContext(value: AmbientContext): string {
   }
 
   return `
-    <aside class="ambient-context ambient-context-ordinary" aria-label="Current household context">
-      <time class="ambient-date">${escapeHtml(value.date)}</time>
-      <time class="ambient-time">${escapeHtml(value.time)}</time>
-      <span class="ambient-weather">${escapeHtml(value.weather)}</span>
+    <aside class="ambient-context" aria-label="Current household context">
+      <span class="ambient-message">${escapeHtml(value.date)} · ${escapeHtml(value.time)} · ${escapeHtml(value.weather)}</span>
     </aside>
   `;
 }
