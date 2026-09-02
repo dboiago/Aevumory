@@ -1,20 +1,9 @@
 :root {
-  font-family: var(--font-body);
-  color: var(--text-main);
-  background: var(--bg-primary);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #eee;
+  background: #111;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-}
-
-[data-theme="overgrown-dark"] {
-  --bg-primary: #0A0D0B;
-  --bg-surface: #141A16;
-  --border-subtle: #27332B;
-  --text-main: #E2ECE6;
-  --text-muted: #7E9487;
-  --accent-primary: #C29A53;
-  --font-heading: 'Cinzel', 'Trajan Pro', serif, system-ui;
-  --font-body: 'Inter', sans-serif, system-ui;
 }
 
 * {
@@ -25,129 +14,117 @@ html,
 body,
 #app {
   width: 100%;
-  min-height: 100%;
+  height: 100%;
   margin: 0;
 }
 
 body {
   min-height: 100vh;
   overflow: hidden;
-  background: var(--bg-primary);
-}
-
-.ambient-shell {
-  position: relative;
-  min-height: 100vh;
-  padding: clamp(2rem, 5vw, 5rem);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background:
-    radial-gradient(circle at 72% 42%, rgba(194, 154, 83, 0.07), transparent 34rem),
-    var(--bg-primary);
-}
-
-.ambient-context {
-  display: grid;
-  gap: 0.45rem;
-  width: max-content;
-  max-width: 100%;
-}
-
-.date,
-.weather,
-.eyebrow {
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.date {
-  font-size: clamp(0.8rem, 1.1vw, 1rem);
-}
-
-.time {
-  font-family: var(--font-heading);
-  font-size: clamp(3rem, 8vw, 8rem);
-  line-height: 0.95;
-  letter-spacing: 0.02em;
-}
-
-.weather {
-  font-size: clamp(0.75rem, 1vw, 0.9rem);
+  background: #111;
 }
 
 .horizon {
-  align-self: center;
-  width: min(70rem, 100%);
-  min-height: 18rem;
-  display: grid;
-  place-items: center;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.03) 65%, rgba(0, 0, 0, 0.18) 100%),
+    url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=2400&q=88') center / cover no-repeat;
+}
+
+.horizon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 clamp(36px, 6vw, 110px) rgba(0, 0, 0, 0.12);
+}
+
+.horizon-field {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.horizon-event {
+  position: absolute;
+  max-width: min(38vw, 460px);
+  color: rgba(255, 255, 255, var(--opacity));
+  font-size: var(--font-size, 14px);
+  font-weight: var(--weight);
+  letter-spacing: var(--tracking);
+  line-height: 1.08;
+  white-space: nowrap;
   text-align: center;
+  filter: blur(var(--blur));
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.42),
+    0 0 10px rgba(0, 0, 0, 0.18);
+  transform: translate(-50%, -50%) scale(var(--scale));
+  transform-origin: center;
+  transition: none;
+  will-change: transform, filter, color;
 }
 
-.eyebrow {
-  margin: 0;
-  font-size: 0.7rem;
+.horizon-event-title {
+  display: block;
 }
 
-.occurrence-list {
-  display: grid;
-  gap: 1rem;
-  width: min(42rem, 100%);
-}
-
-.occurrence {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 2rem;
-  padding: 1.25rem 1.5rem;
-  border: 1px solid var(--border-subtle);
-  background: rgba(20, 26, 22, 0.72);
-  text-align: left;
-}
-
-.occurrence h2,
-.occurrence p {
-  margin: 0;
-}
-
-.occurrence h2 {
-  font-family: var(--font-heading);
-  font-size: clamp(1.25rem, 2.4vw, 2rem);
+.horizon-event-time {
+  display: block;
+  margin-top: 0.18em;
+  font-size: 0.68em;
   font-weight: 400;
+  letter-spacing: 0.08em;
+  opacity: var(--time-opacity);
+  transform: translateY(var(--time-rise)) scale(var(--time-scale));
+  transform-origin: center top;
 }
 
-.occurrence p,
-.occurrence-location {
-  color: var(--text-muted);
-  font-size: clamp(0.8rem, 1vw, 0.95rem);
+.ambient-metadata {
+  position: absolute;
+  right: clamp(24px, 3vw, 54px);
+  bottom: clamp(22px, 2.4vw, 42px);
+  z-index: 3;
+  display: grid;
+  justify-items: end;
+  gap: 0.2rem;
+  color: rgba(255, 255, 255, 0.38);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.2);
+  transition: opacity 600ms ease;
 }
 
-.occurrence p {
-  margin-top: 0.4rem;
-}
-
-.occurrence-location {
+.ambient-date,
+.ambient-weather {
+  font-size: clamp(10px, 1.15vw, 18px);
+  font-weight: 400;
+  letter-spacing: 0.12em;
   white-space: nowrap;
 }
 
-.empty-state {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: clamp(1rem, 1.5vw, 1.35rem);
+.ambient-time {
+  font-size: clamp(2rem, 4.2vw, 5rem);
   font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: 0.015em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-@media (max-width: 640px) {
-  .occurrence {
-    display: grid;
-    gap: 0.5rem;
+@media (max-width: 700px) {
+  .horizon-event {
+    max-width: 42vw;
+    white-space: normal;
   }
 
-  .occurrence-location {
-    white-space: normal;
+  .ambient-metadata {
+    right: 20px;
+    bottom: 20px;
   }
 }
 
