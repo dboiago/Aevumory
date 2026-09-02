@@ -18,9 +18,11 @@ export class FixtureTaskBoardStore {
     if (action.kind === 'complete') {
       if (task.status === 'completed') {
         task.status = 'pending';
+        task.completedAt = undefined;
         task.completionReward = undefined;
       } else {
         task.status = 'completed';
+        task.completedAt = new Date().toISOString();
         task.completionReward = structuredClone(task.reward);
       }
     } else {
