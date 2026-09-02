@@ -23,18 +23,39 @@ CREATE TABLE household_events (
   description TEXT,
   location TEXT,
   status TEXT NOT NULL CHECK (status IN ('active', 'cancelled')),
-  all_day INTEGER NOT NULL,
   timezone TEXT NOT NULL,
+
+  schedule_kind TEXT NOT NULL CHECK (schedule_kind IN ('timed', 'all_day')),
+  local_start TEXT,
+  local_end TEXT,
+  local_start_date TEXT,
+  local_end_date TEXT,
+  CHECK (
+    (schedule_kind = 'timed'
+      AND local_start IS NOT NULL
+      AND local_end IS NOT NULL
+      AND local_start_date IS NULL
+      AND local_end_date IS NULL)
+    OR
+    (schedule_kind = 'all_day'
+      AND local_start IS NULL
+      AND local_end IS NULL
+      AND local_start_date IS NOT NULL
+      AND local_end_date IS NOT NULL)
+  ),
+
   relevance TEXT NOT NULL CHECK (relevance IN ('ordinary', 'meaningful')),
   significance TEXT NOT NULL CHECK (significance IN ('low', 'normal', 'high')),
   recurrence_json TEXT,
-  external_provider TEXT,
-  external_event_id TEXT,
-  external_account_id TEXT,
+
+  -- Null for local events. For external events this is a normalized,
+  -- provider-scoped identity such as provider:account:event-id.
+  external_identity_key TEXT,
+
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
 
-  UNIQUE (source_id, external_provider, external_event_id, external_account_id)
+  UNIQUE (source_id, external_identity_key)
 );
 
 CREATE TABLE event_occurrences (
@@ -47,9 +68,18 @@ CREATE TABLE event_occurrences (
   timezone TEXT NOT NULL,
   recurrence_instance_key TEXT,
   status TEXT NOT NULL CHECK (status IN ('scheduled', 'cancelled')),
-
-  UNIQUE (event_id, recurrence_instance_key)
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  CHECK (
+    (starts_at IS NOT NULL AND ends_at IS NOT NULL)
+    OR
+    (starts_at IS NULL AND ends_at IS NULL)
+  )
 );
+
+CREATE UNIQUE INDEX event_occurrences_recurrence_key_idx
+  ON event_occurrences (event_id, recurrence_instance_key)
+  WHERE recurrence_instance_key IS NOT NULL;
 
 CREATE INDEX event_occurrences_time_idx
   ON event_occurrences (starts_at, ends_at);
