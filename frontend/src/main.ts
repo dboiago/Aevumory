@@ -7,9 +7,9 @@ type AmbientContext = {
   weather: string;
 };
 
-const app = document.querySelector<HTMLDivElement>('#app');
+const root = document.querySelector<HTMLDivElement>('#app');
 
-if (!app) {
+if (!root) {
   throw new Error('Aevumory application root was not found');
 }
 
@@ -29,7 +29,7 @@ async function render(): Promise<void> {
     ends_at: '2026-09-09T18:00:00-04:00',
   });
 
-  app.innerHTML = `
+  root.innerHTML = `
     <section class="ambient-shell">
       <header class="ambient-context" aria-label="Current household context">
         <time class="date">${context.date}</time>
