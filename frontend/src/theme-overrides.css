@@ -34,9 +34,9 @@
   --text-resolved: #756a64;
   --action-primary-bg: #e5e4e1;
   --action-primary-hover-bg: #ddd8e3;
-  --action-primary-border: #594a40;
+  --action-primary-border: var(--border-active);
   --action-resolved-bg: #ededeb;
-  --action-resolved-border: #594a40;
+  --action-resolved-border: #d4d2ce;
   --action-resolved-text: #756a64;
   --ambient-text: rgb(33 43 37 / 55%);
   --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
@@ -75,9 +75,9 @@
   --text-resolved: #65757c;
   --action-primary-bg: #e0e7ea;
   --action-primary-hover-bg: #d5e2e7;
-  --action-primary-border: #92743a;
+  --action-primary-border: var(--border-active);
   --action-resolved-bg: #ebeff0;
-  --action-resolved-border: #92743a;
+  --action-resolved-border: #cdd6d9;
   --action-resolved-text: #65757c;
   --ambient-text: rgb(52 67 74 / 55%);
   --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
@@ -114,9 +114,9 @@
   --text-resolved: #a18e84;
   --action-primary-bg: #1a2024;
   --action-primary-hover-bg: #222a2f;
-  --action-primary-border: #426b82;
+  --action-primary-border: var(--border-active);
   --action-resolved-bg: #171c20;
-  --action-resolved-border: #b28b78;
+  --action-resolved-border: #282f33;
   --action-resolved-text: #b99f91;
   --ambient-text: rgb(217 199 189 / 38%);
   --font-heading: "Space Grotesk", sans-serif;
