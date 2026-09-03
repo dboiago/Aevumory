@@ -197,13 +197,10 @@ function trajectory(event, p, horizonHours, settlingHours) {
   const distalX = side < 0
     ? .035 + event.phase*.17 + event.bias*.5
     : .965 - event.phase*.17 + event.bias*.5;
-  // Ingress occupies a broader lower field. Events should not appear to enter
-  // from one shared height or immediately crowd the middle.
-  const distalY = clamp(
-    .80 + event.phase * .13 + event.arrivalLane * .35 + event.bias * .25,
-    .79,
-    .94
-  );
+  // Ingress has its own deterministic spatial identity. It is intentionally
+  // independent from trajectory phase so composition does not inherit phase bias.
+  const ingress = weightedIngress(event);
+  const distalY = ingress.y;
 
   // The approach field is deliberately a field rather than a convergence point.
   // Every event reaches a different, but still recognizably central, resting area
