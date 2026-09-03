@@ -5,7 +5,8 @@ type Theme = (typeof themes)[number];
 
 const stored = window.localStorage.getItem('aevumory-prototype-theme');
 const initial = themes.includes(stored as Theme) ? stored as Theme : 'overgrown';
-applyTheme(initial);
+
+document.documentElement.dataset.theme = initial;
 
 const switcher = document.createElement('div');
 switcher.className = 'theme-switcher';
@@ -18,6 +19,7 @@ switcher.innerHTML = `
 `;
 
 document.body.appendChild(switcher);
+
 const select = switcher.querySelector<HTMLSelectElement>('#prototype-theme');
 if (select) {
   select.value = initial;
@@ -27,5 +29,4 @@ if (select) {
 function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme;
   window.localStorage.setItem('aevumory-prototype-theme', theme);
-  if (select) select.value = theme;
 }
