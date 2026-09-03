@@ -5,20 +5,20 @@
  * material; theme colour emerges through typography, accents, and interaction.
  */
 
-/* Vernal: softer light material, stronger violet reading colour, warm accent */
+/* Vernal: lavender-violet identity on restrained warm-neutral material */
 [data-theme="vernal"] {
   --bg-primary: #f1f2ef;
   --bg-surface: #e9e8e6;
   --bg-surface-hover: #e4e0e8;
   --border-subtle: #d0cfcc;
-  --border-active: #8a68ad;
-  --text-primary: #7654a0;
+  --border-active: #8f72b2;
+  --text-primary: #9b7bc0;
   --text-muted: #594a40;
   --text-soft: #756a64;
   --accent-primary: #594a40;
   --accent-alert: #a94738;
   --accent-success: #4d6255;
-  --accent-warning: #8a68ad;
+  --accent-warning: #8f72b2;
   --text-strong: #212b25;
   --overlay-black-subtle: rgb(0 0 0 / 1%);
   --overlay-black-soft: rgb(0 0 0 / 2%);
@@ -28,15 +28,16 @@
   --overlay-black-glow: rgb(0 0 0 / 12%);
   --overlay-white-soft: rgb(255 255 255 / 55%);
   --overlay-white-complete: rgb(255 255 255 / 72%);
-  --surface-resolved: #e4e4e1;
-  --border-resolved: #c4c2be;
-  --text-resolved: #6d625b;
-  --action-primary-bg: #e7e4e0;
-  --action-primary-hover-bg: #ddd8d4;
+  /* Light-state hierarchy: background -> active card -> completed card */
+  --surface-resolved: #f0f0ed;
+  --border-resolved: #d4d2ce;
+  --text-resolved: #756a64;
+  --action-primary-bg: #e5e4e1;
+  --action-primary-hover-bg: #ddd8e3;
   --action-primary-border: #594a40;
-  --action-resolved-bg: #e6e6e2;
-  --action-resolved-border: #c4c2be;
-  --action-resolved-text: #6d625b;
+  --action-resolved-bg: #ededeb;
+  --action-resolved-border: #d4d2ce;
+  --action-resolved-text: #756a64;
   --ambient-text: rgb(33 43 37 / 55%);
   --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
   --font-body: Inter, sans-serif, system-ui;
@@ -45,21 +46,21 @@
   --radius-badge: 999px;
 }
 
-/* Maritime: cooler blue-grey material, with a readable gold derived from the anchor */
+/* Maritime: blue-grey rather than sea-green, with a darkened gold accent */
 [data-theme="maritime"] {
-  --bg-primary: #e8edef;
-  --bg-surface: #e1e7e9;
-  --bg-surface-hover: #d9e4e7;
-  --border-subtle: #c9d0d2;
-  --border-active: #5f929b;
-  --text-primary: #4e858f;
-  --text-muted: #5d6261;
-  --text-soft: #737c7d;
-  --accent-primary: #92773b;
+  --bg-primary: #edf2f4;
+  --bg-surface: #e3eaed;
+  --bg-surface-hover: #dbe7eb;
+  --border-subtle: #c8d2d6;
+  --border-active: #6698b0;
+  --text-primary: #6195ad;
+  --text-muted: #596c75;
+  --text-soft: #71818a;
+  --accent-primary: #92743a;
   --accent-alert: #b95f4a;
-  --accent-success: #4e7e84;
-  --accent-warning: #92773b;
-  --text-strong: #343b3c;
+  --accent-success: #4d7485;
+  --accent-warning: #92743a;
+  --text-strong: #34434a;
   --overlay-black-subtle: rgb(0 0 0 / 1%);
   --overlay-black-soft: rgb(0 0 0 / 2%);
   --overlay-black-strong: rgb(0 0 0 / 8%);
@@ -68,16 +69,17 @@
   --overlay-black-glow: rgb(0 0 0 / 12%);
   --overlay-white-soft: rgb(255 255 255 / 55%);
   --overlay-white-complete: rgb(255 255 255 / 72%);
-  --surface-resolved: #dde2e3;
-  --border-resolved: #bec6c8;
-  --text-resolved: #667071;
-  --action-primary-bg: #e0e5e6;
-  --action-primary-hover-bg: #d5dfe1;
-  --action-primary-border: #92773b;
-  --action-resolved-bg: #e0e4e5;
-  --action-resolved-border: #bec6c8;
-  --action-resolved-text: #667071;
-  --ambient-text: rgb(52 59 60 / 55%);
+  /* Light-state hierarchy: background -> active card -> completed card */
+  --surface-resolved: #e9eef0;
+  --border-resolved: #cdd6d9;
+  --text-resolved: #65757c;
+  --action-primary-bg: #e0e7ea;
+  --action-primary-hover-bg: #d5e2e7;
+  --action-primary-border: #92743a;
+  --action-resolved-bg: #ebeff0;
+  --action-resolved-border: #cdd6d9;
+  --action-resolved-text: #65757c;
+  --ambient-text: rgb(52 67 74 / 55%);
   --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
   --font-body: Inter, sans-serif, system-ui;
   --font-mono: "Fira Code", monospace;
@@ -85,20 +87,20 @@
   --radius-badge: 999px;
 }
 
-/* Nebula: cooler charcoal material keeps the warm typography from blending into the background */
+/* Nebula: Pillars-of-Creation direction, with warm dusty typography and a deep blue accent */
 [data-theme="nebula"],
 [data-theme="solar-flare"] {
-  --bg-primary: #111518;
-  --bg-surface: #1a1d1f;
-  --bg-surface-hover: #22272a;
-  --border-subtle: #30363a;
-  --border-active: #76543e;
-  --text-primary: #a88f80;
-  --text-muted: #e4d9d3;
-  --text-soft: #bca69b;
-  --accent-primary: #e67e22;
-  --accent-alert: #d35400;
-  --accent-success: #65866e;
+  --bg-primary: #11161a;
+  --bg-surface: #1a2024;
+  --bg-surface-hover: #222a2f;
+  --border-subtle: #30383d;
+  --border-active: #526f82;
+  --text-primary: #b28b78;
+  --text-muted: #d9c7bd;
+  --text-soft: #b99f91;
+  --accent-primary: #426b82;
+  --accent-alert: #b65f48;
+  --accent-success: #668b78;
   --overlay-black-subtle: rgb(0 0 0 / 2%);
   --overlay-black-soft: rgb(0 0 0 / 3%);
   --overlay-black-strong: rgb(0 0 0 / 18%);
@@ -107,19 +109,30 @@
   --overlay-black-glow: rgb(0 0 0 / 18%);
   --overlay-white-soft: rgb(255 255 255 / 2.5%);
   --overlay-white-complete: rgb(255 255 255 / 3.5%);
-  --surface-resolved: #171a1c;
-  --border-resolved: #282d30;
-  --text-resolved: #9c8d84;
-  --action-primary-bg: #1a1d1f;
-  --action-primary-hover-bg: #22272a;
-  --action-primary-border: #76543e;
-  --action-resolved-bg: #171a1c;
-  --action-resolved-border: #282d30;
-  --action-resolved-text: #bca69b;
-  --ambient-text: rgb(245 236 232 / 38%);
+  --surface-resolved: #171c20;
+  --border-resolved: #282f33;
+  --text-resolved: #a18e84;
+  --action-primary-bg: #1a2024;
+  --action-primary-hover-bg: #222a2f;
+  --action-primary-border: #426b82;
+  --action-resolved-bg: #171c20;
+  --action-resolved-border: #282f33;
+  --action-resolved-text: #b99f91;
+  --ambient-text: rgb(217 199 189 / 38%);
   --font-heading: "Space Grotesk", sans-serif;
   --font-body: Inter, sans-serif, system-ui;
   --font-mono: "Fira Code", monospace;
+}
+
+/*
+ * The board itself does not change colour on hover. Hover belongs to the card
+ * and to controls only, preventing the containing frame from lighting up.
+ */
+[data-theme="vernal"] .task-card:hover,
+[data-theme="maritime"] .task-card:hover,
+[data-theme="nebula"] .task-card:hover,
+[data-theme="solar-flare"] .task-card:hover {
+  background: var(--bg-surface-hover);
 }
 
 .theme-switcher {
