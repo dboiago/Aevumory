@@ -1,0 +1,96 @@
+/* Temporary theme palette corrections for the frontend prototype
+ *
+ * These five colours are palette anchors, not a requirement that every anchor
+ * map one-to-one to a generic UI semantic role. Keep the canvas quiet and let
+ * the theme colours primarily live in typography and restrained accents.
+ */
+
+[data-theme="vernal"] {
+  --bg-primary: #f8f9f7;
+  --bg-surface: #c7b5c0;
+  --bg-surface-hover: #b8a3b0;
+  --border-subtle: #594a40;
+  --border-active: #9a77bd;
+  --text-primary: #9a77bd;
+  --text-muted: #c7b5c0;
+  --text-soft: #212b25;
+  --accent-primary: #594a40;
+  --accent-alert: #b84a39;
+  --accent-success: #212b25;
+  --accent-warning: #9a77bd;
+  --text-strong: #212b25;
+  --surface-resolved: color-mix(in srgb, #f8f9f7 58%, #c7b5c0);
+  --border-resolved: color-mix(in srgb, #594a40 58%, #f8f9f7);
+  --text-resolved: #212b25;
+  --action-primary-bg: color-mix(in srgb, #c7b5c0 86%, #f8f9f7);
+  --action-primary-hover-bg: #b8a3b0;
+  --action-primary-border: #594a40;
+  --action-resolved-bg: color-mix(in srgb, #f8f9f7 72%, #c7b5c0);
+  --action-resolved-border: var(--border-resolved);
+  --action-resolved-text: #212b25;
+  --ambient-text: rgb(33 43 37 / 55%);
+}
+
+[data-theme="maritime"] {
+  --bg-primary: #ebeded;
+  --bg-surface: #696761;
+  --bg-surface-hover: #5b5a55;
+  --border-subtle: #696761;
+  --border-active: #6d9da1;
+  --text-primary: #6d9da1;
+  --text-muted: #a9baba;
+  --text-soft: #696761;
+  --accent-primary: #f7de97;
+  --accent-alert: #c86d51;
+  --accent-success: #6d9da1;
+  --accent-warning: #f7de97;
+  --text-strong: #696761;
+  --surface-resolved: color-mix(in srgb, #ebeded 58%, #696761);
+  --border-resolved: color-mix(in srgb, #696761 58%, #ebeded);
+  --text-resolved: #696761;
+  --action-primary-bg: color-mix(in srgb, #696761 86%, #ebeded);
+  --action-primary-hover-bg: #5b5a55;
+  --action-primary-border: #6d9da1;
+  --action-resolved-bg: color-mix(in srgb, #ebeded 72%, #696761);
+  --action-resolved-border: var(--border-resolved);
+  --action-resolved-text: #696761;
+  --ambient-text: rgb(105 103 97 / 55%);
+}
+
+.theme-switcher {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-badge, 999px);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 6px 24px var(--overlay-black-shadow);
+}
+
+.theme-switcher label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.theme-switcher select {
+  min-width: 120px;
+  padding: 4px 22px 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.theme-switcher select:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
