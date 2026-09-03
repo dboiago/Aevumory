@@ -102,7 +102,7 @@
   --accent-alert: #b65f48;
   --accent-success: #668b78;
   --overlay-black-subtle: rgb(0 0 0 / 2%);
-  --overlay-black-soft: rgb(255 255 255 / 3%);
+  --overlay-black-soft: rgb(0 0 0 / 3%);
   --overlay-black-strong: rgb(0 0 0 / 18%);
   --overlay-black-edge: rgb(0 0 0 / 12%);
   --overlay-black-shadow: rgb(0 0 0 / 42%);
@@ -116,7 +116,7 @@
   --action-primary-hover-bg: #222a2f;
   --action-primary-border: var(--border-active);
   --action-resolved-bg: #171c20;
-  --action-resolved-border: #282f33;
+  --action-resolved-border: var(--text-muted);
   --action-resolved-text: #b99f91;
   --ambient-text: rgb(217 199 189 / 38%);
   --font-heading: "Space Grotesk", sans-serif;
