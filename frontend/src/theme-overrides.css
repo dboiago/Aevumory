@@ -114,7 +114,7 @@
   --text-resolved: #a18e84;
   --action-primary-bg: #1a2024;
   --action-primary-hover-bg: #222a2f;
-  --action-primary-border: var(--text-muted);
+  --action-primary-border: var(--border-active);
   --action-resolved-bg: #171c20;
   --action-resolved-border: #282f33;
   --action-resolved-text: #b99f91;
