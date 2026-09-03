@@ -48,7 +48,7 @@
 
 /* Maritime: blue-grey rather than sea-green, with a darkened gold accent */
 [data-theme="maritime"] {
-  --bg-primary: #eff1f1;
+  --bg-primary: #edf2f4;
   --bg-surface: #e3eaed;
   --bg-surface-hover: #dbe7eb;
   --border-subtle: #c8d2d6;
