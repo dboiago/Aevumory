@@ -36,7 +36,7 @@
   --action-primary-hover-bg: #ddd8e3;
   --action-primary-border: var(--border-active);
   --action-resolved-bg: #ededeb;
-  --action-resolved-border: #d4d2ce;
+  --action-resolved-border: var(--text-muted);
   --action-resolved-text: #756a64;
   --ambient-text: rgb(33 43 37 / 55%);
   --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
@@ -77,7 +77,7 @@
   --action-primary-hover-bg: #dce4e7;
   --action-primary-border: var(--border-active);
   --action-resolved-bg: #edf0f0;
-  --action-resolved-border: #d0d5d6;
+  --action-resolved-border: var(--text-muted);
   --action-resolved-text: #65757c;
   --ambient-text: rgb(52 67 74 / 55%);
   --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
@@ -102,7 +102,7 @@
   --accent-alert: #b65f48;
   --accent-success: #668b78;
   --overlay-black-subtle: rgb(0 0 0 / 2%);
-  --overlay-black-soft: rgb(0 0 0 / 3%);
+  --overlay-black-soft: rgb(255 255 255 / 3%);
   --overlay-black-strong: rgb(0 0 0 / 18%);
   --overlay-black-edge: rgb(0 0 0 / 12%);
   --overlay-black-shadow: rgb(0 0 0 / 42%);
