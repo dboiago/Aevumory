@@ -14,7 +14,7 @@
   --border-active: #8f72b2;
   --text-primary: #9b7bc0;
   --text-muted: #594a40;
-  --text-soft: #756a64;
+  --text-soft: #6f6560;
   --accent-primary: #594a40;
   --accent-alert: #a94738;
   --accent-success: #4d6255;
@@ -28,7 +28,6 @@
   --overlay-black-glow: rgb(0 0 0 / 12%);
   --overlay-white-soft: rgb(255 255 255 / 55%);
   --overlay-white-complete: rgb(255 255 255 / 72%);
-  /* Light-state hierarchy: background -> active card -> completed card */
   --surface-resolved: #f0f0ed;
   --border-resolved: #d4d2ce;
   --text-resolved: #756a64;
@@ -54,8 +53,8 @@
   --border-subtle: #cdd3d4;
   --border-active: #6698b0;
   --text-primary: #6195ad;
-  --text-muted: #596c75;
-  --text-soft: #71818a;
+  --text-muted: #586b74;
+  --text-soft: #687982;
   --accent-primary: #92743a;
   --accent-alert: #b95f4a;
   --accent-success: #4d7485;
@@ -69,7 +68,6 @@
   --overlay-black-glow: rgb(0 0 0 / 12%);
   --overlay-white-soft: rgb(255 255 255 / 55%);
   --overlay-white-complete: rgb(255 255 255 / 72%);
-  /* Light-state hierarchy: background -> active card -> completed card */
   --surface-resolved: #ebeeee;
   --border-resolved: #d0d5d6;
   --text-resolved: #65757c;
@@ -87,13 +85,13 @@
   --radius-badge: 999px;
 }
 
-/* Nebula: Pillars-of-Creation direction, with warm dusty typography and a deep blue accent */
+/* Nebula: Pillars-of-Creation direction, with darker neutral space material */
 [data-theme="nebula"],
 [data-theme="solar-flare"] {
-  --bg-primary: #11161a;
-  --bg-surface: #1a2024;
-  --bg-surface-hover: #222a2f;
-  --border-subtle: #30383d;
+  --bg-primary: #0d1114;
+  --bg-surface: #171c20;
+  --bg-surface-hover: #20272c;
+  --border-subtle: #2d353a;
   --border-active: #664838;
   --text-primary: #b28b78;
   --text-muted: #d9c7bd;
@@ -109,17 +107,17 @@
   --overlay-black-glow: rgb(0 0 0 / 18%);
   --overlay-white-soft: rgb(255 255 255 / 2.5%);
   --overlay-white-complete: rgb(255 255 255 / 3.5%);
-  --surface-resolved: #171c20;
-  --border-resolved: #282f33;
+  --surface-resolved: #14191c;
+  --border-resolved: #252c30;
   --text-resolved: #a18e84;
-  --action-primary-bg: #1a2024;
-  --action-primary-hover-bg: #222a2f;
+  --action-primary-bg: #171c20;
+  --action-primary-hover-bg: #20272c;
   --action-primary-border: var(--border-active);
-  --action-resolved-bg: #171c20;
-  --action-resolved-border: #282f33;
+  --action-resolved-bg: #14191c;
+  --action-resolved-border: #252c30;
   --action-resolved-text: #b99f91;
   --ambient-text: rgb(217 199 189 / 38%);
-  --font-heading: "Space Grotesk", sans-serif;
+  --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
   --font-body: Inter, sans-serif, system-ui;
   --font-mono: "Fira Code", monospace;
 }
