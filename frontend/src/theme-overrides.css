@@ -1,60 +1,150 @@
 /* Temporary theme palette corrections for the frontend prototype
  *
- * These five colours are palette anchors, not a requirement that every anchor
- * map one-to-one to a generic UI semantic role. Keep the canvas quiet and let
- * the theme colours primarily live in typography and restrained accents.
+ * Palette anchors describe each theme's neighbourhood rather than mapping
+ * one-to-one to generic UI roles. Resting surfaces stay close to neutral
+ * material; theme colour emerges through typography, accents, and interaction.
  */
 
+/*
+ * Light-theme material
+ *
+ * Keep the canvas and resting cards close to white. The small temperature
+ * shift is intentional, but should read as material rather than a coloured UI.
+ */
 [data-theme="vernal"] {
   --bg-primary: #f8f9f7;
-  --bg-surface: #c7b5c0;
-  --bg-surface-hover: #b8a3b0;
-  --border-subtle: #594a40;
+  --bg-surface: #f0efed;
+  --bg-surface-hover: #e8e4ea;
+  --border-subtle: #d5d2cf;
   --border-active: #9a77bd;
   --text-primary: #9a77bd;
-  --text-muted: #c7b5c0;
-  --text-soft: #212b25;
+  --text-muted: #594a40;
+  --text-soft: #756a64;
   --accent-primary: #594a40;
   --accent-alert: #b84a39;
-  --accent-success: #212b25;
+  --accent-success: #4d6255;
   --accent-warning: #9a77bd;
   --text-strong: #212b25;
-  --surface-resolved: color-mix(in srgb, #f8f9f7 58%, #c7b5c0);
-  --border-resolved: color-mix(in srgb, #594a40 58%, #f8f9f7);
-  --text-resolved: #212b25;
-  --action-primary-bg: color-mix(in srgb, #c7b5c0 86%, #f8f9f7);
-  --action-primary-hover-bg: #b8a3b0;
-  --action-primary-border: #594a40;
-  --action-resolved-bg: color-mix(in srgb, #f8f9f7 72%, #c7b5c0);
-  --action-resolved-border: var(--border-resolved);
-  --action-resolved-text: #212b25;
+  --overlay-black-subtle: rgb(0 0 0 / 1%);
+  --overlay-black-soft: rgb(0 0 0 / 2%);
+  --overlay-black-strong: rgb(0 0 0 / 8%);
+  --overlay-black-edge: rgb(0 0 0 / 7%);
+  --overlay-black-shadow: rgb(0 0 0 / 22%);
+  --overlay-black-glow: rgb(0 0 0 / 12%);
+  --overlay-white-soft: rgb(255 255 255 / 55%);
+  --overlay-white-complete: rgb(255 255 255 / 72%);
+  --surface-resolved: #ecebea;
+  --border-resolved: #c9c5c1;
+  --text-resolved: #6d625b;
+  --action-primary-bg: #f0efed;
+  --action-primary-hover-bg: #e8e4ea;
+  --action-primary-border: #9a77bd;
+  --action-resolved-bg: #f2f2ef;
+  --action-resolved-border: #c9c5c1;
+  --action-resolved-text: #6d625b;
   --ambient-text: rgb(33 43 37 / 55%);
+  --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
+  --font-body: Inter, sans-serif, system-ui;
+  --font-mono: "Fira Code", monospace;
+  --radius-card: 8px;
+  --radius-badge: 999px;
 }
 
 [data-theme="maritime"] {
   --bg-primary: #ebeded;
-  --bg-surface: #696761;
-  --bg-surface-hover: #5b5a55;
-  --border-subtle: #696761;
+  --bg-surface: #f0f2f1;
+  --bg-surface-hover: #e5ecec;
+  --border-subtle: #d0d4d3;
   --border-active: #6d9da1;
   --text-primary: #6d9da1;
-  --text-muted: #a9baba;
-  --text-soft: #696761;
+  --text-muted: #696761;
+  --text-soft: #7c807b;
   --accent-primary: #f7de97;
   --accent-alert: #c86d51;
-  --accent-success: #6d9da1;
+  --accent-success: #4f777a;
   --accent-warning: #f7de97;
-  --text-strong: #696761;
-  --surface-resolved: color-mix(in srgb, #ebeded 58%, #696761);
-  --border-resolved: color-mix(in srgb, #696761 58%, #ebeded);
+  --text-strong: #343330;
+  --overlay-black-subtle: rgb(0 0 0 / 1%);
+  --overlay-black-soft: rgb(0 0 0 / 2%);
+  --overlay-black-strong: rgb(0 0 0 / 8%);
+  --overlay-black-edge: rgb(0 0 0 / 7%);
+  --overlay-black-shadow: rgb(0 0 0 / 22%);
+  --overlay-black-glow: rgb(0 0 0 / 12%);
+  --overlay-white-soft: rgb(255 255 255 / 55%);
+  --overlay-white-complete: rgb(255 255 255 / 72%);
+  --surface-resolved: #e7e9e8;
+  --border-resolved: #c4c9c8;
   --text-resolved: #696761;
-  --action-primary-bg: color-mix(in srgb, #696761 86%, #ebeded);
-  --action-primary-hover-bg: #5b5a55;
+  --action-primary-bg: #f0f2f1;
+  --action-primary-hover-bg: #e5ecec;
   --action-primary-border: #6d9da1;
-  --action-resolved-bg: color-mix(in srgb, #ebeded 72%, #696761);
-  --action-resolved-border: var(--border-resolved);
+  --action-resolved-bg: #edefed;
+  --action-resolved-border: #c4c9c8;
   --action-resolved-text: #696761;
-  --ambient-text: rgb(105 103 97 / 55%);
+  --ambient-text: rgb(52 51 48 / 55%);
+  --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
+  --font-body: Inter, sans-serif, system-ui;
+  --font-mono: "Fira Code", monospace;
+  --radius-card: 8px;
+  --radius-badge: 999px;
+}
+
+/*
+ * Nebula keeps its warm charcoal material restrained. The orange is an accent,
+ * not the reading colour; typography carries the dusty, warm character.
+ */
+[data-theme="nebula"],
+[data-theme="solar-flare"] {
+  --bg-primary: #120f0d;
+  --bg-surface: #1b1816;
+  --bg-surface-hover: #25201d;
+  --border-subtle: #302a26;
+  --border-active: #76543e;
+  --text-primary: #a88f80;
+  --text-muted: #e4d9d3;
+  --text-soft: #bca69b;
+  --accent-primary: #e67e22;
+  --accent-alert: #d35400;
+  --accent-success: #65866e;
+  --overlay-black-subtle: rgb(0 0 0 / 2%);
+  --overlay-black-soft: rgb(0 0 0 / 3%);
+  --overlay-black-strong: rgb(0 0 0 / 18%);
+  --overlay-black-edge: rgb(0 0 0 / 12%);
+  --overlay-black-shadow: rgb(0 0 0 / 42%);
+  --overlay-black-glow: rgb(0 0 0 / 18%);
+  --overlay-white-soft: rgb(255 255 255 / 2.5%);
+  --overlay-white-complete: rgb(255 255 255 / 3.5%);
+  --surface-resolved: #171412;
+  --border-resolved: #28231f;
+  --text-resolved: #9c8d84;
+  --action-primary-bg: #1b1816;
+  --action-primary-hover-bg: #25201d;
+  --action-primary-border: #76543e;
+  --action-resolved-bg: #171412;
+  --action-resolved-border: #28231f;
+  --action-resolved-text: #bca69b;
+  --ambient-text: rgb(245 236 232 / 38%);
+  --font-heading: "Space Grotesk", sans-serif;
+  --font-body: Inter, sans-serif, system-ui;
+  --font-mono: "Fira Code", monospace;
+}
+
+/*
+ * Interaction treatment: resting cards are quiet, while hover reveals a
+ * restrained theme temperature and the existing accent border
+ */
+[data-theme="vernal"] .task-card:hover,
+[data-theme="vernal"] .task-column:hover,
+[data-theme="maritime"] .task-card:hover,
+[data-theme="maritime"] .task-column:hover {
+  background: var(--bg-surface-hover);
+}
+
+[data-theme="nebula"] .task-card:hover,
+[data-theme="nebula"] .task-column:hover,
+[data-theme="solar-flare"] .task-card:hover,
+[data-theme="solar-flare"] .task-column:hover {
+  background: var(--bg-surface-hover);
 }
 
 .theme-switcher {
