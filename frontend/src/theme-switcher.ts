@@ -1,5 +1,3 @@
-import './theme-overrides.css';
-
 const themes = ['overgrown', 'nebula', 'vernal', 'maritime', 'memoix'] as const;
 type Theme = (typeof themes)[number];
 
