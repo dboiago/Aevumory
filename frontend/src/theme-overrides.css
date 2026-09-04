@@ -7,9 +7,9 @@
 
 /* Vernal: lavender-violet identity on restrained warm-neutral material */
 [data-theme="vernal"] {
-  --bg-primary: #f0f2f1;
-  --bg-surface: #e6e9e7;
-  --bg-surface-hover: #dedcdc;
+  --bg-primary: #f2f3f4;
+  --bg-surface: #e9eaec;
+  --bg-surface-hover: #e2e3e6;
   --border-subtle: #d3cbdc;
   --border-active: #9b7bc0;
   --text-primary: #9b7bc0;
@@ -28,11 +28,11 @@
   --overlay-black-glow: rgb(0 0 0 / 12%);
   --overlay-white-soft: rgb(255 255 255 / 55%);
   --overlay-white-complete: rgb(255 255 255 / 72%);
-  --surface-resolved: #ededeb;
+  --surface-resolved: #e8e7e4;
   --border-resolved: #d4d2ce;
   --text-resolved: #756a64;
-  --action-primary-bg: #eae7e4;
-  --action-primary-hover-bg: #dfdbe3;
+  --action-primary-bg: #e0e1e2;
+  --action-primary-hover-bg: #d7d5dd;
   --action-primary-border: var(--text-muted);
   --action-resolved-bg: #ededeb;
   --action-resolved-border: #d4d2ce;
