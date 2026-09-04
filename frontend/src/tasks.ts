@@ -13,6 +13,7 @@ export type TaskReward = {
 export type HouseholdParticipant = {
   id: string;
   name: string;
+  avatarUrl?: string;
 };
 
 export type TaskBoardItem = {
