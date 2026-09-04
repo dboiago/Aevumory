@@ -184,7 +184,7 @@ function renderParticipantAvatar(participant: HouseholdParticipant): string {
     return `<img src="${escapeHtml(participant.avatarUrl)}" alt="">`;
   }
 
-  return escapeHtml(participant.name.split(/\\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase());
+  return escapeHtml(participant.name.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase());
 }
 
 function renderParticipantProfileScaffold(target: HTMLDivElement, participant: HouseholdParticipant): void {
