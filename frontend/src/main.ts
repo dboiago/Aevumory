@@ -1,6 +1,6 @@
 import './styles.css';
 import { horizonPosition, horizonVisual, type HorizonEvent } from './horizon';
-import { FixtureTaskBoardQuery } from './tasks';
+import { FixtureTaskBoardQuery, type HouseholdParticipant } from './tasks';
 import { FixtureTaskBoardStore } from './task-board';
 import { FixtureTemporalQuery, type TemporalOccurrence } from './temporal';
 
@@ -32,6 +32,16 @@ async function render(target: HTMLDivElement): Promise<void> {
     return;
   }
 
+  const participantMatch = window.location.hash.match(/^#participant\/(.+)$/);
+  if (participantMatch) {
+    const state = await taskBoardQuery.getBoard();
+    const participant = state.participants.find((item) => item.id === decodeURIComponent(participantMatch[1]));
+    if (participant) {
+      renderParticipantProfileScaffold(target, participant);
+      return;
+    }
+  }
+
   const occurrences = await temporalQuery.listOccurrencesInWindow({
     starts_at: now,
     ends_at: '2026-09-09T18:00:00-04:00',
@@ -51,7 +61,7 @@ function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): 
   const state = store.getState();
   const todaysTasks = state.tasks.filter(isTaskForToday);
   const participantSections = state.participants
-    .map((participant) => renderParticipantColumn(participant.id, participant.name, todaysTasks))
+    .map((participant) => renderParticipantColumn(participant, todaysTasks))
     .join('');
   const householdTasks = todaysTasks.filter((task) => task.assignment === 'household');
 
@@ -113,6 +123,13 @@ function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): 
     });
   });
 
+  target.querySelectorAll<HTMLButtonElement>('[data-participant-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const participantId = button.dataset.participantId;
+      if (participantId) window.location.hash = `#participant/${encodeURIComponent(participantId)}`;
+    });
+  });
+
   target.querySelectorAll<HTMLButtonElement>('[data-action="complete"]').forEach((button) => {
     button.addEventListener('click', () => {
       store.apply({ kind: 'complete', taskId: button.dataset.taskId ?? '' });
@@ -126,26 +143,33 @@ function isTaskForToday(task: ReturnType<FixtureTaskBoardStore['getState']>['tas
 }
 
 function renderParticipantColumn(
-  participantId: string,
-  participantName: string,
+  participant: HouseholdParticipant,
   tasks: ReturnType<FixtureTaskBoardStore['getState']>['tasks'],
 ): string {
   const participantTasks = tasks.filter(
-    (task) => task.assignment === 'individual' && task.responsibleUserId === participantId,
+    (task) => task.assignment === 'individual' && task.responsibleUserId === participant.id,
   );
 
-  return renderTaskColumn(participantName, participantId, participantTasks);
+  return renderTaskColumn(participant.name, participant.id, participantTasks, participant);
 }
 
 function renderTaskColumn(
   heading: string,
   participantId: string | undefined,
   tasks: ReturnType<FixtureTaskBoardStore['getState']>['tasks'],
+  participant?: HouseholdParticipant,
 ): string {
+  const identity = participant
+    ? `<button type="button" class="task-participant-identity" data-participant-id="${escapeHtml(participant.id)}" aria-label="Open ${escapeHtml(participant.name)}'s profile">
+        <span class="task-participant-avatar" aria-hidden="true">${renderParticipantAvatar(participant)}</span>
+        <span class="task-participant-name">${escapeHtml(participant.name)}</span>
+      </button>`
+    : `<h2>${escapeHtml(heading)}</h2>`;
+
   return `
     <section class="task-column" data-drop-target="${participantId ?? ''}">
       <div class="task-column-heading">
-        <h2>${escapeHtml(heading)}</h2>
+        ${identity}
         <span>${tasks.filter((task) => task.status === 'pending').length}</span>
       </div>
       <div class="task-list">
@@ -153,6 +177,32 @@ function renderTaskColumn(
       </div>
     </section>
   `;
+}
+
+function renderParticipantAvatar(participant: HouseholdParticipant): string {
+  if (participant.avatarUrl) {
+    return `<img src="${escapeHtml(participant.avatarUrl)}" alt="">`;
+  }
+
+  return escapeHtml(participant.name.split(/\\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase());
+}
+
+function renderParticipantProfileScaffold(target: HTMLDivElement, participant: HouseholdParticipant): void {
+  target.innerHTML = `
+    <main class="task-board participant-profile-scaffold" aria-label="${escapeHtml(participant.name)} profile">
+      <header class="task-board-header">
+        <button type="button" class="participant-profile-back" data-profile-back>Tasks</button>
+        <div class="participant-profile-heading">
+          <span class="task-participant-avatar participant-profile-avatar" aria-hidden="true">${renderParticipantAvatar(participant)}</span>
+          <h1>${escapeHtml(participant.name)}</h1>
+        </div>
+      </header>
+    </main>
+  `;
+
+  target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => {
+    window.location.hash = '#tasks';
+  });
 }
 
 function renderTaskCard(
