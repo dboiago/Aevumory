@@ -7,14 +7,14 @@
 
 /* Vernal: lavender-violet identity on restrained warm-neutral material */
 [data-theme="vernal"] {
-  --bg-primary: #f1f2ef;
-  --bg-surface: #e9e8e6;
-  --bg-surface-hover: #e4e0e8;
-  --border-subtle: #d0cfcc;
-  --border-active: #8f72b2;
+  --bg-primary: #f0f2f1;
+  --bg-surface: #e6e9e7;
+  --bg-surface-hover: #dedcdc;
+  --border-subtle: #d3cbdc;
+  --border-active: #9b7bc0;
   --text-primary: #9b7bc0;
-  --text-muted: #9f8d9a;
-  --text-soft: #6f6560;
+  --text-muted: #837b93;
+  --text-soft: #636168;
   --accent-primary: #594a40;
   --accent-alert: #a94738;
   --accent-success: #4d6255;
@@ -28,15 +28,15 @@
   --overlay-black-glow: rgb(0 0 0 / 12%);
   --overlay-white-soft: rgb(255 255 255 / 55%);
   --overlay-white-complete: rgb(255 255 255 / 72%);
-  --surface-resolved: #f0f0ed;
+  --surface-resolved: #ededeb;
   --border-resolved: #d4d2ce;
   --text-resolved: #756a64;
-  --action-primary-bg: #e5e4e1;
-  --action-primary-hover-bg: #ddd8e3;
+  --action-primary-bg: #eae7e4;
+  --action-primary-hover-bg: #dfdbe3;
   --action-primary-border: var(--text-muted);
   --action-resolved-bg: #ededeb;
   --action-resolved-border: #d4d2ce;
-  --action-resolved-text: #756a64;
+  --action-resolved-text: #594a40;
   --ambient-text: rgb(33 43 37 / 55%);
   --font-heading: Cinzel, "Trajan Pro", serif, system-ui;
   --font-body: Inter, sans-serif, system-ui;
