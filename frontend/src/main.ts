@@ -8,6 +8,8 @@ type AmbientContext =
   | { kind: 'ordinary'; date: string; time: string; weather: string }
   | { kind: 'transient'; message: string };
 
+type TaskListScrollPositions = Record<string, number>;
+
 const root = document.querySelector<HTMLDivElement>('#app');
 if (!root) throw new Error('Aevumory application root was not found');
 
@@ -57,7 +59,11 @@ async function render(target: HTMLDivElement): Promise<void> {
   `;
 }
 
-function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): void {
+function renderTaskBoard(
+  target: HTMLDivElement,
+  store: FixtureTaskBoardStore,
+  scrollPositions: TaskListScrollPositions = {},
+): void {
   const state = store.getState();
   const todaysTasks = state.tasks.filter(isTaskForToday);
   const participantSections = state.participants
@@ -79,6 +85,8 @@ function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): 
       </section>
     </main>
   `;
+
+  restoreTaskListScrollPositions(target, scrollPositions);
 
   target.querySelectorAll<HTMLElement>('[data-task-id]').forEach((card) => {
     card.addEventListener('dragstart', (event) => {
@@ -114,12 +122,13 @@ function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): 
       const taskId = event.dataTransfer?.getData('text/task-id');
       if (!taskId) return;
 
+      const scrollPositions = captureTaskListScrollPositions(target);
       store.apply({
         kind: 'assign',
         taskId,
         responsibleUserId: column.dataset.dropTarget || undefined,
       });
-      renderTaskBoard(target, store);
+      renderTaskBoard(target, store, scrollPositions);
     });
   });
 
@@ -132,9 +141,26 @@ function renderTaskBoard(target: HTMLDivElement, store: FixtureTaskBoardStore): 
 
   target.querySelectorAll<HTMLButtonElement>('[data-action="complete"]').forEach((button) => {
     button.addEventListener('click', () => {
+      const scrollPositions = captureTaskListScrollPositions(target);
       store.apply({ kind: 'complete', taskId: button.dataset.taskId ?? '' });
-      renderTaskBoard(target, store);
+      renderTaskBoard(target, store, scrollPositions);
     });
+  });
+}
+
+function captureTaskListScrollPositions(target: HTMLDivElement): TaskListScrollPositions {
+  const positions: TaskListScrollPositions = {};
+  target.querySelectorAll<HTMLElement>('[data-task-list]').forEach((list) => {
+    positions[list.dataset.taskList ?? ''] = list.scrollTop;
+  });
+  return positions;
+}
+
+function restoreTaskListScrollPositions(target: HTMLDivElement, positions: TaskListScrollPositions): void {
+  target.querySelectorAll<HTMLElement>('[data-task-list]').forEach((list) => {
+    const key = list.dataset.taskList ?? '';
+    const position = positions[key];
+    if (position !== undefined) list.scrollTop = position;
   });
 }
 
@@ -166,6 +192,7 @@ function renderTaskColumn(
       </button>`
     : `<h2>${escapeHtml(heading)}</h2>`;
   const orderedTasks = [...tasks].sort((left, right) => Number(left.status === 'completed') - Number(right.status === 'completed'));
+  const scrollKey = participantId ?? 'household';
 
   return `
     <section class="task-column" data-drop-target="${participantId ?? ''}">
@@ -173,7 +200,7 @@ function renderTaskColumn(
         ${identity}
         <span>${tasks.filter((task) => task.status === 'pending').length}</span>
       </div>
-      <div class="task-list">
+      <div class="task-list" data-task-list="${escapeHtml(scrollKey)}">
         ${orderedTasks.map((task) => renderTaskCard(task)).join('')}
       </div>
     </section>
