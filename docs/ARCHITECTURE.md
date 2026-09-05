@@ -230,7 +230,19 @@ Avoid coupling the display protocol to concepts such as:
 
 If a transport protocol is introduced, its messages should describe meaningful application state or presentation updates and remain independent of the visual implementation where practical.
 
-## 11. Architectural Principles
+## 11. Internationalization Boundary
+
+Aevumory is **internationalization-ready, not internationalized** for V1.
+
+The domain and persistence layers must remain locale-neutral. They should store semantic values rather than user-facing formatted strings. Temporal data, for example, should continue to use absolute instants, IANA timezones, local dates, and recurrence rules rather than localized display text.
+
+English is the canonical product language for V1. Additional languages and locale conventions may be introduced later without changing domain semantics.
+
+User-facing formatting belongs to the presentation layer. This includes date formats, time formats, number formats, and other locale-sensitive conventions. A 24-hour clock is therefore a presentation preference rather than a temporal-domain rule.
+
+The architecture should support Unicode text, but V1 does not require translation infrastructure, locale-specific semantic models, or accommodation of every writing system. Product concepts should not be distorted to support a future language if doing so would compromise their meaning. English remains a supported baseline.
+
+## 12. Architectural Principles
 
 ### Domain Ownership
 
@@ -256,7 +268,11 @@ Progression and visual identity layers may enrich household participation but mu
 
 Ambient composition, animation, opacity, position, and other visual treatments are presentation decisions. They should not become authoritative domain state unless there is a genuine product reason to persist them.
 
-## 12. Deferred Decisions
+### Locale Neutrality
+
+Domain semantics must not depend on a particular language, locale, date format, time format, or number format. Localization belongs at the presentation boundary.
+
+## 13. Deferred Decisions
 
 The following remain intentionally open:
 
@@ -267,5 +283,4 @@ The following remain intentionally open:
 * smart-home provider integrations
 * final Event Horizon visual composition
 * future personal visual identity treatment
-
-These decisions should be made when implementation requires them rather than encoded prematurely as architectural facts.
+* additional product languages and locale conventions
