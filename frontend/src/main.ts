@@ -10,6 +10,11 @@ type AmbientContext =
 
 type TaskListScrollPositions = Record<string, number>;
 
+type TaskBoardScrollState = {
+  board: number;
+  lists: TaskListScrollPositions;
+};
+
 const root = document.querySelector<HTMLDivElement>('#app');
 if (!root) throw new Error('Aevumory application root was not found');
 
@@ -62,7 +67,7 @@ async function render(target: HTMLDivElement): Promise<void> {
 function renderTaskBoard(
   target: HTMLDivElement,
   store: FixtureTaskBoardStore,
-  scrollPositions: TaskListScrollPositions = {},
+  scrollState: TaskBoardScrollState = { board: 0, lists: {} },
 ): void {
   const state = store.getState();
   const todaysTasks = state.tasks.filter(isTaskForToday);
@@ -86,7 +91,9 @@ function renderTaskBoard(
     </main>
   `;
 
-  restoreTaskListScrollPositions(target, scrollPositions);
+  const board = target.querySelector<HTMLElement>('.task-board');
+  if (board) board.scrollTop = scrollState.board;
+  restoreTaskListScrollPositions(target, scrollState.lists);
 
   target.querySelectorAll<HTMLElement>('[data-task-id]').forEach((card) => {
     card.addEventListener('dragstart', (event) => {
@@ -122,13 +129,13 @@ function renderTaskBoard(
       const taskId = event.dataTransfer?.getData('text/task-id');
       if (!taskId) return;
 
-      const scrollPositions = captureTaskListScrollPositions(target);
+      const scrollState = captureTaskBoardScrollState(target);
       store.apply({
         kind: 'assign',
         taskId,
         responsibleUserId: column.dataset.dropTarget || undefined,
       });
-      renderTaskBoard(target, store, scrollPositions);
+      renderTaskBoard(target, store, scrollState);
     });
   });
 
@@ -141,11 +148,19 @@ function renderTaskBoard(
 
   target.querySelectorAll<HTMLButtonElement>('[data-action="complete"]').forEach((button) => {
     button.addEventListener('click', () => {
-      const scrollPositions = captureTaskListScrollPositions(target);
+      const scrollState = captureTaskBoardScrollState(target);
       store.apply({ kind: 'complete', taskId: button.dataset.taskId ?? '' });
-      renderTaskBoard(target, store, scrollPositions);
+      renderTaskBoard(target, store, scrollState);
     });
   });
+}
+
+function captureTaskBoardScrollState(target: HTMLDivElement): TaskBoardScrollState {
+  const board = target.querySelector<HTMLElement>('.task-board');
+  return {
+    board: board?.scrollTop ?? 0,
+    lists: captureTaskListScrollPositions(target),
+  };
 }
 
 function captureTaskListScrollPositions(target: HTMLDivElement): TaskListScrollPositions {
