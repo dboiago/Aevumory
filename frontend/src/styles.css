@@ -445,7 +445,7 @@ select {
   text-transform: uppercase;
 }
 
-.task-column-heading span {
+.task-column-heading > span {
   color: var(--text-muted);
   font-size: 12px;
 }
