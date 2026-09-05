@@ -27,6 +27,7 @@
   --overlay-black-glow: rgb(0 0 0 / 18%);
   --overlay-white-soft: rgb(255 255 255 / 2.5%);
   --overlay-white-complete: rgb(255 255 255 / 3.5%);
+  --overlay-white-complete: rgb(255 255 255 / 3.5%);
   --surface-resolved: #111512;
   --border-resolved: #1e2721;
   --text-resolved: #5a6e63;
@@ -206,7 +207,7 @@ button, select { font: inherit; }
 .horizon-event-time { display: block; margin-top: .18em; font-size: .68em; font-weight: 400; letter-spacing: .08em; opacity: var(--time-opacity); transform: translateY(var(--time-rise)) scale(var(--time-scale)); transform-origin: center top; }
 .ambient-context { position: absolute; right: clamp(24px, 3vw, 54px); bottom: clamp(22px, 2.4vw, 42px); z-index: 3; color: var(--ambient-text); font-size: clamp(10px, 1.15vw, 18px); font-weight: 400; letter-spacing: .12em; white-space: nowrap; text-shadow: 0 1px 10px var(--overlay-black-glow); pointer-events: none; transition: opacity 600ms ease; }
 
-.task-board { min-height: 100vh; overflow: auto; color: var(--text-primary); background: var(--bg-primary); padding: clamp(32px, 5vw, 72px) clamp(24px, 6vw, 96px); }
+.task-board { height: 100vh; overflow: auto; color: var(--text-primary); background: var(--bg-primary); padding: clamp(32px, 5vw, 72px) clamp(24px, 6vw, 96px); }
 .task-board-header { max-width: 1400px; margin: 0 auto clamp(34px, 5vw, 64px); }
 .eyebrow { margin: 0 0 8px; color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
 .task-board h1 { margin: 0; font-family: var(--font-heading, Georgia, serif); font-size: clamp(38px, 5vw, 68px); font-weight: 500; letter-spacing: -.025em; }
@@ -223,7 +224,7 @@ button, select { font: inherit; }
 .task-participant-identity:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; border-radius: var(--radius-card, 8px); }
 .task-column-heading h2 { margin: 0; color: var(--text-muted); font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 .task-column-heading > span { color: var(--text-muted); font-size: 12px; }
-.task-list { display: grid; gap: 8px; height: 279px; overflow-y: auto; padding-top: 10px; scrollbar-width: none; }
+.task-list { display: grid; gap: 8px; height: 279px; overflow-y: auto; align-content: start; padding-top: 10px; scrollbar-width: none; }
 .task-list::-webkit-scrollbar { display: none; }
 .task-card { display: flex; flex-direction: column; gap: 18px; min-height: 126px; padding: 18px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card, 8px); background: var(--bg-surface); cursor: grab; transition: border-color 160ms ease, background 160ms ease, opacity 160ms ease, transform 160ms ease; }
 .task-card:hover { border-color: var(--accent-primary); background: var(--bg-surface-hover); }
