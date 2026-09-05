@@ -165,6 +165,7 @@ function renderTaskColumn(
         <span class="task-participant-name">${escapeHtml(participant.name)}</span>
       </button>`
     : `<h2>${escapeHtml(heading)}</h2>`;
+  const orderedTasks = [...tasks].sort((left, right) => Number(left.status === 'completed') - Number(right.status === 'completed'));
 
   return `
     <section class="task-column" data-drop-target="${participantId ?? ''}">
@@ -173,7 +174,7 @@ function renderTaskColumn(
         <span>${tasks.filter((task) => task.status === 'pending').length}</span>
       </div>
       <div class="task-list">
-        ${tasks.map((task) => renderTaskCard(task)).join('')}
+        ${orderedTasks.map((task) => renderTaskCard(task)).join('')}
       </div>
     </section>
   `;
