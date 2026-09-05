@@ -156,17 +156,47 @@ function renderTaskBoard(
 
 function setupTouchDrag(target: HTMLDivElement, store: FixtureTaskBoardStore, card: HTMLElement): void {
   card.style.touchAction = 'pan-y';
+  const holdDelay = 400;
+  const movementTolerance = 8;
   let startX = 0;
   let startY = 0;
+  let holdTimer: number | undefined;
   let dragging = false;
   let dropTarget: HTMLElement | null = null;
 
+  const clearHoldTimer = (): void => {
+    if (holdTimer !== undefined) {
+      window.clearTimeout(holdTimer);
+      holdTimer = undefined;
+    }
+  };
+
+  const cancelTouchDrag = (): void => {
+    clearHoldTimer();
+    card.classList.remove('task-card-dragging');
+    clearTouchDropTargets(target);
+    dragging = false;
+    dropTarget = null;
+  };
+
   card.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'mouse' || (event.target as HTMLElement).closest('button')) return;
+
     startX = event.clientX;
     startY = event.clientY;
     dragging = false;
     dropTarget = null;
+    clearHoldTimer();
+
+    holdTimer = window.setTimeout(() => {
+      holdTimer = undefined;
+      dragging = true;
+      card.setPointerCapture(event.pointerId);
+      card.classList.add('task-card-dragging');
+      updateTouchDropTarget(target, event.clientX, event.clientY, (next) => {
+        dropTarget = next;
+      });
+    }, holdDelay);
   });
 
   card.addEventListener('pointermove', (event) => {
@@ -174,13 +204,10 @@ function setupTouchDrag(target: HTMLDivElement, store: FixtureTaskBoardStore, ca
 
     const dx = event.clientX - startX;
     const dy = event.clientY - startY;
+
     if (!dragging) {
-      const threshold = 10;
-      if (Math.hypot(dx, dy) < threshold) return;
-      if (Math.abs(dy) >= Math.abs(dx)) return;
-      dragging = true;
-      card.setPointerCapture(event.pointerId);
-      card.classList.add('task-card-dragging');
+      if (Math.hypot(dx, dy) > movementTolerance) clearHoldTimer();
+      return;
     }
 
     event.preventDefault();
@@ -190,9 +217,13 @@ function setupTouchDrag(target: HTMLDivElement, store: FixtureTaskBoardStore, ca
   });
 
   card.addEventListener('pointerup', (event) => {
-    if (event.pointerType === 'mouse' || !dragging) return;
+    if (event.pointerType === 'mouse') return;
+
+    clearHoldTimer();
+    if (!dragging) return;
+
     event.preventDefault();
-    card.releasePointerCapture(event.pointerId);
+    if (card.hasPointerCapture(event.pointerId)) card.releasePointerCapture(event.pointerId);
     card.classList.remove('task-card-dragging');
     clearTouchDropTargets(target);
 
@@ -200,16 +231,13 @@ function setupTouchDrag(target: HTMLDivElement, store: FixtureTaskBoardStore, ca
     if (taskId && dropTarget) {
       applyTaskAssignment(target, store, taskId, dropTarget.dataset.dropTarget || undefined);
     }
+
     dragging = false;
     dropTarget = null;
   });
 
   card.addEventListener('pointercancel', () => {
-    if (!dragging) return;
-    card.classList.remove('task-card-dragging');
-    clearTouchDropTargets(target);
-    dragging = false;
-    dropTarget = null;
+    cancelTouchDrag();
   });
 }
 
