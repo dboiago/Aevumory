@@ -155,6 +155,7 @@ function renderTaskBoard(
 }
 
 function setupTouchDrag(target: HTMLDivElement, store: FixtureTaskBoardStore, card: HTMLElement): void {
+  card.style.touchAction = 'pan-y';
   let startX = 0;
   let startY = 0;
   let dragging = false;
