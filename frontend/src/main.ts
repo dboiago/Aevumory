@@ -108,6 +108,11 @@ function renderTaskBoard(
       card.classList.remove('task-card-dragging');
       target.querySelectorAll('.task-column-drag-over').forEach((column) => column.classList.remove('task-column-drag-over'));
     });
+
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      card.draggable = false;
+      setupTouchDrag(target, store, card);
+    }
   });
 
   target.querySelectorAll<HTMLElement>('[data-drop-target]').forEach((column) => {
@@ -129,13 +134,7 @@ function renderTaskBoard(
       const taskId = event.dataTransfer?.getData('text/task-id');
       if (!taskId) return;
 
-      const scrollState = captureTaskBoardScrollState(target);
-      store.apply({
-        kind: 'assign',
-        taskId,
-        responsibleUserId: column.dataset.dropTarget || undefined,
-      });
-      renderTaskBoard(target, store, scrollState);
+      applyTaskAssignment(target, store, taskId, column.dataset.dropTarget || undefined);
     });
   });
 
@@ -153,6 +152,99 @@ function renderTaskBoard(
       renderTaskBoard(target, store, scrollState);
     });
   });
+}
+
+function setupTouchDrag(target: HTMLDivElement, store: FixtureTaskBoardStore, card: HTMLElement): void {
+  let startX = 0;
+  let startY = 0;
+  let dragging = false;
+  let dropTarget: HTMLElement | null = null;
+
+  card.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' || (event.target as HTMLElement).closest('button')) return;
+    startX = event.clientX;
+    startY = event.clientY;
+    dragging = false;
+    dropTarget = null;
+  });
+
+  card.addEventListener('pointermove', (event) => {
+    if (event.pointerType === 'mouse') return;
+
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    if (!dragging) {
+      const threshold = 10;
+      if (Math.hypot(dx, dy) < threshold) return;
+      if (Math.abs(dy) >= Math.abs(dx)) return;
+      dragging = true;
+      card.setPointerCapture(event.pointerId);
+      card.classList.add('task-card-dragging');
+    }
+
+    event.preventDefault();
+    updateTouchDropTarget(target, event.clientX, event.clientY, (next) => {
+      dropTarget = next;
+    });
+  });
+
+  card.addEventListener('pointerup', (event) => {
+    if (event.pointerType === 'mouse' || !dragging) return;
+    event.preventDefault();
+    card.releasePointerCapture(event.pointerId);
+    card.classList.remove('task-card-dragging');
+    clearTouchDropTargets(target);
+
+    const taskId = card.dataset.taskId;
+    if (taskId && dropTarget) {
+      applyTaskAssignment(target, store, taskId, dropTarget.dataset.dropTarget || undefined);
+    }
+    dragging = false;
+    dropTarget = null;
+  });
+
+  card.addEventListener('pointercancel', () => {
+    if (!dragging) return;
+    card.classList.remove('task-card-dragging');
+    clearTouchDropTargets(target);
+    dragging = false;
+    dropTarget = null;
+  });
+}
+
+function updateTouchDropTarget(
+  target: HTMLDivElement,
+  x: number,
+  y: number,
+  onChange: (target: HTMLElement | null) => void,
+): void {
+  const element = document.elementFromPoint(x, y) as HTMLElement | null;
+  const next = element?.closest<HTMLElement>('[data-drop-target]') ?? null;
+  const current = target.querySelector<HTMLElement>('.task-column-drag-over');
+  if (current === next) return;
+
+  clearTouchDropTargets(target);
+  next?.classList.add('task-column-drag-over');
+  onChange(next);
+}
+
+function clearTouchDropTargets(target: HTMLDivElement): void {
+  target.querySelectorAll('.task-column-drag-over').forEach((column) => column.classList.remove('task-column-drag-over'));
+}
+
+function applyTaskAssignment(
+  target: HTMLDivElement,
+  store: FixtureTaskBoardStore,
+  taskId: string,
+  responsibleUserId: string | undefined,
+): void {
+  const scrollState = captureTaskBoardScrollState(target);
+  store.apply({
+    kind: 'assign',
+    taskId,
+    responsibleUserId,
+  });
+  renderTaskBoard(target, store, scrollState);
 }
 
 function captureTaskBoardScrollState(target: HTMLDivElement): TaskBoardScrollState {
