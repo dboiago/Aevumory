@@ -1,4 +1,3 @@
-
 :root {
   font-family: var(--font-body, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   color: var(--text-primary);
@@ -211,8 +210,8 @@ button, select { font: inherit; }
 .task-board-header { max-width: 1400px; margin: 0 auto clamp(34px, 5vw, 64px); }
 .eyebrow { margin: 0 0 8px; color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
 .task-board h1 { margin: 0; font-family: var(--font-heading, Georgia, serif); font-size: clamp(38px, 5vw, 68px); font-weight: 500; letter-spacing: -.025em; }
-.task-columns { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: clamp(16px, 2vw, 30px); max-width: 1400px; margin: 0 auto; align-items: start; }
-.task-column { min-width: 0; min-height: 180px; padding-bottom: 18px; transition: background 160ms ease, box-shadow 160ms ease; }
+.task-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 400px)); gap: clamp(16px, 2vw, 30px); max-width: 1400px; margin: 0 auto; justify-content: center; align-items: start; }
+.task-column { min-width: 0; height: 340px; overflow: hidden; padding-bottom: 18px; transition: background 160ms ease, box-shadow 160ms ease; }
 .task-column-drag-over { background: var(--overlay-white-soft); box-shadow: inset 0 0 0 1px var(--border-active); }
 .task-column-heading { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 2px 12px; border-bottom: 1px solid var(--border-subtle); }
 .task-participant-identity { display: inline-flex; align-items: center; gap: 9px; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: left; }
@@ -224,7 +223,8 @@ button, select { font: inherit; }
 .task-participant-identity:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; border-radius: var(--radius-card, 8px); }
 .task-column-heading h2 { margin: 0; color: var(--text-muted); font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 .task-column-heading > span { color: var(--text-muted); font-size: 12px; }
-.task-list { display: grid; gap: 8px; padding-top: 10px; }
+.task-list { display: grid; gap: 8px; height: 279px; overflow-y: auto; padding-top: 10px; scrollbar-width: none; }
+.task-list::-webkit-scrollbar { display: none; }
 .task-card { display: flex; flex-direction: column; gap: 18px; min-height: 126px; padding: 18px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card, 8px); background: var(--bg-surface); cursor: grab; transition: border-color 160ms ease, background 160ms ease, opacity 160ms ease, transform 160ms ease; }
 .task-card:hover { border-color: var(--accent-primary); background: var(--bg-surface-hover); }
 .task-card:active, .task-card-dragging { cursor: grabbing; opacity: .62; transform: scale(.985); }
@@ -249,7 +249,8 @@ button, select { font: inherit; }
 .task-card-completed .task-complete { border-color: var(--action-resolved-border); background: var(--action-resolved-bg); color: var(--action-resolved-text); }
 .task-card-completed .task-complete:hover { border-color: var(--border-active); color: var(--text-primary); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-@media (max-width: 900px) { .task-columns { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .task-columns { grid-template-columns: repeat(2, minmax(0, 400px)); } }
+@media (max-width: 520px) { .task-columns { grid-template-columns: minmax(220px, 400px); } }
 @media (max-width: 700px) { .horizon-event { max-width: 42vw; white-space: normal; } .ambient-context { right: 16px; bottom: 16px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
 .theme-switcher { position: fixed; right: 18px; bottom: 18px; z-index: 20; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border-active); border-radius: var(--radius-badge, 999px); background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 6px 24px var(--overlay-black-shadow); }
