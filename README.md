@@ -117,6 +117,7 @@ The `docs/` directory contains the current product and engineering specification
 - [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) — domain, application, persistence, and integration boundaries
 - [`DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) — visual identity and ambient presentation principles
 - [`EVENT_HORIZON.md`](docs/EVENT_HORIZON.md) — Event Horizon behavior and presentation boundaries
+- [`PARTICIPANT_PROFILE_SPEC.md`](docs/PARTICIPANT_PROFILE_SPEC.md) — Participant identity, profile boundaries, optional context, and future progression expression
 
 ## Project Status
 
