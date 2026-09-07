@@ -44,7 +44,9 @@ The display name does not need to be a legal name or globally unique name. It is
 
 ### Representation
 
-A participant may have an optional visual representation. An initial fallback is always sufficient. A selected image, abstract avatar, or future Mark-derived representation may be added without changing the participant's core identity.
+A participant may have an optional visual representation. An initial fallback is always sufficient. A selected image or abstract avatar may be added without changing the participant's core identity.
+
+The representation is personal identity. It is distinct from the participant's progression state and persistent accomplishment expression.
 
 The representation must not become a prerequisite for participation or progression.
 
@@ -128,21 +130,87 @@ Its information architecture should remain clear and functional, but the visual 
 
 The identity should have meaningful visual weight without turning the page into a large generic social-profile header.
 
-Potential sections include:
+The upper composition should distinguish three separate concepts:
 
 ```text
-Identity
-Current state
-Progress
-Rewards / history
-Connections
+Participant representation
+        +
+Participant expression field
+        +
+Domain structures
 ```
 
-These may ultimately be composed spatially rather than implemented as conventional cards or tabs.
+The participant's representation is a compact identity marker, such as an initial or chosen image. On the profile it may be mounted on or overlap the boundary of the larger expression field.
+
+The large expression field is not a conventional oversized avatar container. It is reserved territory for richer persistent accomplishment expression, theme-specific environmental treatment, future Mark-derived geometry, or other visual interpretation. The field should remain structurally stable even as its contents evolve.
+
+This separation allows a participant to change their personal representation without changing or losing their accomplishment expression.
+
+The participant name should be integrated with the expression field boundary rather than implemented as a conventional profile heading. A likely composition is:
+
+```text
+            [ representation ]
+                   │
+      ┌────────────┼────────────┐
+      │                         │
+      │    participant          │
+      │    expression field     │
+      │                         │
+      └────────── name ─────────┘
+```
+
+The exact vessel geometry remains intentionally open.
+
+Domain information is intended to occupy the upper-right composition adjacent to the participant expression field. The four Domains should not default to conventional cards, dashboard widgets, or four identical progress bars.
+
+Each Domain is a composed semantic structure containing:
+
+```text
+Domain rank
+    ↓
+Domain visual vessel / optional icon
+    ↓
+Domain identity
+    ↓
+Associated Discipline annotations
+```
+
+The Domain itself should remain the primary semantic unit. Rank notation is supporting information rather than the defining visual focus.
+
+A Domain may use a shared geometric vessel, frame, shield-like form, rounded form, or other stable visual structure. The exact shape is intentionally undecided. Domain-specific differentiation should primarily come from iconography, if adopted, the Domain name, associated Disciplines, and theme interpretation.
+
+The Domain rank may use restrained Roman numeral notation. It may sit above, below, or otherwise attach to the Domain vessel. Roman numerals should remain supporting notation and must not dominate the composition in the manner of RPG combat statistics.
+
+Each Discipline may appear as a smaller adjacent structure or annotation:
+
+```text
+        II
+   [ domain vessel ]
+      KINETIC
+
+   [ I ] Force
+   [ V ] Motion
+   [ I ] Precision
+```
+
+Discipline rank and name remain subordinate to the Domain.
+
+Progress bars are not currently required. They should be introduced only if the progression system later has a concrete state that benefits from showing precise movement toward a threshold.
 
 ## 8. Persistent Progress Expression
 
 The former Mark concept is reframed as a future **theme-specific visual expression of actual accomplishments** rather than a fixed procedural Mark that must be displayed everywhere.
+
+Participant representation and persistent expression are separate layers:
+
+```text
+Participant representation
+    → initial / image / chosen identity
+
+Participant expression
+    → accomplishment-driven visual state
+    → interpreted by the active theme
+```
 
 The underlying progression system should record durable accomplishment information. A visual expression consumes that information and interprets it according to the active visual theme.
 
@@ -186,7 +254,7 @@ A participant must remain fully functional if no progression expression, Mark, g
 
 The expression may eventually influence the profile environment around the identity, including framing, edges, corners, background geometry, or other thematic elements. It should not make core information harder to understand or turn progression into fictional RPG statistics.
 
-The Task Board should continue to use compact participant identity representations. The profile is the primary surface where richer personal visual expression can have sufficient space without compromising operational interactions.
+The Task Board should continue to use compact participant identity representations. The profile expression field is the primary surface where richer personal visual expression can have sufficient space without compromising operational interactions.
 
 ## 11. Connections
 
