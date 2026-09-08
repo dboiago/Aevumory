@@ -187,20 +187,44 @@ function clamp(v, a=0, b=1) { return Math.max(a, Math.min(b, v)); }
 function lerp(a,b,t){ return a + (b-a)*t; }
 function smoothstep(t){ t=clamp(t); return t*t*(3-2*t); }
 
+function spatialSeed(id, salt='') {
+  let h = 2166136261;
+  const input = id + ':' + salt;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 1000000) / 1000000;
+}
+
+function weightedIngress(event) {
+  const ySeed = spatialSeed(event.id, 'y');
+  const xSeed = spatialSeed(event.id, 'x');
+
+  // Larger Y values are lower on screen. This preserves the range while
+  // making lower ingress statistically more common.
+  const yWeight = 1 - Math.pow(1 - ySeed, 0.55);
+  const y = lerp(.77, .95, yWeight);
+
+  // Mild centre avoidance. Centre remains possible; it is simply less common.
+  const side = xSeed < .5 ? -1 : 1;
+  const distance = .07 + Math.pow(Math.abs(xSeed - .5) * 2, 0.72) * .40;
+  const x = clamp(.5 + side * distance, .035, .965);
+
+  return { x, y };
+}
+
 // Low-left and low-right ingress curves. Curves are intentionally asymmetric.
 // Deterministic event-specific phase/bias prevents left-right-left-right symmetry.
 function trajectory(event, p, horizonHours, settlingHours) {
   const side = event.family === 'right' ? 1 : -1;
   const settleStart = clamp(1 - settlingHours / horizonHours);
 
-  // Entry points remain peripheral and low, but are individually seeded.
-  const distalX = side < 0
-    ? .035 + event.phase*.17 + event.bias*.5
-    : .965 - event.phase*.17 + event.bias*.5;
   // Ingress has its own deterministic spatial identity. It is intentionally
   // independent from trajectory phase so composition does not inherit phase bias.
-  const ingress = weightedIngress(event);
-  const distalY = ingress.y;
+  const ingressPoint = weightedIngress(event);
+  const distalX = ingressPoint.x;
+  const distalY = ingressPoint.y;
 
   // The approach field is deliberately a field rather than a convergence point.
   // Every event reaches a different, but still recognizably central, resting area
@@ -222,9 +246,9 @@ function trajectory(event, p, horizonHours, settlingHours) {
   // destination that is reached before the downward phase begins.
   const u = clamp(p / settleStart);
   const ingressRate = .56 + event.phase*.16;
-  const ingress = smoothstep(u / ingressRate);
+  const ingressProgress = smoothstep(u / ingressRate);
 
-  let x = lerp(distalX, middleX, ingress);
+  let x = lerp(distalX, middleX, ingressProgress);
   let y = lerp(distalY, middleY, smoothstep(u / (.42 + event.phase*.13)));
 
   // Nonchalant deterministic wandering. The envelope is zero at entry and at
