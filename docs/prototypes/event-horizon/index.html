@@ -204,7 +204,7 @@ function weightedIngress(event) {
   // Larger Y values are lower on screen. This preserves the range while
   // making lower ingress statistically more common.
   const yWeight = 1 - Math.pow(1 - ySeed, 0.55);
-  const y = lerp(.77, .95, yWeight);
+  const y = lerp(.84, .96, yWeight);
 
   // Mild centre avoidance. Centre remains possible; it is simply less common.
   const side = xSeed < .5 ? -1 : 1;
