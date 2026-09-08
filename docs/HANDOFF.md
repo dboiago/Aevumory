@@ -48,7 +48,9 @@ Core principles:
 
 ### Event Horizon
 
-The Event Horizon is the default full-screen ambient state and functions like a sophisticated screensaver or picture frame.
+The Event Horizon is the default full-screen ambient state and functions like a sophisticated digital photo frame or screensaver.
+
+The Ambient screen is intentionally **not a household dashboard**. Its resting composition is primarily selected imagery or other ambient media, the Event Horizon, and an optional user-configurable signature.
 
 The background may use:
 
@@ -71,6 +73,47 @@ The event treatment is literal **event horizon** behavior:
 The exact spatial/animation model remains open. A scattered field, arc, or other mechanism has not been locked.
 
 The Event Horizon should surface exceptions rather than become a conventional calendar dashboard.
+
+### Ambient Signature
+
+The Ambient screen may display a single-line signature such as:
+
+`Monday · 7:42 PM · 21°`
+
+The signature is one compositional element with equal weighting across its components, not a collection of separate widgets.
+
+Users may choose whether to show components such as date/day, time, and temperature and may choose alternate time formatting such as 24-hour time. The layout must therefore adapt naturally to variable content.
+
+The signature should retain the feeling of a signature on a painting. Difficult imagery should be handled through subtle local atmospheric/contrast treatment rather than conventional outlines, drop shadows, cards, or other obvious UI decoration.
+
+### Ambient Interruptions
+
+Ordinary notifications, task summaries, activity feeds, persistent household status, and similar dashboard information do not belong on the Ambient screen.
+
+A meaningful current household state may temporarily occupy the signature position when there is a clear reason to interrupt the normal signature. For example:
+
+`Someone's at the door`
+
+The information itself is the interaction target. Explicit `Tap to view` or similar instructional text is not required.
+
+Serious alerts are a separate, explicitly configured category. They may use the same signature position but should become more visually prominent than ordinary Ambient content and may persist until acknowledged or until the underlying condition is resolved.
+
+Exact alert severity, acknowledgment, persistence, and visual treatment remain open.
+
+### Ambient Interaction
+
+There is no persistent navigation control on the Ambient screen.
+
+The current interaction model is directional vertical gesture navigation:
+
+* Swipe up from Ambient to reveal the functional interface
+* Swipe down from the functional interface to return to Ambient
+
+The transition should feel like the Ambient surface is being moved away to reveal the functional interface beneath it rather than like a conventional route change.
+
+The imagery, event typography, signature, and underlying functional surface may move and fade at slightly different rates to create a restrained layered transition.
+
+Inactivity-based return from functional screens to Ambient is a separate policy question and remains open. It may vary by screen.
 
 ### Calendar
 
