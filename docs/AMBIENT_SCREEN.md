@@ -60,13 +60,85 @@ Multiple sources may contribute to the same Ambient image pool.
 
 A source is an input to the pool, not a separate presentation mode. Source-specific integration details belong at the integration boundary.
 
-Users must explicitly control which galleries or collections are available to the Ambient screen. A household display must not silently expose a user's private imagery merely because it is accessible to the device or application.
+Users must explicitly control which galleries, folders, collections, or individual images are available to the Ambient screen. A household display must not silently expose a user's private imagery merely because it is accessible to the device or application.
 
 Built-in imagery may provide a usable initial experience when no personal imagery has been configured. It should be treated as an explicit image source rather than as an invisible fallback that changes the meaning of the user's configured pool.
 
 Source availability, authorization, synchronization, caching, and provider-specific behavior remain implementation concerns.
 
-## 5. Image Selection
+## 5. Communal Device and Source Ownership
+
+Aevumory may operate as a communal household device while image sources remain owned or authorized by individual household members.
+
+A source connection should retain an association with the household member who authorized or owns it. This association exists primarily for authorization, configuration, and disconnection rather than for image-selection behavior.
+
+For example:
+
+```text
+Household
+├── Alice
+│    └── Google Photos connection
+├── Bob
+│    └── iCloud connection
+└── Ambient
+     ├── selected images from Alice's source
+     └── selected images from Bob's source
+```
+
+The Ambient renderer does not need to distinguish ownership when selecting images. The source-management layer does.
+
+The interface should make ownership clear enough that a household member can understand whose account is connected and remove or manage that connection without ambiguity.
+
+The exact household permission model remains open.
+
+## 6. Connection vs Ambient Inclusion
+
+Connecting or synchronizing an image source should not normally make it available to Ambient automatically.
+
+These are distinct concepts:
+
+```text
+Connect source
+      │
+      ▼
+Source available to Aevumory
+      │
+      │ explicit Ambient inclusion
+      ▼
+Eligible Ambient image pool
+```
+
+There is one intentional contextual exception: when a user explicitly initiates a source connection from an Ambient-image configuration action such as `Add Google Photos`, the action may both connect the source and include it for Ambient.
+
+This avoids requiring the user to repeat the same intent in a separate settings location.
+
+The rule is therefore:
+
+> Connecting a source never implicitly enables Ambient use, except when connection is initiated explicitly as part of adding that source to Ambient.
+
+## 7. Selecting Images Within a Source
+
+A source may expose its own hierarchy of collections, galleries, albums, folders, or individual images.
+
+Aevumory should allow the user to select the level of specificity appropriate to the source, including specific collections or individual images where the provider or storage system makes that practical.
+
+For example:
+
+```text
+Google Photos
+  ├── All photos
+  ├── Albums
+  │    ├── Family
+  │    ├── Travel
+  │    └── Cottage
+  └── Specific selection
+```
+
+The selected collections and images become part of the aggregate Ambient pool.
+
+Aevumory should not need to copy ownership of those photographs merely to use them. Whether an eligible image is represented by a local path, provider asset identifier, URL, cached file, or another reference is an implementation detail of the relevant source adapter.
+
+## 8. Image Selection
 
 Image selection should operate on the currently eligible image pool.
 
@@ -98,11 +170,17 @@ A zero-match configuration is valid. It should not trigger a warning, forced fal
 
 Exact matching-count semantics depend on the configured source pool and remain subject to implementation.
 
-## 6. Image Rotation
+## 9. Image Rotation and Selection
 
 Image rotation is an Ambient-screen behavior and is independent of Event Horizon events.
 
 The image may rotate on a configurable timed interval. A reasonable initial range is approximately 30 seconds to 3 minutes per image, with the exact default determined through use and testing.
+
+Selection should be intentionally simple. Aevumory should treat the eligible images as a bucket and select photographs at random rather than attempting to determine which image is better, more interesting, more relevant, or more likely to engage the household.
+
+To avoid unnecessary repetition, selection should preferably use a shuffled-cycle approach: images are shuffled, displayed without repetition until the current pool is exhausted, and then reshuffled for another cycle.
+
+The selection system should not rank, weight, prioritize, favorite, or otherwise score photographs.
 
 Changing the photograph must not alter:
 
@@ -115,7 +193,7 @@ Changing the photograph must not alter:
 
 The rotation timer applies to the photograph only.
 
-## 7. Image Transition
+## 10. Image Transition
 
 Image changes should use a soft crossfade / cross dissolve rather than a conventional UI transition.
 
@@ -129,7 +207,7 @@ A subtle Ken Burns-style pan or zoom may be applied during an image's display in
 
 The movement should be nearly imperceptible and should read as the photograph being quietly alive rather than as animation demanding attention.
 
-## 8. Framing
+## 11. Framing
 
 Photographs must never be distorted to fit the display.
 
@@ -163,7 +241,7 @@ Smart should not use AI, semantic image understanding, face detection, focal-poi
 
 More sophisticated content-aware framing is deferred unless real-world testing demonstrates that geometry alone is insufficient.
 
-## 9. Motion and Framing Safety
+## 12. Motion and Framing Safety
 
 Ken Burns movement must remain inside a safe framing envelope for the selected framing mode.
 
@@ -171,7 +249,7 @@ It must not introduce unexpected cropping of important image areas simply becaus
 
 The exact pan distance, zoom range, easing, and motion duration remain implementation and visual-tuning decisions.
 
-## 10. Signature
+## 13. Signature
 
 The Ambient screen may contain a single-line persistent signature providing optional orientation.
 
@@ -189,7 +267,7 @@ The signature should remain visually restrained and should not acquire conventio
 
 Legibility treatment should alter the immediate visual environment around the typography as subtly as necessary while preserving the impression of a signature on the image.
 
-## 11. Display Longevity
+## 14. Display Longevity
 
 Persistent Ambient elements should minimize unnecessary static, high-contrast pixel occupation.
 
@@ -201,7 +279,7 @@ This is a mitigation, not a guarantee against image retention or burn-in. Platfo
 
 The Ambient design should consciously avoid creating unnecessary persistent high-contrast elements rather than attempting to solve display longevity entirely in application code.
 
-## 12. Transient State and Alerts
+## 15. Transient State and Alerts
 
 A meaningful current household state may temporarily occupy the signature position when there is a specific reason to interrupt the normal signature.
 
@@ -219,7 +297,7 @@ Serious alerts are a distinct category and may receive a more visible treatment 
 
 Alert behavior and severity remain subject to the Ambient alert specification and implementation.
 
-## 13. Ambient Interaction
+## 16. Ambient Interaction
 
 The Ambient screen has no persistent navigation control.
 
@@ -245,7 +323,7 @@ The transition should feel like the Ambient surface is moving away to reveal the
 
 The exact layered motion and timing remain implementation and visual-tuning decisions.
 
-## 14. Resting and Awake Behavior
+## 17. Resting and Awake Behavior
 
 The Ambient screen is intended for sustained household display use rather than conventional application-session use.
 
@@ -257,7 +335,7 @@ Platform-specific display sleep, dimming, and presence optimization may be used 
 
 Exact awake-hour, inactivity, dimming, and presence behavior remains open.
 
-## 15. Failure and Absence
+## 18. Failure and Absence
 
 The Ambient screen must degrade gracefully.
 
@@ -269,17 +347,37 @@ A configured source should not silently change the user's selection intent merel
 
 If there are no eligible images at all, the screen should still remain coherent. Exact empty-pool presentation is deferred.
 
-## 16. Deferred Decisions
+## 19. Explicit Non-Goals
+
+The Ambient image system is intentionally not a photo-management system.
+
+It should not provide:
+
+* image deletion
+* image editing
+* filters or effects
+* favorites or ratings
+* ranking or recommendation
+* source priority
+* source percentages or weighting
+* AI image selection
+* semantic or content-based image selection
+* engagement optimization
+
+Aevumory consumes photographs. It does not manage photographs.
+
+## 20. Deferred Decisions
 
 The following remain intentionally open:
 
 * exact image-source integrations
 * source-management UI
-* household sharing and source ownership model
+* household permission model
 * provider authorization and synchronization behavior
 * local caching strategy
 * built-in image collection and licensing
 * exact rotation default
+* exact shuffled-cycle implementation
 * exact Ken Burns motion parameters
 * exact Smart framing threshold
 * exact safe framing envelope
