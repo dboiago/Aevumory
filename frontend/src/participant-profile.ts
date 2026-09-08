@@ -34,22 +34,17 @@ const profileFixtures: Record<string, { credits: number; perks: string[] }> = {
 
 export async function renderParticipantProfile(target: HTMLDivElement, participant: HouseholdParticipant): Promise<void> {
   const state = await taskBoardQuery.getBoard();
-  const participantTasks = state.tasks.filter(
-    (task) => task.assignment === 'individual' && task.responsibleUserId === participant.id,
-  );
-  const pendingTasks = participantTasks.filter((task) => task.status === 'pending').length;
   const fixture = profileFixtures[participant.id] ?? { credits: 0, perks: [] };
   const domains = domainFixtures[participant.id] ?? fallbackDomains;
 
   target.innerHTML = `
     <main class="participant-profile" aria-label="${escapeHtml(participant.name)} profile">
       <header class="participant-profile-toolbar">
-        <button type="button" class="participant-profile-back" data-profile-back>Tasks</button>
-        <span class="participant-profile-kicker">Participant</span>
+        <button type="button" class="participant-profile-back" data-profile-back>Back</button>
       </header>
 
       <div class="participant-profile-sheet">
-        <section class="participant-profile-upper" aria-label="Identity and progress">
+        <section class="participant-profile-upper" aria-label="Identity and progression">
           <div class="participant-expression-field" aria-label="Participant expression field">
             <div class="participant-expression-inner" aria-hidden="true"></div>
             <div class="participant-identity-marker" aria-hidden="true">${renderParticipantInitial(participant)}</div>
@@ -64,37 +59,28 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
           </aside>
         </section>
 
-        <section class="participant-profile-state" aria-label="Current state">
-          <div class="participant-state-item">
-            <span class="participant-state-label">Tasks</span>
-            <strong>${pendingTasks}</strong>
-            <span class="participant-state-caption">active</span>
-          </div>
-          <div class="participant-state-item">
-            <span class="participant-state-label">Credits</span>
-            <strong>${fixture.credits}</strong>
-            <span class="participant-state-caption">available</span>
-          </div>
-        </section>
+        <section class="participant-profile-lower" aria-label="Participant state">
+          <section class="participant-profile-section participant-perks" aria-labelledby="participant-perks-heading">
+            <div class="participant-section-rule"></div>
+            <div class="participant-section-heading">
+              <h2 id="participant-perks-heading">Perks</h2>
+            </div>
+            ${fixture.perks.length
+              ? `<ul>${fixture.perks.map((perk) => `<li>${escapeHtml(perk)}</li>`).join('')}</ul>`
+              : '<p class="participant-empty">None earned yet</p>'}
+          </section>
 
-        <section class="participant-profile-section participant-perks" aria-labelledby="participant-perks-heading">
-          <div class="participant-section-rule"></div>
-          <div class="participant-section-heading">
-            <h2 id="participant-perks-heading">Perks</h2>
-            ${fixture.perks.length ? `<span>${fixture.perks.length}</span>` : ''}
-          </div>
-          ${fixture.perks.length
-            ? `<ul>${fixture.perks.map((perk) => `<li>${escapeHtml(perk)}</li>`).join('')}</ul>`
-            : '<p class="participant-empty">None earned yet</p>'}
-        </section>
-
-        <section class="participant-profile-lower" aria-label="Rewards and connections">
-          <section class="participant-profile-section" aria-labelledby="participant-rewards-heading">
+          <section class="participant-profile-section participant-rewards" aria-labelledby="participant-rewards-heading">
             <div class="participant-section-rule"></div>
             <div class="participant-section-heading"><h2 id="participant-rewards-heading">Rewards</h2></div>
-            <p class="participant-empty">History will appear here</p>
+            <div class="participant-credit-balance">
+              <strong>${fixture.credits}</strong>
+              <span>Credits available</span>
+            </div>
+            <p class="participant-empty">No redemption history</p>
           </section>
-          <section class="participant-profile-section" aria-labelledby="participant-connections-heading">
+
+          <section class="participant-profile-section participant-connections" aria-labelledby="participant-connections-heading">
             <div class="participant-section-rule"></div>
             <div class="participant-section-heading"><h2 id="participant-connections-heading">Connections</h2></div>
             <p class="participant-empty">No connected services</p>
@@ -104,8 +90,10 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
     </main>
   `;
 
+  void state;
+
   target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => {
-    window.location.hash = '#tasks';
+    window.history.back();
   });
 }
 
@@ -117,7 +105,7 @@ function renderParticipantInitial(participant: HouseholdParticipant): string {
 
 function renderDomain(domain: DomainFixture): string {
   return `
-    <article class="participant-domain participant-domain-${domain.name.toLowerCase()}">
+    <div class="participant-domain participant-domain-${domain.name.toLowerCase()}">
       <div class="participant-domain-vessel">
         <span class="participant-domain-rank">${toRoman(domain.rank)}</span>
         <span class="participant-domain-name">${escapeHtml(domain.name)}</span>
@@ -127,7 +115,7 @@ function renderDomain(domain: DomainFixture): string {
           <li><span class="participant-discipline-rank">${toRoman(discipline.rank)}</span><span>${escapeHtml(discipline.name)}</span></li>
         `).join('')}
       </ul>
-    </article>
+    </div>
   `;
 }
 
