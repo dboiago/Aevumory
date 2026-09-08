@@ -1,7 +1,5 @@
 import './participant-profile.css';
-import { FixtureTaskBoardQuery, type HouseholdParticipant } from './tasks';
-
-const taskBoardQuery = new FixtureTaskBoardQuery();
+import type { HouseholdParticipant } from './tasks';
 
 type DomainFixture = {
   name: string;
@@ -33,7 +31,6 @@ const profileFixtures: Record<string, { credits: number; perks: string[] }> = {
 };
 
 export async function renderParticipantProfile(target: HTMLDivElement, participant: HouseholdParticipant): Promise<void> {
-  const state = await taskBoardQuery.getBoard();
   const fixture = profileFixtures[participant.id] ?? { credits: 0, perks: [] };
   const domains = domainFixtures[participant.id] ?? fallbackDomains;
 
@@ -59,7 +56,7 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
           </aside>
         </section>
 
-        <section class="participant-profile-lower" aria-label="Participant state">
+        <section class="participant-profile-lower" aria-label="Participant profile details">
           <section class="participant-profile-section participant-perks" aria-labelledby="participant-perks-heading">
             <div class="participant-section-rule"></div>
             <div class="participant-section-heading">
@@ -89,8 +86,6 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
       </div>
     </main>
   `;
-
-  void state;
 
   target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => {
     window.history.back();
