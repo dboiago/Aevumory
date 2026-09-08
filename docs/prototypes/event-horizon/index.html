@@ -204,7 +204,7 @@ function weightedIngress(event) {
   // Larger Y values are lower on screen. This preserves the range while
   // making lower ingress statistically more common.
   const yWeight = 1 - Math.pow(1 - ySeed, 0.55);
-  const y = lerp(.84, .96, yWeight);
+  const y = lerp(.88, .97, yWeight);
 
   // Mild centre avoidance. Centre remains possible; it is simply less common.
   const side = xSeed < .5 ? -1 : 1;
@@ -231,12 +231,12 @@ function trajectory(event, p, horizonHours, settlingHours) {
   // before it begins its downward settling.
   const middleX = clamp(.29 + event.phase*.42 + event.bias*.9, .29, .71);
   const middleY = clamp(
-    .645 +
-    Math.sin((event.phase * 2.2 + .13) * Math.PI) * .085 +
-    event.arrivalLane * .55 +
-    event.bias * .18,
-    .61,
-    .79
+    .755 +
+    Math.sin((event.phase * 2.2 + .13) * Math.PI) * .065 +
+    event.arrivalLane * .42 +
+    event.bias * .14,
+    .72,
+    .88
   );
 
   const arrivalX = clamp(.43 + event.phase*.14 + event.bias*.4, .38, .62);
@@ -368,7 +368,7 @@ function render() {
     // A bad visual parameter must never place an otherwise valid event off-screen.
     const safeX = Number.isFinite(pos.x) ? clamp(pos.x, .035, .965) : .50;
     const rawY = pos.y + (Number.isFinite(v.departureDrift) ? v.departureDrift : 0);
-    const safeY = Number.isFinite(rawY) ? clamp(rawY, .64, .97) : .78;
+    const safeY = Number.isFinite(rawY) ? clamp(rawY, .72, .98) : .84;
 
     // Use concrete field pixels in the prototype. This avoids any browser-specific
     // interaction between percentage positioning, transforms and custom properties.
