@@ -66,9 +66,9 @@ Built-in imagery may provide a usable initial experience when no personal imager
 
 Source availability, authorization, synchronization, caching, and provider-specific behavior remain implementation concerns.
 
-## 5. Communal Device and Source Ownership
+## 5. Communal Device, Profiles, and Source Ownership
 
-Aevumory may operate as a communal household device while image sources remain owned or authorized by individual household members.
+Aevumory may operate as a communal household device with no signed-in or active device user. Profiles represent household participants and exist for specific relationships to household data and integrations, not as device sessions.
 
 A source connection should retain an association with the household member who authorized or owns it. This association exists primarily for authorization, configuration, and disconnection rather than for image-selection behavior.
 
@@ -89,9 +89,30 @@ The Ambient renderer does not need to distinguish ownership when selecting image
 
 The interface should make ownership clear enough that a household member can understand whose account is connected and remove or manage that connection without ambiguity.
 
-The exact household permission model remains open.
+The communal device does not authenticate a user merely because someone is interacting with it. Authentication is required only when an interaction crosses into protected profile information or configuration.
 
-## 6. Connection vs Ambient Inclusion
+## 6. Profile Privacy and PIN Protection
+
+A household member may configure a PIN for their profile.
+
+When a profile has a PIN, any interaction that could expose that member's private information or alter their protected configuration requires that member's PIN. This includes, where applicable:
+
+* viewing private source contents
+* viewing private albums, collections, or individual images
+* changing source selections
+* changing source configuration
+* disconnecting a source
+* removing a source
+
+The PIN belongs to the profile owner rather than to a device user.
+
+Top-level source-management views may expose non-sensitive configuration information such as provider, owner, inclusion state, collection counts, and eligible-image counts. Private thumbnails and private source contents should not be exposed there.
+
+A successful PIN entry may establish an authenticated management context for the protected source until the context expires or is explicitly locked. Exact session behavior remains an implementation decision.
+
+This model is intended to protect profile-owned configuration on an intentionally open communal device without introducing device accounts or signed-in users.
+
+## 7. Connection vs Ambient Inclusion
 
 Connecting or synchronizing an image source should not normally make it available to Ambient automatically.
 
@@ -116,7 +137,57 @@ The rule is therefore:
 
 > Connecting a source never implicitly enables Ambient use, except when connection is initiated explicitly as part of adding that source to Ambient.
 
-## 7. Selecting Images Within a Source
+## 8. Source Management
+
+Image-source configuration belongs under Settings → Ambient Display. It is not available as configuration UI from the Ambient screen itself.
+
+The top-level source-management view should remain shallow and communal-safe. It describes configured sources and their state without becoming a photo browser.
+
+A source may present a summary such as:
+
+```text
+Google Photos
+Alice
+3 albums · 1,284 images
+Included
+```
+
+Tapping a source opens its configuration summary. Deeper management of a PIN-protected source requires the owner's PIN.
+
+The source-management flow is:
+
+```text
+Add image source
+        ↓
+Choose source
+        ↓
+Connect / authorize
+        ↓
+Establish owner
+        ↓
+Choose what to include
+        ↓
+Done
+```
+
+When a source is added from Ambient Display settings, connecting the source and completing its initial inclusion is one intentional flow because the user's destination is already explicit.
+
+A source should distinguish at least these states:
+
+```text
+Connected + Included
+Connected + Not Included
+Temporarily Unavailable
+No Eligible Images
+```
+
+`Temporarily Unavailable` indicates that the configured source cannot currently provide its images. `No Eligible Images` indicates that the source is functioning but its current selection produces no eligible images.
+
+An unavailable source may expose diagnostic information when the provider or integration supplies it. This may include the last successful synchronization time, a concise error description, and a way to copy diagnostic details for reporting. Diagnostic content must not expose private image contents or other protected profile information.
+
+Removing or disconnecting a profile-owned source is a protected configuration action and requires the owner's PIN when one is configured.
+
+## 9. Selecting Images Within a Source
 
 A source may expose its own hierarchy of collections, galleries, albums, folders, or individual images.
 
@@ -138,7 +209,7 @@ The selected collections and images become part of the aggregate Ambient pool.
 
 Aevumory should not need to copy ownership of those photographs merely to use them. Whether an eligible image is represented by a local path, provider asset identifier, URL, cached file, or another reference is an implementation detail of the relevant source adapter.
 
-## 8. Image Selection
+## 10. Image Selection
 
 Image selection should operate on the currently eligible image pool.
 
@@ -170,7 +241,7 @@ A zero-match configuration is valid. It should not trigger a warning, forced fal
 
 Exact matching-count semantics depend on the configured source pool and remain subject to implementation.
 
-## 9. Image Rotation and Selection
+## 11. Image Rotation and Selection
 
 Image rotation is an Ambient-screen behavior and is independent of Event Horizon events.
 
@@ -193,7 +264,7 @@ Changing the photograph must not alter:
 
 The rotation timer applies to the photograph only.
 
-## 10. Image Transition
+## 12. Image Transition
 
 Image changes should use a soft crossfade / cross dissolve rather than a conventional UI transition.
 
@@ -207,7 +278,7 @@ A subtle Ken Burns-style pan or zoom may be applied during an image's display in
 
 The movement should be nearly imperceptible and should read as the photograph being quietly alive rather than as animation demanding attention.
 
-## 11. Framing
+## 13. Framing
 
 Photographs must never be distorted to fit the display.
 
@@ -241,7 +312,7 @@ Smart should not use AI, semantic image understanding, face detection, focal-poi
 
 More sophisticated content-aware framing is deferred unless real-world testing demonstrates that geometry alone is insufficient.
 
-## 12. Motion and Framing Safety
+## 14. Motion and Framing Safety
 
 Ken Burns movement must remain inside a safe framing envelope for the selected framing mode.
 
@@ -249,7 +320,7 @@ It must not introduce unexpected cropping of important image areas simply becaus
 
 The exact pan distance, zoom range, easing, and motion duration remain implementation and visual-tuning decisions.
 
-## 13. Signature
+## 15. Signature
 
 The Ambient screen may contain a single-line persistent signature providing optional orientation.
 
@@ -267,7 +338,7 @@ The signature should remain visually restrained and should not acquire conventio
 
 Legibility treatment should alter the immediate visual environment around the typography as subtly as necessary while preserving the impression of a signature on the image.
 
-## 14. Display Longevity
+## 16. Display Longevity
 
 Persistent Ambient elements should minimize unnecessary static, high-contrast pixel occupation.
 
@@ -279,7 +350,7 @@ This is a mitigation, not a guarantee against image retention or burn-in. Platfo
 
 The Ambient design should consciously avoid creating unnecessary persistent high-contrast elements rather than attempting to solve display longevity entirely in application code.
 
-## 15. Transient State and Alerts
+## 17. Transient State and Alerts
 
 A meaningful current household state may temporarily occupy the signature position when there is a specific reason to interrupt the normal signature.
 
@@ -297,7 +368,7 @@ Serious alerts are a distinct category and may receive a more visible treatment 
 
 Alert behavior and severity remain subject to the Ambient alert specification and implementation.
 
-## 16. Ambient Interaction
+## 18. Ambient Interaction
 
 The Ambient screen has no persistent navigation control.
 
@@ -323,7 +394,7 @@ The transition should feel like the Ambient surface is moving away to reveal the
 
 The exact layered motion and timing remain implementation and visual-tuning decisions.
 
-## 17. Resting and Awake Behavior
+## 19. Resting and Awake Behavior
 
 The Ambient screen is intended for sustained household display use rather than conventional application-session use.
 
@@ -335,7 +406,7 @@ Platform-specific display sleep, dimming, and presence optimization may be used 
 
 Exact awake-hour, inactivity, dimming, and presence behavior remains open.
 
-## 18. Failure and Absence
+## 20. Failure and Absence
 
 The Ambient screen must degrade gracefully.
 
@@ -347,7 +418,7 @@ A configured source should not silently change the user's selection intent merel
 
 If there are no eligible images at all, the screen should still remain coherent. Exact empty-pool presentation is deferred.
 
-## 19. Explicit Non-Goals
+## 21. Explicit Non-Goals
 
 The Ambient image system is intentionally not a photo-management system.
 
@@ -366,13 +437,11 @@ It should not provide:
 
 Aevumory consumes photographs. It does not manage photographs.
 
-## 20. Deferred Decisions
+## 22. Deferred Decisions
 
 The following remain intentionally open:
 
 * exact image-source integrations
-* source-management UI
-* household permission model
 * provider authorization and synchronization behavior
 * local caching strategy
 * built-in image collection and licensing
