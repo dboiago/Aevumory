@@ -80,23 +80,25 @@ function renderParticipantInitial(participant: HouseholdParticipant): string {
 
 function renderDomain(domain: DomainFixture, index: number): string {
   return `
-    <article class="participant-domain participant-domain-${index + 1}">
-      <div class="participant-domain-vessel" aria-hidden="true">
-        <svg viewBox="0 0 150 100" preserveAspectRatio="none">
-          <path d="M25 1 H125 L149 50 L125 99 H25 L1 50 Z" fill="none" stroke="currentColor" vector-effect="non-scaling-stroke" />
-        </svg>
+    <div class="participant-domain-node participant-domain-${index + 1}">
+      <div class="participant-domain-vessel-wrap">
+        <div class="participant-domain-vessel" aria-label="${escapeHtml(domain.name)} domain rank ${toRoman(domain.rank)}">
+          <svg class="participant-domain-vessel-frame" viewBox="0 0 150 100" aria-hidden="true" preserveAspectRatio="none">
+            <path d="M25 1 H125 L149 50 L125 99 H25 L1 50 Z" fill="none" stroke="currentColor" vector-effect="non-scaling-stroke" />
+          </svg>
+          <span class="domain-rank-badge">${toRoman(domain.rank)}</span>
+          <span class="domain-name-badge">${escapeHtml(domain.name)}</span>
+        </div>
       </div>
-      <span class="participant-domain-rank" aria-label="Domain rank ${domain.rank}">${toRoman(domain.rank)}</span>
-      <span class="participant-domain-name">${escapeHtml(domain.name)}</span>
-      <ul class="participant-disciplines" aria-label="${escapeHtml(domain.name)} disciplines">
+      <div class="discipline-list" aria-label="${escapeHtml(domain.name)} disciplines">
         ${domain.disciplines.map((discipline) => `
-          <li>
+          <div class="discipline-item">
             <span class="discipline-rank">${toRoman(discipline.rank).toLowerCase()}</span>
             <span class="discipline-name">${escapeHtml(discipline.name)}</span>
-          </li>
+          </div>
         `).join('')}
-      </ul>
-    </article>
+      </div>
+    </div>
   `;
 }
 
