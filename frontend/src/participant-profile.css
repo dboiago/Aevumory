@@ -39,7 +39,7 @@ body:has(.participant-profile) { overflow-x: hidden; }
 /* Four equal-height nodes form one centred group, so the Erudite/Form gap straddles the circle's horizontal midline exactly. */
 .domain-arc-group {
   position: absolute;
-  left: 82%x;
+  right: 12%x;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
