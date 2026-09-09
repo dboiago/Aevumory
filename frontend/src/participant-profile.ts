@@ -45,7 +45,7 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
             <div class="participant-expression-name">${escapeHtml(participant.name)}</div>
           </div>
 
-          <aside class="participant-domain-orbit" aria-label="Domain progression">
+          <aside class="domain-arc-group" aria-label="Domain progression">
             ${domains.map((domain, index) => renderDomain(domain, index)).join('')}
           </aside>
         </section>
@@ -80,15 +80,13 @@ function renderParticipantInitial(participant: HouseholdParticipant): string {
 
 function renderDomain(domain: DomainFixture, index: number): string {
   return `
-    <div class="participant-domain-node participant-domain-${index + 1}">
-      <div class="participant-domain-vessel-wrap">
-        <div class="participant-domain-vessel" aria-label="${escapeHtml(domain.name)} domain rank ${toRoman(domain.rank)}">
-          <svg class="participant-domain-vessel-frame" viewBox="0 0 150 100" aria-hidden="true" preserveAspectRatio="none">
-            <path d="M25 1 H125 L149 50 L125 99 H25 L1 50 Z" fill="none" stroke="currentColor" vector-effect="non-scaling-stroke" />
-          </svg>
-          <span class="domain-rank-badge">${toRoman(domain.rank)}</span>
-          <span class="domain-name-badge">${escapeHtml(domain.name)}</span>
-        </div>
+    <div class="domain-node domain-node-${index + 1}">
+      <div class="domain-vessel">
+        <svg class="domain-vessel-frame" viewBox="0 0 150 100" aria-hidden="true" preserveAspectRatio="none">
+          <path d="M25 1 H125 L149 50 L125 99 H25 L1 50 Z" fill="none" stroke="currentColor" vector-effect="non-scaling-stroke" />
+        </svg>
+        <span class="domain-rank-badge">${toRoman(domain.rank)}</span>
+        <span class="domain-name-badge">${escapeHtml(domain.name)}</span>
       </div>
       <div class="discipline-list" aria-label="${escapeHtml(domain.name)} disciplines">
         ${domain.disciplines.map((discipline) => `
