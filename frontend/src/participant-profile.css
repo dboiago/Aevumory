@@ -36,16 +36,46 @@ body:has(.participant-profile) { overflow-x: hidden; }
 .participant-identity-marker img { width: 100%; height: 100%; object-fit: cover; }
 .participant-expression-name { position: absolute; z-index: 4; bottom: -17px; left: 50%; padding: 5px 18px 7px; transform: translateX(-50%); border: 1px solid var(--border-subtle); background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-heading); font-size: clamp(22px, 2.3vw, 34px); font-weight: 500; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 
-.participant-domain-orbit { position: absolute; top: 0; left: 49%; width: 51%; height: 100%; pointer-events: none; }
-.participant-domain-node { position: absolute; display: flex; align-items: center; gap: 16px; width: 100%; pointer-events: auto; }
-.participant-domain-1 { top: 8%; left: 0%; }
-.participant-domain-2 { top: 27%; left: 14%; }
-.participant-domain-3 { top: 48%; left: 14%; }
-.participant-domain-4 { top: 67%; left: 0%; }
+/* Four equal-height nodes form one centred group, so the Erudite/Form gap straddles the circle's horizontal midline exactly. */
+.domain-arc-group {
+  position: absolute;
+  right: -120px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
-.participant-domain-vessel-wrap { position: relative; flex: 0 0 90px; width: 90px; height: 110px; }
-.participant-domain-vessel { position: relative; width: 90px; height: 110px; flex-shrink: 0; color: var(--text-muted); }
-.participant-domain-vessel-frame { position: absolute; inset: 0; width: 90px; height: 110px; overflow: visible; }
+.domain-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  pointer-events: auto;
+}
+
+.domain-node:nth-child(1) { transform: translateX(0px); }
+.domain-node:nth-child(2) { transform: translateX(28px); }
+.domain-node:nth-child(3) { transform: translateX(28px); }
+.domain-node:nth-child(4) { transform: translateX(0px); }
+
+.domain-vessel {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.domain-vessel-frame {
+  position: absolute;
+  inset: 0;
+  width: 72px;
+  height: 72px;
+  overflow: visible;
+}
+
 .domain-rank-badge { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; background: var(--bg-surface); padding: 0 6px; line-height: 1; z-index: 2; color: var(--accent-primary); white-space: nowrap; }
 .domain-name-badge { position: absolute; bottom: 0; left: 50%; transform: translate(-50%, 50%); font-family: var(--font-heading); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; background: var(--bg-surface); padding: 2px 8px; border: 1px solid var(--border-subtle); z-index: 2; color: var(--text-primary); white-space: nowrap; }
 
@@ -70,25 +100,18 @@ body:has(.participant-profile) { overflow-x: hidden; }
 @media (max-width: 900px) {
   .participant-expression-composition { min-height: 820px; }
   .participant-expression-field { left: 0; width: min(62vw, 600px); }
-  .participant-domain-orbit { left: 46%; width: 54%; }
-  .participant-domain-node { width: max-content; }
-  .participant-domain-vessel-wrap { flex-basis: 90px; width: 90px; height: 110px; }
-  .participant-domain-vessel { width: 90px; height: 110px; }
-  .participant-domain-vessel-frame { width: 90px; height: 110px; }
+  .domain-arc-group { right: -100px; }
 }
 
 @media (max-width: 680px) {
   .participant-expression-composition { min-height: auto; padding-bottom: 36px; }
   .participant-expression-field { position: relative; top: 38px; left: auto; width: min(100%, 430px); margin-inline: auto; }
-  .participant-domain-orbit { position: relative; top: auto; left: auto; width: 100%; height: auto; margin-top: 92px; padding-left: 0; }
-  .participant-domain-node,
-  .participant-domain-1,
-  .participant-domain-2,
-  .participant-domain-3,
-  .participant-domain-4 { position: relative; top: auto; left: auto; width: 100%; margin: 18px 0; }
-  .participant-domain-vessel-wrap { flex-basis: 90px; width: 90px; height: 110px; }
-  .participant-domain-vessel { width: 90px; height: 110px; }
-  .participant-domain-vessel-frame { width: 90px; height: 110px; }
+  .domain-arc-group { position: relative; top: auto; right: auto; transform: none; width: 100%; margin-top: 92px; }
+  .domain-node,
+  .domain-node:nth-child(1),
+  .domain-node:nth-child(2),
+  .domain-node:nth-child(3),
+  .domain-node:nth-child(4) { position: relative; width: 100%; margin: 18px 0; transform: none; }
   .discipline-list { min-width: 0; }
   .participant-profile-foundation { grid-template-columns: 1fr; grid-template-rows: auto; grid-template-areas: "perks" "tbd" "connections"; }
 }
