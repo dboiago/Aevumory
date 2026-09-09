@@ -24,10 +24,7 @@ const fallbackDomains: DomainFixture[] = [
 ];
 
 const profileFixtures: Record<string, { credits: number; perks: string[] }> = {
-  'participant:alex': {
-    credits: 142,
-    perks: ['Early riser', 'Kitchen regular', 'Reliable hands'],
-  },
+  'participant:alex': { credits: 142, perks: ['Early riser', 'Kitchen regular', 'Reliable hands'] },
 };
 
 export async function renderParticipantProfile(target: HTMLDivElement, participant: HouseholdParticipant): Promise<void> {
@@ -40,58 +37,39 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
         <button type="button" class="participant-profile-back" data-profile-back>Back</button>
       </header>
 
-      <div class="participant-profile-sheet">
-        <section class="participant-profile-hero" aria-label="Identity and progression">
-          <div class="participant-expression-stage">
-            <div class="participant-expression-field" aria-label="Participant expression field">
-              <div class="participant-expression-inner" aria-hidden="true"></div>
-              <div class="participant-identity-marker" aria-hidden="true">${renderParticipantInitial(participant)}</div>
-              <div class="participant-expression-name">${escapeHtml(participant.name)}</div>
-            </div>
+      <div class="participant-profile-composition">
+        <section class="participant-expression-composition" aria-label="Identity and expression">
+          <div class="participant-expression-field">
+            <div class="participant-expression-inner" aria-hidden="true"></div>
+            <div class="participant-identity-marker">${renderParticipantInitial(participant)}</div>
+            <div class="participant-expression-name">${escapeHtml(participant.name)}</div>
           </div>
 
-          <aside class="participant-domain-ledger" aria-label="Domain progression">
-            <div class="participant-domains">
-              ${domains.map(renderDomain).join('')}
-            </div>
+          <aside class="participant-domain-orbit" aria-label="Domain progression">
+            ${domains.map((domain, index) => renderDomain(domain, index)).join('')}
           </aside>
         </section>
 
         <section class="participant-profile-foundation" aria-label="Participant profile details">
           <section class="participant-profile-section participant-perks" aria-labelledby="participant-perks-heading">
-            <div class="participant-section-heading">
-              <h2 id="participant-perks-heading">Perks</h2>
-            </div>
-            ${fixture.perks.length
-              ? `<ul>${fixture.perks.map((perk) => `<li>${escapeHtml(perk)}</li>`).join('')}</ul>`
-              : '<p class="participant-empty">None earned yet</p>'}
+            <h2 id="participant-perks-heading">Perks</h2>
+            ${fixture.perks.length ? `<ul>${fixture.perks.map((perk) => `<li>${escapeHtml(perk)}</li>`).join('')}</ul>` : '<p>None earned yet</p>'}
           </section>
 
-          <section class="participant-profile-section participant-rewards" aria-labelledby="participant-rewards-heading">
-            <div class="participant-section-heading">
-              <h2 id="participant-rewards-heading">Rewards</h2>
-            </div>
-            <div class="participant-credit-balance">
-              <strong>${fixture.credits}</strong>
-              <span>Credits available</span>
-            </div>
-            <p class="participant-empty">No redemption history</p>
+          <section class="participant-profile-section participant-tbd" aria-label="Reserved profile space">
+            <span>TBD</span>
           </section>
 
           <section class="participant-profile-section participant-connections" aria-labelledby="participant-connections-heading">
-            <div class="participant-section-heading">
-              <h2 id="participant-connections-heading">Connections</h2>
-            </div>
-            <p class="participant-empty">No connected services</p>
+            <h2 id="participant-connections-heading">Connections</h2>
+            <p>No connected services</p>
           </section>
         </section>
       </div>
     </main>
   `;
 
-  target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => {
-    window.history.back();
-  });
+  target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => window.history.back());
 }
 
 function renderParticipantInitial(participant: HouseholdParticipant): string {
@@ -100,18 +78,19 @@ function renderParticipantInitial(participant: HouseholdParticipant): string {
   return escapeHtml(first.toUpperCase());
 }
 
-function renderDomain(domain: DomainFixture): string {
+function renderDomain(domain: DomainFixture, index: number): string {
   return `
-    <div class="participant-domain">
-      <div class="participant-domain-head">
+    <div class="participant-domain participant-domain-${index + 1}">
+      <svg class="participant-domain-vessel" viewBox="0 0 190 82" aria-hidden="true" preserveAspectRatio="none">
+        <path d="M1 1 H150 L189 41 L150 81 H1 L32 41 Z" fill="none" stroke="currentColor" vector-effect="non-scaling-stroke" />
+      </svg>
+      <div class="participant-domain-content">
         <span class="participant-domain-rank">${toRoman(domain.rank)}</span>
         <span class="participant-domain-name">${escapeHtml(domain.name)}</span>
+        <ul class="participant-disciplines">
+          ${domain.disciplines.map((discipline) => `<li><span>${toRoman(discipline.rank)}</span>${escapeHtml(discipline.name)}</li>`).join('')}
+        </ul>
       </div>
-      <ul class="participant-disciplines">
-        ${domain.disciplines.map((discipline) => `
-          <li><span class="participant-discipline-rank">${toRoman(discipline.rank)}</span><span>${escapeHtml(discipline.name)}</span></li>
-        `).join('')}
-      </ul>
     </div>
   `;
 }
@@ -121,10 +100,7 @@ function toRoman(value: number): string {
   let remaining = Math.max(1, Math.floor(value));
   let result = '';
   for (const [unit, numeral] of numerals) {
-    while (remaining >= unit) {
-      result += numeral;
-      remaining -= unit;
-    }
+    while (remaining >= unit) { result += numeral; remaining -= unit; }
   }
   return result;
 }
