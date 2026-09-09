@@ -37,7 +37,7 @@ body:has(.participant-profile) { overflow-x: hidden; }
 
 .domain-arc-group {
   position: absolute;
-  left: calc(5% + min(54vw, 650px) - clamp(12px, 1.5vw, 24px));
+  left: calc(5% + min(54vw, 650px) + clamp(24px, 2.5vw, 40px));
   top: calc(42px + (min(54vw, 650px) / 2));
   transform: translateY(-50%);
   display: flex;
