@@ -10,6 +10,17 @@
   padding: clamp(20px, 3vw, 44px) clamp(20px, 5vw, 84px) 72px;
 }
 
+/* The application shell normally owns the viewport for the ambient display. Let the profile release that lock while it is mounted. */
+html:has(.participant-profile),
+body:has(.participant-profile),
+#app:has(.participant-profile) {
+  height: auto;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+body:has(.participant-profile) { overflow-x: hidden; }
+
 .participant-profile-toolbar,
 .participant-profile-composition {
   width: min(1380px, 100%);
