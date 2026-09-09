@@ -41,24 +41,24 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
       </header>
 
       <div class="participant-profile-sheet">
-        <section class="participant-profile-upper" aria-label="Identity and progression">
-          <div class="participant-expression-field" aria-label="Participant expression field">
-            <div class="participant-expression-inner" aria-hidden="true"></div>
-            <div class="participant-identity-marker" aria-hidden="true">${renderParticipantInitial(participant)}</div>
-            <div class="participant-expression-name">${escapeHtml(participant.name)}</div>
+        <section class="participant-profile-hero" aria-label="Identity and progression">
+          <div class="participant-expression-stage">
+            <div class="participant-expression-field" aria-label="Participant expression field">
+              <div class="participant-expression-inner" aria-hidden="true"></div>
+              <div class="participant-identity-marker" aria-hidden="true">${renderParticipantInitial(participant)}</div>
+              <div class="participant-expression-name">${escapeHtml(participant.name)}</div>
+            </div>
           </div>
 
           <aside class="participant-domain-ledger" aria-label="Domain progression">
-            <div class="participant-section-label">Domains</div>
             <div class="participant-domains">
               ${domains.map(renderDomain).join('')}
             </div>
           </aside>
         </section>
 
-        <section class="participant-profile-lower" aria-label="Participant profile details">
+        <section class="participant-profile-foundation" aria-label="Participant profile details">
           <section class="participant-profile-section participant-perks" aria-labelledby="participant-perks-heading">
-            <div class="participant-section-rule"></div>
             <div class="participant-section-heading">
               <h2 id="participant-perks-heading">Perks</h2>
             </div>
@@ -68,8 +68,9 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
           </section>
 
           <section class="participant-profile-section participant-rewards" aria-labelledby="participant-rewards-heading">
-            <div class="participant-section-rule"></div>
-            <div class="participant-section-heading"><h2 id="participant-rewards-heading">Rewards</h2></div>
+            <div class="participant-section-heading">
+              <h2 id="participant-rewards-heading">Rewards</h2>
+            </div>
             <div class="participant-credit-balance">
               <strong>${fixture.credits}</strong>
               <span>Credits available</span>
@@ -78,8 +79,9 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
           </section>
 
           <section class="participant-profile-section participant-connections" aria-labelledby="participant-connections-heading">
-            <div class="participant-section-rule"></div>
-            <div class="participant-section-heading"><h2 id="participant-connections-heading">Connections</h2></div>
+            <div class="participant-section-heading">
+              <h2 id="participant-connections-heading">Connections</h2>
+            </div>
             <p class="participant-empty">No connected services</p>
           </section>
         </section>
@@ -100,8 +102,8 @@ function renderParticipantInitial(participant: HouseholdParticipant): string {
 
 function renderDomain(domain: DomainFixture): string {
   return `
-    <div class="participant-domain participant-domain-${domain.name.toLowerCase()}">
-      <div class="participant-domain-vessel">
+    <div class="participant-domain">
+      <div class="participant-domain-head">
         <span class="participant-domain-rank">${toRoman(domain.rank)}</span>
         <span class="participant-domain-name">${escapeHtml(domain.name)}</span>
       </div>
