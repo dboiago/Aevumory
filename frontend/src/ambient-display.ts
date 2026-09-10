@@ -25,6 +25,11 @@ export function renderAmbientDisplay(target: HTMLDivElement, path: string): void
 }
 
 function renderSourceOverview(target: HTMLDivElement): void {
+  const grouped = availableAmbientSourceKinds.map((kind) => ({
+    ...kind,
+    sources: fixtureAmbientSources.filter((source) => source.kind === kind.kind),
+  }));
+
   target.innerHTML = `
     <main class="ambient-settings" aria-label="Ambient Display">
       <header class="ambient-settings-header">
@@ -33,59 +38,76 @@ function renderSourceOverview(target: HTMLDivElement): void {
           <h1>Image Sources</h1>
         </div>
       </header>
-      <section class="ambient-source-list" aria-label="Ambient image sources">
-        ${fixtureAmbientSources.map(renderSourceCard).join('')}
+      <section class="ambient-source-groups" aria-label="Ambient image sources">
+        ${grouped.map(renderSourceGroup).join('')}
       </section>
-      <div class="ambient-settings-actions">
-        <button type="button" class="ambient-secondary-action" data-add-source>+ Add image source</button>
-      </div>
+      <p class="ambient-source-disclaimer">Aevumory only uses the images you choose and does not modify or send images off device.</p>
     </main>
   `;
 
-  target.querySelectorAll<HTMLElement>('[data-source-id]').forEach((card) => {
-    card.addEventListener('click', () => {
-      const sourceId = card.dataset.sourceId;
+  target.querySelectorAll<HTMLElement>('[data-source-id]').forEach((row) => {
+    row.addEventListener('click', () => {
+      const sourceId = row.dataset.sourceId;
       if (sourceId) window.location.hash = `#ambient-display/source/${encodeURIComponent(sourceId)}`;
     });
   });
 
-  target.querySelector<HTMLButtonElement>('[data-add-source]')?.addEventListener('click', () => {
-    window.location.hash = '#ambient-display/add';
+  target.querySelectorAll<HTMLButtonElement>('[data-add-kind]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const kind = button.dataset.addKind;
+      if (kind) {
+        window.location.hash = `#ambient-display/add?kind=${encodeURIComponent(kind)}`;
+        renderAddSource(target, kind as AmbientSourceKind);
+      }
+    });
   });
 }
 
-function renderSourceCard(source: AmbientImageSource): string {
-  const status = source.status === 'included' ? 'Included' : source.status === 'not-included' ? 'Not included' : source.status === 'unavailable' ? 'Temporarily unavailable' : 'No eligible images';
-  const scope = source.owner ? `${escapeHtml(source.owner)} · ${escapeHtml(source.scope)}` : escapeHtml(source.scope);
+function renderSourceGroup(group: {
+  kind: AmbientSourceKind;
+  name: string;
+  sources: AmbientImageSource[];
+}): string {
+  const rows = group.sources.map(renderSourceRow).join('');
+  const addAction = group.kind === 'aevumory' ? '' : '<button type="button" class="ambient-inline-action" data-add-kind="' + escapeHtml(group.kind) + '">Add</button>';
 
   return `
-    <button type="button" class="ambient-source-card" data-source-id="${escapeHtml(source.id)}">
-      <span class="ambient-source-card-main">
-        <span class="ambient-source-name">${escapeHtml(source.name)}</span>
-        <span class="ambient-source-meta">${scope} · ${source.imageCount.toLocaleString('en-CA')} images</span>
-      </span>
-      <span class="ambient-source-status ${source.status === 'included' ? 'ambient-source-status-included' : ''}">${status}</span>
+    <section class="ambient-source-group" aria-label="${escapeHtml(group.name)}">
+      <h2>${escapeHtml(group.name)}</h2>
+      <div class="ambient-source-group-content">
+        ${rows || '<p class="ambient-source-empty">Not connected</p>'}
+        ${addAction ? `<div class="ambient-source-group-action">${addAction}</div>` : ''}
+      </div>
+    </section>
+  `;
+}
+
+function renderSourceRow(source: AmbientImageSource): string {
+  const scope = `${escapeHtml(source.scope)} · ${source.imageCount.toLocaleString('en-CA')} images`;
+  return `
+    <button type="button" class="ambient-source-row" data-source-id="${escapeHtml(source.id)}">
+      <span class="ambient-source-owner">${escapeHtml(source.owner ?? 'Household')}</span>
+      <span class="ambient-source-meta">${scope}</span>
     </button>
   `;
 }
 
-function renderAddSource(target: HTMLDivElement): void {
+function renderAddSource(target: HTMLDivElement, selectedKind?: AmbientSourceKind): void {
   target.innerHTML = `
     <main class="ambient-settings" aria-label="Add image source">
       <header class="ambient-settings-header ambient-settings-header-with-back">
-        <button type="button" class="ambient-back-action" data-back>Image Sources</button>
+        <button type="button" class="ambient-back-action" data-back>← Back</button>
         <div>
-          <p class="eyebrow">Ambient Display</p>
           <h1>Add image source</h1>
         </div>
       </header>
       <section class="ambient-source-choices" aria-label="Available image sources">
-        ${availableAmbientSourceKinds.map(renderSourceChoice).join('')}
+        ${availableAmbientSourceKinds.map((source) => renderSourceChoice(source, selectedKind === source.kind)).join('')}
       </section>
     </main>
   `;
 
-  target.querySelector<HTMLButtonElement>('[data-back]')?.addEventListener('click', () => {
+  bindBack(target, () => {
     window.location.hash = '#ambient-display';
   });
 
@@ -97,9 +119,9 @@ function renderAddSource(target: HTMLDivElement): void {
   });
 }
 
-function renderSourceChoice(source: { kind: AmbientSourceKind; name: string }): string {
+function renderSourceChoice(source: { kind: AmbientSourceKind; name: string }, selected: boolean): string {
   return `
-    <button type="button" class="ambient-source-choice" data-source-kind="${source.kind}">
+    <button type="button" class="ambient-source-choice${selected ? ' ambient-source-choice-selected' : ''}" data-source-kind="${source.kind}">
       <span>${escapeHtml(source.name)}</span>
       <span aria-hidden="true">›</span>
     </button>
@@ -113,23 +135,19 @@ function renderConnectionStep(target: HTMLDivElement, kind: AmbientSourceKind): 
   target.innerHTML = `
     <main class="ambient-settings" aria-label="Connect image source">
       <header class="ambient-settings-header ambient-settings-header-with-back">
-        <button type="button" class="ambient-back-action" data-back>Add image source</button>
+        <button type="button" class="ambient-back-action" data-back>← Back</button>
         <div>
-          <p class="eyebrow">${escapeHtml(name)}</p>
           <h1>${local ? 'Choose source' : `Connect ${escapeHtml(name)}`}</h1>
         </div>
       </header>
       <section class="ambient-source-step">
         <p class="ambient-source-explanation">${local ? 'Choose what Aevumory may use from this device.' : `Your photos remain in ${escapeHtml(name)}. Aevumory only uses the images you choose.`}</p>
-        <button type="button" class="ambient-primary-action" data-continue>Continue</button>
+        <button type="button" class="ambient-primary-action" data-continue>${local ? 'Choose' : `Connect ${escapeHtml(name)}`}</button>
       </section>
     </main>
   `;
 
-  target.querySelector<HTMLButtonElement>('[data-back]')?.addEventListener('click', () => {
-    renderAddSource(target);
-    window.history.replaceState(null, '', '#ambient-display/add');
-  });
+  bindBack(target, () => renderAddSource(target, kind));
 
   target.querySelector<HTMLButtonElement>('[data-continue]')?.addEventListener('click', () => {
     renderSelectionStep(target, kind, name);
@@ -144,9 +162,8 @@ function renderSelectionStep(target: HTMLDivElement, kind: AmbientSourceKind, na
   target.innerHTML = `
     <main class="ambient-settings" aria-label="Choose Ambient Display images">
       <header class="ambient-settings-header ambient-settings-header-with-back">
-        <button type="button" class="ambient-back-action" data-back>Back</button>
+        <button type="button" class="ambient-back-action" data-back>← Back</button>
         <div>
-          <p class="eyebrow">${escapeHtml(name)}</p>
           <h1>Choose what to include</h1>
         </div>
       </header>
@@ -171,9 +188,7 @@ function renderSelectionStep(target: HTMLDivElement, kind: AmbientSourceKind, na
     </main>
   `;
 
-  target.querySelector<HTMLButtonElement>('[data-back]')?.addEventListener('click', () => {
-    renderConnectionStep(target, kind);
-  });
+  bindBack(target, () => renderConnectionStep(target, kind));
 
   target.querySelector<HTMLButtonElement>('[data-done]')?.addEventListener('click', () => {
     renderCompletionStep(target, name, owner);
@@ -192,9 +207,9 @@ function renderSelectionRow(label: string, checked: boolean): string {
 function renderCompletionStep(target: HTMLDivElement, name: string, owner?: string): void {
   target.innerHTML = `
     <main class="ambient-settings" aria-label="Image source added">
-      <header class="ambient-settings-header">
+      <header class="ambient-settings-header ambient-settings-header-with-back">
+        <button type="button" class="ambient-back-action" data-back>← Back</button>
         <div>
-          <p class="eyebrow">${escapeHtml(name)}</p>
           <h1>Included in Ambient Display</h1>
         </div>
       </header>
@@ -208,6 +223,8 @@ function renderCompletionStep(target: HTMLDivElement, name: string, owner?: stri
     </main>
   `;
 
+  bindBack(target, () => renderSelectionStep(target, availableKindForName(name), name));
+
   target.querySelector<HTMLButtonElement>('[data-done]')?.addEventListener('click', () => {
     window.location.hash = '#ambient-display';
   });
@@ -218,9 +235,8 @@ function renderSourceDetail(target: HTMLDivElement, source: AmbientImageSource):
   target.innerHTML = `
     <main class="ambient-settings" aria-label="${escapeHtml(source.name)}">
       <header class="ambient-settings-header ambient-settings-header-with-back">
-        <button type="button" class="ambient-back-action" data-back>Image Sources</button>
+        <button type="button" class="ambient-back-action" data-back>← Back</button>
         <div>
-          <p class="eyebrow">Ambient Display</p>
           <h1>${escapeHtml(source.name)}</h1>
         </div>
       </header>
@@ -236,7 +252,7 @@ function renderSourceDetail(target: HTMLDivElement, source: AmbientImageSource):
     </main>
   `;
 
-  target.querySelector<HTMLButtonElement>('[data-back]')?.addEventListener('click', () => {
+  bindBack(target, () => {
     window.location.hash = '#ambient-display';
   });
 
@@ -247,6 +263,36 @@ function renderSourceDetail(target: HTMLDivElement, source: AmbientImageSource):
     }
     renderSelectionStep(target, source.kind, source.name);
   });
+}
+
+function bindBack(target: HTMLDivElement, action: () => void): void {
+  target.querySelector<HTMLButtonElement>('[data-back]')?.addEventListener('click', action);
+
+  let startX = 0;
+  let startY = 0;
+  let tracking = false;
+
+  target.addEventListener('touchstart', (event) => {
+    const touch = event.changedTouches[0];
+    if (touch.clientX <= 32) {
+      startX = touch.clientX;
+      startY = touch.clientY;
+      tracking = true;
+    }
+  }, { passive: true });
+
+  target.addEventListener('touchend', (event) => {
+    if (!tracking) return;
+    tracking = false;
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - startX;
+    const deltaY = Math.abs(touch.clientY - startY);
+    if (deltaX >= 70 && deltaX > deltaY * 1.5) action();
+  }, { passive: true });
+}
+
+function availableKindForName(name: string): AmbientSourceKind {
+  return availableAmbientSourceKinds.find((item) => item.name === name)?.kind ?? 'device';
 }
 
 function escapeHtml(value: string): string {
