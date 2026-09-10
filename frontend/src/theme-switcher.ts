@@ -1,3 +1,6 @@
+import { renderParticipantProfile } from './participant-profile';
+import { FixtureTaskBoardQuery } from './tasks';
+
 const themes = ['overgrown', 'nebula', 'vernal', 'maritime', 'memoix'] as const;
 type Theme = (typeof themes)[number];
 
@@ -27,4 +30,30 @@ if (select) {
 function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme;
   window.localStorage.setItem('aevumory-prototype-theme', theme);
+}
+
+const profileQuery = new FixtureTaskBoardQuery();
+
+window.addEventListener('hashchange', () => {
+  const match = window.location.hash.match(/^#participant\/(.+)$/);
+  if (!match) return;
+
+  window.setTimeout(async () => {
+    const state = await profileQuery.getBoard();
+    const participant = state.participants.find((item) => item.id === decodeURIComponent(match[1]));
+    const root = document.querySelector<HTMLDivElement>('#app');
+    if (participant && root) await renderParticipantProfile(root, participant);
+  }, 0);
+});
+
+if (window.location.hash.startsWith('#participant/')) {
+  window.setTimeout(async () => {
+    const state = await profileQuery.getBoard();
+    const match = window.location.hash.match(/^#participant\/(.+)$/);
+    const participant = match
+      ? state.participants.find((item) => item.id === decodeURIComponent(match[1]))
+      : undefined;
+    const root = document.querySelector<HTMLDivElement>('#app');
+    if (participant && root) await renderParticipantProfile(root, participant);
+  }, 0);
 }
