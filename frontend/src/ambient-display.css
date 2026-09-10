@@ -25,7 +25,8 @@
 }
 
 .ambient-back-action,
-.ambient-secondary-action {
+.ambient-secondary-action,
+.ambient-inline-action {
   width: fit-content;
   padding: 0;
   border: 0;
@@ -39,86 +40,120 @@
 }
 
 .ambient-back-action:hover,
-.ambient-secondary-action:hover {
+.ambient-secondary-action:hover,
+.ambient-inline-action:hover {
   color: var(--text-primary);
 }
 
 .ambient-back-action:focus-visible,
 .ambient-secondary-action:focus-visible,
 .ambient-primary-action:focus-visible,
-.ambient-source-card:focus-visible,
+.ambient-source-row:focus-visible,
 .ambient-source-choice:focus-visible,
+.ambient-inline-action:focus-visible,
 .ambient-individual-selection:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 3px;
 }
 
-.ambient-source-list,
+.ambient-source-groups,
 .ambient-source-choices,
 .ambient-selection-panel,
 .ambient-source-detail,
 .ambient-source-step,
-.ambient-completion-panel {
+.ambient-completion-panel,
+.ambient-source-disclaimer {
   max-width: 900px;
-  margin: 0 auto;
+  margin-right: auto;
+  margin-left: auto;
 }
 
-.ambient-source-list {
+.ambient-source-groups {
   display: grid;
-  gap: 10px;
+  gap: clamp(30px, 4vw, 48px);
 }
 
-.ambient-source-card {
+.ambient-source-group {
+  display: grid;
+  gap: 14px;
+}
+
+.ambient-source-group h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: .04em;
+}
+
+.ambient-source-group-content {
+  display: grid;
+  gap: 5px;
+}
+
+.ambient-source-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  align-items: baseline;
+  gap: 7px;
   width: 100%;
-  min-height: 88px;
-  padding: 18px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-card, 8px);
-  background: var(--bg-surface);
+  padding: 5px 2px;
+  border: 0;
+  background: transparent;
   color: inherit;
   cursor: pointer;
   text-align: left;
-  transition: border-color 160ms ease, background 160ms ease;
 }
 
-.ambient-source-card:hover {
-  border-color: var(--accent-primary);
-  background: var(--bg-surface-hover);
+.ambient-source-row:hover .ambient-source-owner {
+  color: var(--accent-primary);
 }
 
-.ambient-source-card-main {
-  display: grid;
-  min-width: 0;
-  gap: 7px;
-}
-
-.ambient-source-name {
+.ambient-source-owner {
+  flex: 0 0 auto;
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .ambient-source-meta {
+  min-width: 0;
   color: var(--text-muted);
   font-size: 11px;
   letter-spacing: .04em;
 }
 
-.ambient-source-status {
-  flex: 0 0 auto;
-  color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+.ambient-source-group-action {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 5px;
 }
 
-.ambient-source-status-included {
+.ambient-inline-action {
+  padding: 7px 12px;
+  border: 1px solid var(--action-primary-border);
+  border-radius: 7px;
+  background: var(--action-primary-bg);
   color: var(--accent-primary);
+  letter-spacing: .04em;
+}
+
+.ambient-inline-action:hover {
+  border-color: var(--border-active);
+  background: var(--action-primary-hover-bg);
+}
+
+.ambient-source-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.ambient-source-disclaimer {
+  margin-top: clamp(40px, 6vw, 72px);
+  margin-bottom: 0;
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.6;
 }
 
 .ambient-settings-actions {
@@ -169,6 +204,10 @@
 .ambient-individual-selection:hover {
   border-color: var(--accent-primary);
   background: var(--bg-surface-hover);
+}
+
+.ambient-source-choice-selected {
+  border-color: var(--accent-primary);
 }
 
 .ambient-source-step,
@@ -259,10 +298,7 @@
 
 .ambient-source-detail {
   display: grid;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-card, 8px);
-  background: var(--bg-surface);
+  padding: 4px 0;
 }
 
 .ambient-detail-line {
@@ -270,12 +306,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 20px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.ambient-detail-line:last-of-type {
-  border-bottom: 0;
+  padding: 9px 2px;
 }
 
 .ambient-detail-line span {
@@ -291,21 +322,17 @@
 }
 
 .ambient-private-note {
-  margin: 0;
-  padding: 16px 18px;
-  border-top: 1px solid var(--border-subtle);
-  color: var(--text-muted);
-  font-size: 11px;
+  margin-top: 18px;
+  padding: 0 2px;
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 @media (max-width: 600px) {
-  .ambient-source-card {
+  .ambient-source-row {
     align-items: flex-start;
     flex-direction: column;
-    gap: 12px;
-  }
-
-  .ambient-source-status {
-    align-self: flex-start;
+    gap: 2px;
   }
 }
