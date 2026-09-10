@@ -1,3 +1,4 @@
+import './ambient-display.css';
 import {
   availableAmbientSourceKinds,
   fixtureAmbientSources,
