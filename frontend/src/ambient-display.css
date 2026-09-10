@@ -7,7 +7,7 @@
 }
 
 .ambient-settings-header {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 0 auto clamp(34px, 5vw, 64px);
 }
 
@@ -20,8 +20,11 @@
 }
 
 .ambient-settings-header-with-back {
-  display: grid;
-  gap: 18px;
+  display: block;
+}
+
+.ambient-back-action {
+  margin: 0 0 24px;
 }
 
 .ambient-back-action,
@@ -40,8 +43,7 @@
 }
 
 .ambient-back-action:hover,
-.ambient-secondary-action:hover,
-.ambient-inline-action:hover {
+.ambient-secondary-action:hover {
   color: var(--text-primary);
 }
 
@@ -70,25 +72,29 @@
 
 .ambient-source-groups {
   display: grid;
-  gap: clamp(30px, 4vw, 48px);
+  gap: clamp(24px, 3vw, 36px);
 }
 
-.ambient-source-group {
+.ambient-source-group-card {
   display: grid;
-  gap: 14px;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, 8px);
+  background: var(--bg-surface);
 }
 
 .ambient-source-group h2 {
   margin: 0;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 500;
-  letter-spacing: .04em;
+  letter-spacing: .02em;
 }
 
 .ambient-source-group-content {
   display: grid;
-  gap: 5px;
+  gap: 6px;
 }
 
 .ambient-source-row {
@@ -105,36 +111,39 @@
 }
 
 .ambient-source-row:hover .ambient-source-owner {
-  color: var(--accent-primary);
+  color: var(--text-primary);
 }
 
 .ambient-source-owner {
   flex: 0 0 auto;
-  color: var(--text-primary);
-  font-size: 13px;
+  color: var(--text-soft);
+  font-size: 15px;
   font-weight: 500;
 }
 
 .ambient-source-meta {
   min-width: 0;
   color: var(--text-muted);
-  font-size: 11px;
-  letter-spacing: .04em;
+  font-size: 13px;
+  letter-spacing: .025em;
 }
 
 .ambient-source-group-action {
   display: flex;
   justify-content: flex-end;
-  padding-top: 5px;
+  padding-top: 7px;
 }
 
 .ambient-inline-action {
-  padding: 7px 12px;
+  flex: 0 0 auto;
+  padding: 6px 11px;
   border: 1px solid var(--action-primary-border);
   border-radius: 7px;
   background: var(--action-primary-bg);
   color: var(--accent-primary);
+  font-size: 11px;
   letter-spacing: .04em;
+  white-space: nowrap;
 }
 
 .ambient-inline-action:hover {
@@ -145,7 +154,7 @@
 .ambient-source-empty {
   margin: 0;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .ambient-source-disclaimer {
@@ -163,7 +172,7 @@
 }
 
 .ambient-primary-action {
-  padding: 7px 12px;
+  padding: 6px 11px;
   border: 1px solid var(--action-primary-border);
   border-radius: 7px;
   background: var(--action-primary-bg);
@@ -172,6 +181,7 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: .04em;
+  white-space: nowrap;
 }
 
 .ambient-primary-action:hover {
@@ -204,10 +214,6 @@
 .ambient-individual-selection:hover {
   border-color: var(--accent-primary);
   background: var(--bg-surface-hover);
-}
-
-.ambient-source-choice-selected {
-  border-color: var(--accent-primary);
 }
 
 .ambient-source-step,
@@ -311,13 +317,13 @@
 
 .ambient-detail-line span {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: .05em;
 }
 
 .ambient-detail-line strong {
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -325,7 +331,7 @@
   margin-top: 18px;
   padding: 0 2px;
   color: var(--text-soft);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
