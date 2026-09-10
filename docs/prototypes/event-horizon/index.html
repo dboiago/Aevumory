@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aevumory · Event Horizon Prototype</title>
+<style>
+  :root {
+    --metadata-opacity: .38;
+    --safe-bottom: clamp(22px, 2.4vw, 42px);
+    --safe-right: clamp(24px, 3vw, 54px);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: #111; color: #eee;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  #horizon {
+    position: relative; width: 100vw; height: 100vh; overflow: hidden;
+    isolation: isolate; background: #171716 center / cover no-repeat;
+  }
+  #horizon::before {
+    content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background: linear-gradient(to bottom, rgba(0,0,0,.02) 0%, rgba(0,0,0,.03) 65%, rgba(0,0,0,.18) 100%);
+  }
+  #horizon::after {
+    content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    box-shadow: inset 0 0 clamp(36px, 6vw, 110px) rgba(0,0,0,.12);
+  }
+  #field {
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+  }
+  .event {
+    position:absolute; left:0px; top:0px; max-width:min(38vw, 460px);
+    color:rgba(255,255,255,var(--opacity));
+    font-size:clamp(10px, var(--font-size, 14px), 25px);
+    font-weight:var(--weight);
+    letter-spacing:var(--tracking);
+    line-height:1.08;
+    white-space:nowrap;
+    text-align:center;
+    filter: blur(var(--blur));
+    /* Soft local separation, not an outline. This keeps white type readable
+       over lighter photography without introducing a UI treatment. */
+    text-shadow:
+      0 1px 3px rgba(0,0,0,.42),
+      0 0 10px rgba(0,0,0,.18);
+    transform: translate(-50%,-50%) scale(var(--scale));
+    transform-origin:center;
+    transition: none;
+    will-change: transform, filter, color;
+  }
+  .event-title { display:block; }
+  .event-time {
+    display:block;
+    margin-top:.18em;
+    font-size:.68em;
+    font-weight:400;
+    letter-spacing:.08em;
+    opacity:var(--time-opacity);
+    transform:translateY(var(--time-rise)) scale(var(--time-scale));
+    transform-origin:center top;
+  }
+
+  #metadata {
+    position:absolute; right:var(--safe-right); bottom:var(--safe-bottom); z-index:3;
+    color:rgba(255,255,255,var(--metadata-opacity));
+    font-size:clamp(10px, 1.15vw, 18px);
+    font-weight:400; letter-spacing:.12em; white-space:nowrap;
+    transition: opacity 600ms ease;
+    text-shadow:0 1px 10px rgba(0,0,0,.2);
+  }
+  #controls {
+    position:absolute; left:18px; top:18px; z-index:10; width:min(390px, calc(100vw - 36px));
+    padding:14px; border-radius:12px; background:rgba(12,12,12,.76);
+    backdrop-filter: blur(14px); color:#eee; font-size:13px;
+    opacity:.16; transition:opacity .2s ease;
+  }
+  #controls:hover, #controls:focus-within { opacity:1; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+  .row label { min-width:74px; color:#bdbdbd; }
+  button {
+    border:1px solid rgba(255,255,255,.18); background:#222; color:#eee; border-radius:7px;
+    padding:6px 9px; cursor:pointer; font:inherit;
+  }
+  button.active { background:#e9e5dc; color:#171717; }
+  input[type="range"] { flex:1; min-width:170px; }
+  .value { width:56px; text-align:right; color:#bdbdbd; font-variant-numeric:tabular-nums; }
+  .hint { margin-top:9px; color:#8e8e8e; font-size:11px; line-height:1.4; }
+  @media (max-width:700px) {
+    #controls { opacity:.82; }
+    .event { white-space:normal; max-width:42vw; }
+  }
+</style>
+</head>
+<body>
+<main id="horizon">
+  <div id="field"></div>
+  <div id="metadata">Monday · 7:42 PM · 21°C</div>
+
+  <section id="controls" aria-label="Prototype controls">
+    <div class="row">
+      <label>Photo</label>
+      <button data-photo="portrait" class="active">Portrait</button>
+      <button data-photo="landscape">Landscape</button>
+      <button data-photo="interior">Interior</button>
+    </div>
+    <div class="row">
+      <label>Events</label>
+      <button data-count="0">0</button>
+      <button data-count="1">1</button>
+      <button data-count="3">3</button>
+      <button data-count="5" class="active">5</button>
+    </div>
+    <div class="row">
+      <label for="day">Simulation</label>
+      <input id="day" type="range" min="0" max="504.10" value="72" step="0.0025">
+      <span id="dayValue" class="value"></span>
+    </div>
+    <div class="row">
+      <label for="settle">Settling</label>
+      <input id="settle" type="range" min="4" max="16" value="8" step="1">
+      <span id="settleValue" class="value"></span>
+    </div>
+    <div class="row">
+      <label for="departure">Departure</label>
+      <input id="departure" type="range" min="1" max="5" value="3" step=".5">
+      <span id="departureValue" class="value"></span>
+    </div>
+    <div class="hint">The Horizon remains seven days wide, but the simulation now passes through three weeks of fixed events. After an event starts, it receives a configurable short visual grace period before leaving the display. The finer simulation step makes that departure practical to inspect.</div>
+  </section>
+</main>
+
+<script>
+const photos = {
+  portrait: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=2400&q=88',
+  landscape: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2400&q=88',
+  interior: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=2400&q=88'
+};
+
+const horizon = document.querySelector('#horizon');
+const field = document.querySelector('#field');
+const slider = document.querySelector('#day');
+const value = document.querySelector('#dayValue');
+const settle = document.querySelector('#settle');
+const settleValue = document.querySelector('#settleValue');
+const departure = document.querySelector('#departure');
+const departureValue = document.querySelector('#departureValue');
+let visibleCount = 5;
+let photo = 'portrait';
+
+// ageHours = hours since event entered the 6-day horizon.
+// Each event remains continuous even between nominal day labels.
+const events = [
+  // occurrenceHour is absolute simulation time. Day 1 begins at 00:00.
+  // Each occurrence hour intentionally matches the displayed event clock time.
+  { id:'maya', title:'Maya arrives from Vancouver', time:'6:30 PM', occurrenceHour:186.5, family:'left', phase:.17, bias:.04, arrivalLane:-.014, loop:.12 },
+  { id:'morans', title:'Dinner with the Morans', time:'7:00 PM', occurrenceHour:259, family:'right', phase:.61, bias:-.02, arrivalLane:.038, loop:-.10 },
+  { id:'tournament', title:"Alex's tournament", time:'9:15 AM', occurrenceHour:297.25, family:'left', phase:.83, bias:.025, arrivalLane:.012, loop:.14 },
+  { id:'train', title:'Train to Montreal', time:'2:40 PM', occurrenceHour:350.6667, family:'right', phase:.29, bias:-.035, arrivalLane:.055, loop:-.13 },
+  { id:'maya-arrival', title:'Maya arrives', time:'6:30 PM', occurrenceHour:378.5, family:'right', phase:.47, bias:.012, arrivalLane:-.042, loop:.11 },
+
+  // Additional fixed occurrences exist only to make the three-week simulation
+  // useful. They enter once and never wrap or respawn.
+  { id:'garden', title:'Garden project', time:'10:00 AM', occurrenceHour:418, family:'left', phase:.34, bias:-.028, arrivalLane:.020, loop:-.09 },
+  { id:'parents', title:'Parents visiting', time:'1:00 PM', occurrenceHour:445, family:'right', phase:.72, bias:.018, arrivalLane:-.020, loop:.13 },
+  { id:'concert', title:'Concert downtown', time:'8:00 PM', occurrenceHour:476, family:'left', phase:.54, bias:.031, arrivalLane:.046, loop:-.12 },
+  { id:'checkout', title:'Hotel checkout', time:'11:00 AM', occurrenceHour:491, family:'right', phase:.23, bias:-.041, arrivalLane:.006, loop:.10 }
+];
+
+const nodes = events.map((event) => {
+  const node = document.createElement('div');
+  node.className = 'event';
+  const title = document.createElement('span');
+  title.className = 'event-title';
+  title.textContent = event.title;
+  const time = document.createElement('span');
+  time.className = 'event-time';
+  time.textContent = event.time;
+  node.append(title, time);
+  field.appendChild(node);
+  return { event, node };
+});
+
+function clamp(v, a=0, b=1) { return Math.max(a, Math.min(b, v)); }
+function lerp(a,b,t){ return a + (b-a)*t; }
+function smoothstep(t){ t=clamp(t); return t*t*(3-2*t); }
+
+function spatialSeed(id, salt='') {
+  let h = 2166136261;
+  const input = id + ':' + salt;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 1000000) / 1000000;
+}
+
+function weightedIngress(event) {
+  const ySeed = spatialSeed(event.id, 'y');
+  const xSeed = spatialSeed(event.id, 'x');
+
+  // Larger Y values are lower on screen. This preserves the range while
+  // making lower ingress statistically more common.
+  const yWeight = 1 - Math.pow(1 - ySeed, 0.55);
+  const y = lerp(.88, .97, yWeight);
+
+  // Mild centre avoidance. Centre remains possible; it is simply less common.
+  const side = xSeed < .5 ? -1 : 1;
+  const distance = .07 + Math.pow(Math.abs(xSeed - .5) * 2, 0.72) * .40;
+  const x = clamp(.5 + side * distance, .035, .965);
+
+  return { x, y };
+}
+
+// Low-left and low-right ingress curves. Curves are intentionally asymmetric.
+// Deterministic event-specific phase/bias prevents left-right-left-right symmetry.
+function trajectory(event, p, horizonHours, settlingHours) {
+  const side = event.family === 'right' ? 1 : -1;
+  const settleStart = clamp(1 - settlingHours / horizonHours);
+
+  // Ingress has its own deterministic spatial identity. It is intentionally
+  // independent from trajectory phase so composition does not inherit phase bias.
+  const ingressPoint = weightedIngress(event);
+  const distalX = ingressPoint.x;
+  const distalY = ingressPoint.y;
+
+  // The approach field is deliberately a field rather than a convergence point.
+  // Every event reaches a different, but still recognizably central, resting area
+  // before it begins its downward settling.
+  const middleX = clamp(.29 + event.phase*.42 + event.bias*.9, .29, .71);
+  const middleY = clamp(
+    .755 +
+    Math.sin((event.phase * 2.2 + .13) * Math.PI) * .065 +
+    event.arrivalLane * .42 +
+    event.bias * .14,
+    .72,
+    .88
+  );
+
+  const arrivalX = clamp(.43 + event.phase*.14 + event.bias*.4, .38, .62);
+  const arrivalY = .885 + event.arrivalLane;
+
+  // Normalize the entire pre-settling lifetime. This makes "middle" an actual
+  // destination that is reached before the downward phase begins.
+  const u = clamp(p / settleStart);
+  const ingressRate = .56 + event.phase*.16;
+  const ingressProgress = smoothstep(u / ingressRate);
+
+  let x = lerp(distalX, middleX, ingressProgress);
+  let y = lerp(distalY, middleY, smoothstep(u / (.42 + event.phase*.13)));
+
+  // Nonchalant deterministic wandering. The envelope is zero at entry and at
+  // the middle destination, allowing paths to cross, overshoot and loop without
+  // turning into shared rails or disturbing the eventual middle-field state.
+  const envelope = Math.sin(Math.PI * u);
+  const sweep = Math.sin((u * (2.2 + event.phase*1.35) + event.phase*.73) * Math.PI);
+  const drift = Math.cos((u * (1.35 + event.phase*.85) + event.phase*.41) * Math.PI);
+
+  x += event.loop * envelope * (.95 + event.phase*.35) + sweep * .025 * envelope;
+  y += drift * (.018 + event.phase * .010) * envelope + event.bias * .10 * envelope;
+
+  // Settling begins only after the event has completed its approach and reached
+  // its middle-field state. No early vertical shortcut into the arrival field.
+  if (p > settleStart) {
+    const q = smoothstep((p - settleStart) / (1 - settleStart));
+    x = lerp(middleX, arrivalX, q);
+    y = lerp(middleY, arrivalY, q);
+  }
+
+  return {x:clamp(x,.035,.965), y:clamp(y,.64,.95)};
+}
+
+function visual(p, horizonHours, settlingHours) {
+  const settleStart = clamp(1 - settlingHours / horizonHours);
+
+  // Distal events are intentionally atmospheric rather than readable.
+  const readable = smoothstep((p-.15)/.85);
+  const settleProgress = clamp((p - settleStart) / (1 - settleStart));
+
+  // Time belongs to the latter part of the actual downward/imminent phase.
+  // It cannot resolve while an event is still approaching the middle field.
+  const timeProgress = smoothstep((settleProgress-.46)/.54);
+
+  return {
+    opacity: lerp(.10, .98, Math.pow(readable, 1.08)),
+    size: lerp(.20, 1.46, Math.pow(p, .72)),
+    scale: lerp(.70, 1, smoothstep((p-.08)/.92)),
+    blur: lerp(2.2, 0, Math.pow(p, .92)),
+    tracking: lerp(.29, .012, Math.pow(p, .76)).toFixed(3)+'em',
+    weight: Math.round(lerp(255, 500, Math.pow(p, .94))),
+    timeOpacity: lerp(0, .84, timeProgress),
+    timeScale: lerp(.82, 1, timeProgress),
+    timeRise: lerp(-.38, 0, timeProgress).toFixed(3)+'em',
+    departureDrift: 0,
+    imminent: settleProgress
+  };
+}
+
+function label(simulationHour) {
+  const day = Math.floor(simulationHour / 24) + 1;
+  const totalSeconds = Math.round(simulationHour * 3600);
+  const hour = Math.floor((totalSeconds % 86400) / 3600);
+  const minute = Math.floor((totalSeconds % 3600) / 60);
+  const second = totalSeconds % 60;
+  return 'Day ' + day + ' · ' + String(hour).padStart(2,'0') + ':' + String(minute).padStart(2,'0') + ':' + String(second).padStart(2,'0');
+}
+
+function departureVisual(v, departureProgress) {
+  if (departureProgress <= 0) return v;
+
+  const q = smoothstep(departureProgress);
+  return {
+    ...v,
+    opacity: v.opacity * (1 - q),
+    scale: v.scale * lerp(1, .92, q),
+    size: v.size * lerp(1, .96, q),
+    blur: lerp(v.blur, .85, q),
+    timeOpacity: v.timeOpacity * (1 - q),
+    departureDrift: .014 * q
+  };
+}
+
+function render() {
+  const now = Number(slider.value);
+  const horizonHours = 168;
+  const settlingHours = Number(settle.value);
+  const departureGraceHours = (Number(departure.value) * 60) / 3600;
+
+  value.textContent = label(now);
+  settleValue.textContent = settlingHours + 'h';
+  departureValue.textContent = departure.value + 'm';
+
+  // Choose from events currently inhabiting the display lifetime, rather than
+  // permanently limiting visibility to the first N dummy records.
+  const candidates = nodes
+    .map(({event,node}) => {
+      const hoursUntil = event.occurrenceHour - now;
+      return {event,node,hoursUntil};
+    })
+    .filter(({hoursUntil}) =>
+      hoursUntil <= horizonHours &&
+      hoursUntil >= -departureGraceHours
+    )
+    .sort((a,b) => a.event.occurrenceHour - b.event.occurrenceHour);
+
+  const active = new Set(candidates.slice(0, visibleCount).map(({event}) => event.id));
+
+  nodes.forEach(({event,node}) => {
+    if (!active.has(event.id)) {
+      node.style.display = 'none';
+      return;
+    }
+
+    const hoursUntil = event.occurrenceHour - now;
+    const departureProgress = clamp((-hoursUntil) / departureGraceHours);
+    node.style.display = 'block';
+
+    // The event reaches its normal arrival state at start time, then spends
+    // only the selected grace period dissolving downward out of the Horizon.
+    const p = clamp(1 - (Math.max(hoursUntil, 0) / horizonHours));
+    const pos = trajectory(event,p,horizonHours,settlingHours);
+    const baseVisual = visual(p,horizonHours,settlingHours);
+    const v = departureVisual(baseVisual, departureProgress);
+
+    // Keep the prototype fail-safe while trajectory parameters are being tuned.
+    // A bad visual parameter must never place an otherwise valid event off-screen.
+    const safeX = Number.isFinite(pos.x) ? clamp(pos.x, .035, .965) : .50;
+    const rawY = pos.y + (Number.isFinite(v.departureDrift) ? v.departureDrift : 0);
+    const safeY = Number.isFinite(rawY) ? clamp(rawY, .72, .98) : .84;
+
+    // Use concrete field pixels in the prototype. This avoids any browser-specific
+    // interaction between percentage positioning, transforms and custom properties.
+    const rect = field.getBoundingClientRect();
+    const pxX = Math.round(safeX * rect.width);
+    const pxY = Math.round(safeY * rect.height);
+
+    node.style.left = pxX + 'px';
+    node.style.top = pxY + 'px';
+    node.style.fontSize = Math.max(10, Math.min(25, 10 + v.size * 10)).toFixed(2)+'px';
+    node.style.setProperty('--opacity', v.opacity.toFixed(3));
+    node.style.setProperty('--size', v.size.toFixed(3));
+    node.style.setProperty('--scale', v.scale.toFixed(3));
+    node.style.setProperty('--blur', v.blur.toFixed(2)+'px');
+    node.style.setProperty('--tracking', v.tracking);
+    node.style.setProperty('--weight', v.weight);
+    node.style.setProperty('--time-opacity', v.timeOpacity.toFixed(3));
+    node.style.setProperty('--time-scale', v.timeScale.toFixed(3));
+    node.style.setProperty('--time-rise', v.timeRise);
+  });
+}
+
+function setPhoto(name) {
+  photo=name;
+  horizon.style.backgroundImage = "url('"+photos[name]+"')";
+  document.querySelectorAll('[data-photo]').forEach(b=>b.classList.toggle('active', b.dataset.photo===name));
+}
+
+document.querySelectorAll('[data-photo]').forEach(button => button.addEventListener('click',()=>setPhoto(button.dataset.photo)));
+document.querySelectorAll('[data-count]').forEach(button => button.addEventListener('click',()=>{
+  visibleCount=Number(button.dataset.count);
+  document.querySelectorAll('[data-count]').forEach(b=>b.classList.toggle('active', Number(b.dataset.count)===visibleCount));
+  render();
+}));
+slider.addEventListener('input', render);
+settle.addEventListener('input', render);
+departure.addEventListener('input', render);
+
+setPhoto(photo);
+render();
+</script>
+</body>
+</html>
