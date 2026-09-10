@@ -21,7 +21,7 @@ export function renderAmbientDisplay(target: HTMLDivElement, path: string): void
     const selectedKind = new URLSearchParams(query).get('kind') as AmbientSourceKind | null;
     if (selectedKind) {
       const name = availableAmbientSourceKinds.find((item) => item.kind === selectedKind)?.name ?? 'Image source';
-      renderConnectionStep(target, selectedKind, name);
+      renderSelectionStep(target, selectedKind, name);
     } else {
       renderAddSource(target);
     }
@@ -123,7 +123,7 @@ function renderAddSource(target: HTMLDivElement): void {
       if (kind) {
         const name = availableAmbientSourceKinds.find((item) => item.kind === kind)?.name ?? 'Image source';
         window.location.hash = `#ambient-display/add?kind=${encodeURIComponent(kind)}`;
-        renderConnectionStep(target, kind, name);
+        renderSelectionStep(target, kind, name);
       }
     });
   });
@@ -136,33 +136,6 @@ function renderSourceChoice(source: { kind: AmbientSourceKind; name: string }): 
       <span aria-hidden="true">›</span>
     </button>
   `;
-}
-
-function renderConnectionStep(target: HTMLDivElement, kind: AmbientSourceKind, name: string): void {
-  const local = kind === 'device' || kind === 'aevumory';
-
-  target.innerHTML = `
-    <main class="ambient-settings" aria-label="Add ${escapeHtml(name)} source">
-      <header class="ambient-settings-header ambient-settings-header-with-back">
-        <button type="button" class="ambient-back-action" data-back>← Back</button>
-        <div>
-          <h1>${escapeHtml(name)}</h1>
-        </div>
-      </header>
-      <section class="ambient-source-step">
-        <p class="ambient-source-explanation">${local ? 'Choose what Aevumory may use from this device.' : `Connect ${escapeHtml(name)} to choose what Aevumory may use.`}</p>
-        <button type="button" class="ambient-primary-action" data-continue>${local ? 'Choose' : `Connect ${escapeHtml(name)}`}</button>
-      </section>
-    </main>
-  `;
-
-  bindBack(target, () => {
-    window.location.hash = '#ambient-display';
-  });
-
-  target.querySelector<HTMLButtonElement>('[data-continue]')?.addEventListener('click', () => {
-    renderSelectionStep(target, kind, name);
-  });
 }
 
 function renderSelectionStep(target: HTMLDivElement, kind: AmbientSourceKind, name: string): void {
@@ -200,8 +173,7 @@ function renderSelectionStep(target: HTMLDivElement, kind: AmbientSourceKind, na
   `;
 
   bindBack(target, () => {
-    const name = availableAmbientSourceKinds.find((item) => item.kind === kind)?.name ?? 'Image source';
-    renderConnectionStep(target, kind, name);
+    window.location.hash = '#ambient-display';
   });
 
   target.querySelector<HTMLButtonElement>('[data-done]')?.addEventListener('click', () => {
