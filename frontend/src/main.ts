@@ -1,4 +1,5 @@
 import './styles.css';
+import { renderAmbientDisplay } from './ambient-display';
 import { horizonPosition, horizonVisual, type HorizonEvent } from './horizon';
 import { FixtureTaskBoardQuery, type HouseholdParticipant } from './tasks';
 import { FixtureTaskBoardStore } from './task-board';
@@ -33,13 +34,20 @@ void render(root);
 window.addEventListener('hashchange', () => void render(root));
 
 async function render(target: HTMLDivElement): Promise<void> {
-  if (window.location.hash === '#tasks') {
+  const hash = window.location.hash;
+
+  if (hash === '#tasks') {
     const state = await taskBoardQuery.getBoard();
     renderTaskBoard(target, new FixtureTaskBoardStore(state));
     return;
   }
 
-  const participantMatch = window.location.hash.match(/^#participant\/(.+)$/);
+  if (hash === '#ambient-display' || hash.startsWith('#ambient-display/')) {
+    renderAmbientDisplay(target, hash);
+    return;
+  }
+
+  const participantMatch = hash.match(/^#participant\/(.+)$/);
   if (participantMatch) {
     const state = await taskBoardQuery.getBoard();
     const participant = state.participants.find((item) => item.id === decodeURIComponent(participantMatch[1]));
