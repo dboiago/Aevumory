@@ -158,17 +158,17 @@ function renderSelectionStep(target: HTMLDivElement, kind: AmbientSourceKind, na
             <span class="ambient-selection-title">All photos</span>
             <span class="ambient-selection-description">Include current and future photos available through this connection</span>
           </span>
-          <input type="checkbox" checked>
+          ${renderCheckbox(true, 'Include all photos')}
         </label>
         <div class="ambient-selection-section-label">${kind === 'device' ? 'Folders' : 'Albums'}</div>
         ${renderSelectionRow('Family', true)}
         ${renderSelectionRow('Travel', true)}
         ${renderSelectionRow('Cottage', false)}
         ${canSelectIndividuals ? '<button type="button" class="ambient-individual-selection">Individual images <span aria-hidden="true">›</span></button>' : ''}
+        <div class="ambient-selection-action">
+          <button type="button" class="ambient-primary-action" data-done>Done</button>
+        </div>
       </section>
-      <div class="ambient-settings-actions">
-        <button type="button" class="ambient-primary-action" data-done>Done</button>
-      </div>
     </main>
   `;
 
@@ -185,8 +185,17 @@ function renderSelectionRow(label: string, checked: boolean): string {
   return `
     <label class="ambient-selection-row">
       <span class="ambient-selection-title">${escapeHtml(label)}</span>
-      <input type="checkbox" ${checked ? 'checked' : ''}>
+      ${renderCheckbox(checked, `Include ${label}`)}
     </label>
+  `;
+}
+
+function renderCheckbox(checked: boolean, label: string): string {
+  return `
+    <span class="ambient-checkbox">
+      <input type="checkbox" ${checked ? 'checked' : ''} aria-label="${escapeHtml(label)}">
+      <span class="ambient-checkbox-box" aria-hidden="true"></span>
+    </span>
   `;
 }
 
@@ -202,10 +211,10 @@ function renderCompletionStep(target: HTMLDivElement, name: string, owner: strin
       <section class="ambient-completion-panel">
         ${owner ? `<p>${escapeHtml(owner)}</p>` : ''}
         <p>3 albums · 1,284 images</p>
+        <div class="ambient-selection-action">
+          <button type="button" class="ambient-primary-action" data-done>Done</button>
+        </div>
       </section>
-      <div class="ambient-settings-actions">
-        <button type="button" class="ambient-primary-action" data-done>Done</button>
-      </div>
     </main>
   `;
 
@@ -231,10 +240,10 @@ function renderSourceDetail(target: HTMLDivElement, source: AmbientImageSource):
         <div class="ambient-detail-line"><span>Included</span><strong>${escapeHtml(source.scope)}</strong></div>
         <div class="ambient-detail-line"><span>Images</span><strong>${source.imageCount.toLocaleString('en-CA')}</strong></div>
         ${privateSource ? '<p class="ambient-private-note">Further source contents require the source owner’s PIN</p>' : ''}
+        <div class="ambient-selection-action">
+          <button type="button" class="ambient-primary-action" data-edit>${privateSource ? 'Authenticate to manage' : 'Manage source'}</button>
+        </div>
       </section>
-      <div class="ambient-settings-actions">
-        <button type="button" class="ambient-primary-action" data-edit>${privateSource ? 'Authenticate to manage' : 'Manage source'}</button>
-      </div>
     </main>
   `;
 
