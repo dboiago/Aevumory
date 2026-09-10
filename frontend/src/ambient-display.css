@@ -53,7 +53,8 @@
 .ambient-source-row:focus-visible,
 .ambient-source-choice:focus-visible,
 .ambient-inline-action:focus-visible,
-.ambient-individual-selection:focus-visible {
+.ambient-individual-selection:focus-visible,
+.ambient-checkbox input:focus-visible + .ambient-checkbox-box {
   outline: 2px solid var(--accent-primary);
   outline-offset: 3px;
 }
@@ -128,13 +129,15 @@
   letter-spacing: .025em;
 }
 
-.ambient-source-group-action {
+.ambient-source-group-action,
+.ambient-selection-action {
   display: flex;
   justify-content: flex-end;
   padding-top: 7px;
 }
 
-.ambient-inline-action {
+.ambient-inline-action,
+.ambient-primary-action {
   flex: 0 0 auto;
   padding: 6px 11px;
   border: 1px solid var(--action-primary-border);
@@ -142,11 +145,13 @@
   background: var(--action-primary-bg);
   color: var(--accent-primary);
   font-size: 11px;
+  font-weight: 600;
   letter-spacing: .04em;
   white-space: nowrap;
 }
 
-.ambient-inline-action:hover {
+.ambient-inline-action:hover,
+.ambient-primary-action:hover {
   border-color: var(--border-active);
   background: var(--action-primary-hover-bg);
 }
@@ -169,24 +174,6 @@
   display: flex;
   max-width: 900px;
   margin: 18px auto 0;
-}
-
-.ambient-primary-action {
-  padding: 6px 11px;
-  border: 1px solid var(--action-primary-border);
-  border-radius: 7px;
-  background: var(--action-primary-bg);
-  color: var(--accent-primary);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .04em;
-  white-space: nowrap;
-}
-
-.ambient-primary-action:hover {
-  border-color: var(--border-active);
-  background: var(--action-primary-hover-bg);
 }
 
 .ambient-source-choices {
@@ -236,7 +223,8 @@
   line-height: 1.6;
 }
 
-.ambient-selection-panel {
+.ambient-selection-panel,
+.ambient-source-detail {
   display: grid;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
@@ -244,9 +232,12 @@
   background: var(--bg-surface);
 }
 
+.ambient-selection-panel {
+  gap: 0;
+}
+
 .ambient-selection-owner {
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 16px 18px 10px;
   font-size: 11px;
   letter-spacing: .05em;
 }
@@ -257,7 +248,6 @@
   justify-content: space-between;
   gap: 20px;
   padding: 16px 18px;
-  border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
 }
 
@@ -266,10 +256,46 @@
 }
 
 .ambient-selection-row input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ambient-checkbox {
+  position: relative;
+  display: inline-flex;
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  accent-color: var(--accent-primary);
+  width: 18px;
+  height: 18px;
+}
+
+.ambient-checkbox-box {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.ambient-checkbox input:checked + .ambient-checkbox-box {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+}
+
+.ambient-checkbox input:checked + .ambient-checkbox-box::after {
+  position: absolute;
+  top: 1px;
+  left: 5px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--bg-primary);
+  border-width: 0 2px 2px 0;
+  content: '';
+  transform: rotate(45deg);
 }
 
 .ambient-selection-title {
@@ -298,13 +324,11 @@
 
 .ambient-individual-selection {
   border: 0;
-  border-top: 1px solid var(--border-subtle);
   border-radius: 0;
 }
 
-.ambient-source-detail {
-  display: grid;
-  padding: 4px 0;
+.ambient-selection-action {
+  padding: 12px 18px 18px;
 }
 
 .ambient-detail-line {
@@ -312,7 +336,11 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 20px;
-  padding: 9px 2px;
+  padding: 9px 18px;
+}
+
+.ambient-detail-line:first-child {
+  padding-top: 18px;
 }
 
 .ambient-detail-line span {
@@ -328,11 +356,15 @@
 }
 
 .ambient-private-note {
-  margin-top: 18px;
-  padding: 0 2px;
+  margin-top: 10px;
+  padding: 0 18px;
   color: var(--text-soft);
   font-size: 11px;
   line-height: 1.5;
+}
+
+.ambient-source-detail .ambient-selection-action {
+  padding-top: 12px;
 }
 
 @media (max-width: 600px) {
