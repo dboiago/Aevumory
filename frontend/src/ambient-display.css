@@ -1,0 +1,311 @@
+.ambient-settings {
+  height: 100vh;
+  overflow: auto;
+  padding: clamp(32px, 5vw, 72px) clamp(24px, 6vw, 96px);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.ambient-settings-header {
+  max-width: 900px;
+  margin: 0 auto clamp(34px, 5vw, 64px);
+}
+
+.ambient-settings-header h1 {
+  margin: 0;
+  font-family: var(--font-heading, Georgia, serif);
+  font-size: clamp(38px, 5vw, 68px);
+  font-weight: 500;
+  letter-spacing: -.025em;
+}
+
+.ambient-settings-header-with-back {
+  display: grid;
+  gap: 18px;
+}
+
+.ambient-back-action,
+.ambient-secondary-action {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.ambient-back-action:hover,
+.ambient-secondary-action:hover {
+  color: var(--text-primary);
+}
+
+.ambient-back-action:focus-visible,
+.ambient-secondary-action:focus-visible,
+.ambient-primary-action:focus-visible,
+.ambient-source-card:focus-visible,
+.ambient-source-choice:focus-visible,
+.ambient-individual-selection:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
+}
+
+.ambient-source-list,
+.ambient-source-choices,
+.ambient-selection-panel,
+.ambient-source-detail,
+.ambient-source-step,
+.ambient-completion-panel {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.ambient-source-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ambient-source-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  min-height: 88px;
+  padding: 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, 8px);
+  background: var(--bg-surface);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.ambient-source-card:hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-surface-hover);
+}
+
+.ambient-source-card-main {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.ambient-source-name {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.ambient-source-meta {
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: .04em;
+}
+
+.ambient-source-status {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.ambient-source-status-included {
+  color: var(--accent-primary);
+}
+
+.ambient-settings-actions {
+  display: flex;
+  max-width: 900px;
+  margin: 18px auto 0;
+}
+
+.ambient-primary-action {
+  padding: 7px 12px;
+  border: 1px solid var(--action-primary-border);
+  border-radius: 7px;
+  background: var(--action-primary-bg);
+  color: var(--accent-primary);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.ambient-primary-action:hover {
+  border-color: var(--border-active);
+  background: var(--action-primary-hover-bg);
+}
+
+.ambient-source-choices {
+  display: grid;
+  gap: 8px;
+}
+
+.ambient-source-choice,
+.ambient-individual-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, 8px);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.ambient-source-choice:hover,
+.ambient-individual-selection:hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-surface-hover);
+}
+
+.ambient-source-step,
+.ambient-completion-panel {
+  display: grid;
+  gap: 24px;
+  padding: 22px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, 8px);
+  background: var(--bg-surface);
+}
+
+.ambient-source-explanation,
+.ambient-completion-panel p,
+.ambient-private-note,
+.ambient-selection-owner {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ambient-selection-panel {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, 8px);
+  background: var(--bg-surface);
+}
+
+.ambient-selection-owner {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.ambient-selection-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+}
+
+.ambient-selection-row-all {
+  padding-block: 18px;
+}
+
+.ambient-selection-row input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+}
+
+.ambient-selection-title {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ambient-selection-description {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.ambient-selection-section-label {
+  padding: 14px 18px 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.ambient-individual-selection {
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0;
+}
+
+.ambient-source-detail {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, 8px);
+  background: var(--bg-surface);
+}
+
+.ambient-detail-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ambient-detail-line:last-of-type {
+  border-bottom: 0;
+}
+
+.ambient-detail-line span {
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.ambient-detail-line strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ambient-private-note {
+  margin: 0;
+  padding: 16px 18px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 600px) {
+  .ambient-source-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ambient-source-status {
+    align-self: flex-start;
+  }
+}
