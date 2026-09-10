@@ -16,8 +16,10 @@ export function renderAmbientDisplay(target: HTMLDivElement, path: string): void
     }
   }
 
-  if (path === '#ambient-display/add') {
-    renderAddSource(target);
+  if (path.startsWith('#ambient-display/add')) {
+    const query = path.split('?')[1] ?? '';
+    const selectedKind = new URLSearchParams(query).get('kind') as AmbientSourceKind | null;
+    renderAddSource(target, selectedKind ?? undefined);
     return;
   }
 
@@ -54,11 +56,8 @@ function renderSourceOverview(target: HTMLDivElement): void {
 
   target.querySelectorAll<HTMLButtonElement>('[data-add-kind]').forEach((button) => {
     button.addEventListener('click', () => {
-      const kind = button.dataset.addKind;
-      if (kind) {
-        window.location.hash = `#ambient-display/add?kind=${encodeURIComponent(kind)}`;
-        renderAddSource(target, kind as AmbientSourceKind);
-      }
+      const kind = button.dataset.addKind as AmbientSourceKind | undefined;
+      if (kind) window.location.hash = `#ambient-display/add?kind=${encodeURIComponent(kind)}`;
     });
   });
 }
@@ -191,7 +190,7 @@ function renderSelectionStep(target: HTMLDivElement, kind: AmbientSourceKind, na
   bindBack(target, () => renderConnectionStep(target, kind));
 
   target.querySelector<HTMLButtonElement>('[data-done]')?.addEventListener('click', () => {
-    renderCompletionStep(target, name, owner);
+    renderCompletionStep(target, name, owner, kind);
   });
 }
 
@@ -204,7 +203,7 @@ function renderSelectionRow(label: string, checked: boolean): string {
   `;
 }
 
-function renderCompletionStep(target: HTMLDivElement, name: string, owner?: string): void {
+function renderCompletionStep(target: HTMLDivElement, name: string, owner: string | undefined, kind: AmbientSourceKind): void {
   target.innerHTML = `
     <main class="ambient-settings" aria-label="Image source added">
       <header class="ambient-settings-header ambient-settings-header-with-back">
@@ -223,7 +222,7 @@ function renderCompletionStep(target: HTMLDivElement, name: string, owner?: stri
     </main>
   `;
 
-  bindBack(target, () => renderSelectionStep(target, availableKindForName(name), name));
+  bindBack(target, () => renderSelectionStep(target, kind, name));
 
   target.querySelector<HTMLButtonElement>('[data-done]')?.addEventListener('click', () => {
     window.location.hash = '#ambient-display';
@@ -289,10 +288,6 @@ function bindBack(target: HTMLDivElement, action: () => void): void {
     const deltaY = Math.abs(touch.clientY - startY);
     if (deltaX >= 70 && deltaX > deltaY * 1.5) action();
   }, { passive: true });
-}
-
-function availableKindForName(name: string): AmbientSourceKind {
-  return availableAmbientSourceKinds.find((item) => item.name === name)?.kind ?? 'device';
 }
 
 function escapeHtml(value: string): string {
