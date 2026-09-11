@@ -19,6 +19,7 @@ export type CalendarEvent = {
   notes?: string;
   participantIds?: string[];
   recurrence?: string;
+  taskLinked?: boolean;
   relevance: 'ordinary' | 'meaningful';
   significance: 'low' | 'normal' | 'high';
 };
@@ -34,15 +35,15 @@ export interface CalendarQuery {
 
 const fixtureState: CalendarState = {
   sources: [
-    { id: 'calendar:aevumory-household', provider: 'aevumory', name: 'Household', writable: true },
+    { id: 'calendar:aevumory', provider: 'aevumory', name: 'Aevumory', writable: true },
     { id: 'calendar:google-alex', provider: 'google', name: 'Alex', accountName: 'Google Calendar', writable: false },
     { id: 'calendar:google-jordan', provider: 'google', name: 'Jordan', accountName: 'Google Calendar', writable: false },
     { id: 'calendar:icloud-family', provider: 'icloud', name: 'Family', accountName: 'iCloud', writable: false },
   ],
   events: [
     {
-      id: 'event:brush-teeth', calendarId: 'calendar:aevumory-household', title: 'Brush teeth', allDay: false,
-      startsAt: '2026-09-02T07:30:00-04:00', endsAt: '2026-09-02T07:35:00-04:00', recurrence: '3x daily',
+      id: 'event:brush-teeth', calendarId: 'calendar:aevumory', title: 'Brush teeth', allDay: false,
+      startsAt: '2026-09-02T07:30:00-04:00', endsAt: '2026-09-02T07:35:00-04:00', recurrence: '3x daily', taskLinked: true,
       relevance: 'ordinary', significance: 'low',
     },
     {
@@ -52,21 +53,21 @@ const fixtureState: CalendarState = {
     },
     {
       id: 'event:school-pickup', calendarId: 'calendar:google-alex', title: 'School pickup', allDay: false,
-      startsAt: '2026-09-02T15:15:00-04:00', endsAt: '2026-09-02T15:45:00-04:00', recurrence: 'Weekdays',
+      startsAt: '2026-09-02T15:15:00-04:00', endsAt: '2026-09-02T15:45:00-04:00', recurrence: 'Weekdays', taskLinked: true,
       relevance: 'ordinary', significance: 'normal', participantIds: ['participant:alex'],
     },
     {
-      id: 'event:instrument-practice', calendarId: 'calendar:aevumory-household', title: 'Instrument practice', allDay: false,
-      startsAt: '2026-09-02T18:30:00-04:00', endsAt: '2026-09-02T19:00:00-04:00', recurrence: 'Daily',
+      id: 'event:instrument-practice', calendarId: 'calendar:aevumory', title: 'Instrument practice', allDay: false,
+      startsAt: '2026-09-02T18:30:00-04:00', endsAt: '2026-09-02T19:00:00-04:00', recurrence: 'Daily', taskLinked: true,
       relevance: 'ordinary', significance: 'normal', participantIds: ['participant:jordan'],
     },
     {
-      id: 'event:garbage', calendarId: 'calendar:aevumory-household', title: 'Garbage collection', allDay: false,
-      startsAt: '2026-09-03T07:00:00-04:00', endsAt: '2026-09-03T07:05:00-04:00', recurrence: 'Weekly',
+      id: 'event:garbage', calendarId: 'calendar:aevumory', title: 'Garbage collection', allDay: false,
+      startsAt: '2026-09-03T07:00:00-04:00', endsAt: '2026-09-03T07:05:00-04:00', recurrence: 'Weekly', taskLinked: true,
       relevance: 'ordinary', significance: 'low',
     },
     {
-      id: 'event:dinner', calendarId: 'calendar:aevumory-household', title: 'Dinner with friends', allDay: false,
+      id: 'event:dinner', calendarId: 'calendar:aevumory', title: 'Dinner with friends', allDay: false,
       startsAt: '2026-09-03T19:00:00-04:00', endsAt: '2026-09-03T21:00:00-04:00',
       relevance: 'meaningful', significance: 'normal',
     },
@@ -86,7 +87,7 @@ const fixtureState: CalendarState = {
       relevance: 'ordinary', significance: 'normal', participantIds: ['participant:maya'],
     },
     {
-      id: 'event:weekend-trip', calendarId: 'calendar:aevumory-household', title: 'Weekend trip', allDay: true,
+      id: 'event:weekend-trip', calendarId: 'calendar:aevumory', title: 'Weekend trip', allDay: true,
       startsAt: '2026-09-11T00:00:00-04:00', endsAt: '2026-09-14T00:00:00-04:00',
       relevance: 'meaningful', significance: 'high',
     },
