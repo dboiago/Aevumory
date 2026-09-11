@@ -23,6 +23,8 @@ export async function renderCalendar(target: HTMLDivElement, query: CalendarQuer
     }, (value) => { showTasks = value; render(); });
   };
   render();
+  const observer = new MutationObserver(() => { if (target.isConnected) applySourceColours(target, state.sources); else observer.disconnect(); });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 }
 
 function renderPage(month: Date, sources: CalendarSource[], visible: Set<string>, events: Occurrence[], showTasks: boolean): string {
@@ -100,7 +102,7 @@ function wire(target: HTMLDivElement, state: { sources: CalendarSource[]; events
   target.querySelector('[data-calendar-add]')?.addEventListener('click', () => addEvent(fixtureToday));
   target.querySelectorAll<HTMLInputElement>('[data-calendar-source]').forEach((input) => input.addEventListener('change', () => { const id = input.dataset.calendarSource; if (id) { input.checked ? visible.add(id) : visible.delete(id); rerender(); } }));
   target.querySelector<HTMLInputElement>('[data-calendar-tasks]')?.addEventListener('change', (event) => tasks((event.currentTarget as HTMLInputElement).checked));
-  target.querySelectorAll<HTMLButtonElement>('[data-calendar-colour-source]').forEach((button) => button.addEventListener('click', () => openColourPicker(target, state, button.dataset.calendarColourSource ?? '', rerender)));
+  target.querySelectorAll<HTMLButtonElement>('[data-calendar-colour-source]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); openColourPicker(target, state, button.dataset.calendarColourSource ?? '', rerender); }));
   target.querySelectorAll<HTMLButtonElement>('[data-calendar-event]').forEach((button) => button.addEventListener('click', () => { const event = state.events.find((item) => item.id === button.dataset.calendarEvent); if (event) openEvent({ ...event, occurrenceDate: button.closest<HTMLElement>('[data-date]')?.dataset.date ?? fixtureToday }); }));
   target.querySelectorAll<HTMLButtonElement>('[data-calendar-more]').forEach((button) => button.addEventListener('click', () => openDay(target, state, button.dataset.calendarMore ?? fixtureToday)));
   target.querySelectorAll<HTMLElement>('[data-date]').forEach((day) => day.addEventListener('dblclick', (event) => { if ((event.target as HTMLElement).closest('[data-calendar-event], [data-calendar-more]')) return; const date = day.dataset.date; if (date) addEvent(date); }));
