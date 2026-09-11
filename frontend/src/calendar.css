@@ -49,15 +49,11 @@ body:has(.calendar-page) { overflow-x: hidden; }
 .calendar-event-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-event-high { border-color: var(--border-active); }
 
-/* Frequent/task-linked events are quieter through surface, text, and opacity, not by losing their structure. */
-.calendar-event-quiet { background: var(--action-resolved-bg); color: var(--action-resolved-text); border-color: var(--action-resolved-border); opacity: .86; }
-.calendar-event-quiet .calendar-event-title { color: var(--action-resolved-text); }
-.calendar-event-quiet .calendar-event-time { color: var(--text-soft); }
-.calendar-event-quiet:hover { background: var(--bg-surface-hover); border-color: var(--border-active); opacity: 1; }
-.calendar-event-task { background: var(--action-resolved-bg); border-color: var(--action-resolved-border); color: var(--action-resolved-text); }
-.calendar-event-task .calendar-event-title { color: var(--action-resolved-text); }
-.calendar-event-task .calendar-event-time { color: var(--text-soft); }
-.calendar-event-recurring { opacity: .86; }
+/* Frequent/repeating events are quieter through opacity while retaining the normal event palette and structure. */
+.calendar-event-quiet { opacity: .82; }
+.calendar-event-quiet:hover { opacity: 1; }
+.calendar-event-recurring { opacity: .82; }
+.calendar-event-recurring:hover { opacity: 1; }
 
 .calendar-event-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }
 .calendar-event-dot-quiet { background: var(--text-soft); }
