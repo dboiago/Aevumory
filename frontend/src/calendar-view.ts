@@ -115,8 +115,11 @@ function expandVisibleOccurrences(events: CalendarEvent[], month: Date): Calenda
     const recurrence = event.recurrence?.toLowerCase();
 
     if (!recurrence) {
-      addIfVisible(result, event, base, start, end);
-      if (event.allDay && event.endsAt) addSpanDays(result, event, base, new Date(event.endsAt), start, end);
+      if (event.allDay && event.endsAt) {
+        addSpanDays(result, event, base, new Date(event.endsAt), start, end);
+      } else {
+        addIfVisible(result, event, base, start, end);
+      }
       continue;
     }
 
