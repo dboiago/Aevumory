@@ -6,62 +6,28 @@
   color: var(--text-primary);
 }
 
-html:has(.calendar-page),
-body:has(.calendar-page),
-#app:has(.calendar-page) {
-  height: auto;
-  min-height: 100vh;
-  overflow-y: auto;
-}
-
+html:has(.calendar-page), body:has(.calendar-page), #app:has(.calendar-page) { height: auto; min-height: 100vh; overflow-y: auto; }
 body:has(.calendar-page) { overflow-x: hidden; }
 
-.calendar-header,
-.calendar-controls,
-.calendar-grid,
-.calendar-actions {
-  width: min(1400px, 100%);
-  margin-inline: auto;
-}
-
+.calendar-header, .calendar-controls, .calendar-grid, .calendar-actions { width: min(1400px, 100%); margin-inline: auto; }
 .calendar-header { display: block; margin-bottom: clamp(34px, 5vw, 64px); }
-
 .calendar-back-action { margin: 0 0 24px; padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 .calendar-back-action:hover { color: var(--text-primary); }
 
-.calendar-back-action:focus-visible,
-.calendar-nav-button:focus-visible,
-.calendar-today-button:focus-visible,
-.calendar-primary-action:focus-visible,
-.calendar-event:focus-visible,
-.calendar-more:focus-visible,
-.calendar-dialog-close:focus-visible,
-.calendar-dialog-primary:focus-visible,
-.calendar-dialog-secondary:focus-visible,
-.calendar-checkbox input:focus-visible + .calendar-checkbox-box { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
-
+.calendar-back-action:focus-visible, .calendar-nav-button:focus-visible, .calendar-today-button:focus-visible, .calendar-primary-action:focus-visible, .calendar-event:focus-visible, .calendar-more:focus-visible, .calendar-dialog-close:focus-visible, .calendar-dialog-primary:focus-visible, .calendar-dialog-secondary:focus-visible, .calendar-checkbox input:focus-visible + .calendar-checkbox-box { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
 .calendar-header h1 { margin: 0; font-family: var(--font-heading, Georgia, serif); font-size: clamp(38px, 5vw, 68px); font-weight: 500; letter-spacing: -.025em; }
 
 .calendar-controls { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 12px; flex-wrap: wrap; }
 .calendar-month-nav { display: flex; align-items: center; gap: 10px; }
 .calendar-month-nav h2 { min-width: 190px; margin: 0; text-align: center; font-family: var(--font-heading); font-size: 1.2rem; font-weight: 500; }
-
-.calendar-nav-button,
-.calendar-today-button,
-.calendar-primary-action,
-.calendar-dialog-primary,
-.calendar-dialog-secondary { border: 1px solid var(--action-primary-border); border-radius: 7px; background: var(--action-primary-bg); color: var(--accent-primary); cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; letter-spacing: .04em; white-space: nowrap; }
-.calendar-nav-button:hover,
-.calendar-today-button:hover,
-.calendar-primary-action:hover,
-.calendar-dialog-primary:hover { border-color: var(--border-active); background: var(--action-primary-hover-bg); }
+.calendar-nav-button, .calendar-today-button, .calendar-primary-action, .calendar-dialog-primary, .calendar-dialog-secondary { border: 1px solid var(--action-primary-border); border-radius: 7px; background: var(--action-primary-bg); color: var(--accent-primary); cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; letter-spacing: .04em; white-space: nowrap; }
+.calendar-nav-button:hover, .calendar-today-button:hover, .calendar-primary-action:hover, .calendar-dialog-primary:hover { border-color: var(--border-active); background: var(--action-primary-hover-bg); }
 .calendar-nav-button { width: 34px; height: 34px; padding: 0; font-size: 1.4rem; line-height: 1; }
 .calendar-today-button { margin-left: 4px; padding: 6px 11px; }
 
 .calendar-sources { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; color: var(--text-muted); font-size: 13px; }
 .calendar-source { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap; }
 .calendar-source-provider { color: var(--text-soft); }
-
 .calendar-checkbox { position: relative; display: inline-flex; flex: 0 0 auto; width: 18px; height: 18px; }
 .calendar-checkbox input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .calendar-checkbox-box { position: absolute; inset: 0; display: block; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--bg-primary); transition: border-color 120ms ease, background 120ms ease; }
@@ -83,9 +49,13 @@ body:has(.calendar-page) { overflow-x: hidden; }
 .calendar-event-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-event-high { border-color: var(--border-active); }
 
-/* Quiet items still need structure so repeated events do not become a wall of one tone. */
-.calendar-event-quiet { background: var(--bg-primary); color: var(--text-soft); border-color: var(--border-subtle); }
+/* Quiet events are visually lighter, but retain the same surface/border structure as everything else. */
+.calendar-event-quiet { background: var(--bg-surface); color: var(--text-muted); border-color: var(--border-subtle); }
+.calendar-event-quiet .calendar-event-title { color: var(--text-muted); }
 .calendar-event-quiet .calendar-event-time { color: var(--text-soft); }
+.calendar-event-task { background: var(--action-resolved-bg); border-color: var(--action-resolved-border); color: var(--action-resolved-text); }
+.calendar-event-task .calendar-event-title { color: var(--action-resolved-text); }
+.calendar-event-task .calendar-event-time { color: var(--text-soft); }
 .calendar-event-recurring { opacity: .9; }
 
 .calendar-event-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }
@@ -95,7 +65,6 @@ body:has(.calendar-page) { overflow-x: hidden; }
 
 .calendar-more { width: 100%; padding: 3px 5px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: .7rem; text-align: left; cursor: pointer; }
 .calendar-more:hover { color: var(--text-primary); }
-
 .calendar-actions { display: flex; justify-content: flex-end; padding-top: 12px; }
 .calendar-primary-action { padding: 6px 11px; }
 
