@@ -18,7 +18,7 @@ export async function renderCalendar(target: HTMLDivElement, query: CalendarQuer
       return visibleSources.has(event.calendarId);
     });
     const occurrences = expandVisibleOccurrences(visibleEvents, visibleMonth);
-    target.innerHTML = renderCalendarPage(visibleMonth, state.sources, occurrences, showTasks);
+    target.innerHTML = renderCalendarPage(visibleMonth, state.sources, visibleSources, occurrences, showTasks);
     wireCalendar(target, state, visibleSources, () => render(), (offset) => {
       visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + offset, 1);
       render();
@@ -39,7 +39,13 @@ export async function renderCalendar(target: HTMLDivElement, query: CalendarQuer
   render();
 }
 
-function renderCalendarPage(month: Date, sources: CalendarSource[], occurrences: CalendarOccurrence[], showTasks: boolean): string {
+function renderCalendarPage(
+  month: Date,
+  sources: CalendarSource[],
+  visibleSources: Set<string>,
+  occurrences: CalendarOccurrence[],
+  showTasks: boolean,
+): string {
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
   const firstDay = new Date(year, monthIndex, 1).getDay();
@@ -66,7 +72,7 @@ function renderCalendarPage(month: Date, sources: CalendarSource[], occurrences:
           <button type="button" class="calendar-today-button" data-calendar-today>Today</button>
         </div>
         <div class="calendar-sources" aria-label="Calendar visibility">
-          ${sources.map((source) => renderSourceControl(source)).join('')}
+          ${sources.map((source) => renderSourceControl(source, visibleSources.has(source.id))).join('')}
           <label class="calendar-source calendar-task-filter">
             ${renderCheckbox(showTasks, 'Show task-linked events', 'data-calendar-tasks')}
             <span>Tasks</span>
@@ -82,11 +88,11 @@ function renderCalendarPage(month: Date, sources: CalendarSource[], occurrences:
   `;
 }
 
-function renderSourceControl(source: CalendarSource): string {
+function renderSourceControl(source: CalendarSource, checked: boolean): string {
   const provider = source.provider === 'aevumory' ? '' : ` · ${source.provider === 'google' ? 'Google' : 'iCloud'}`;
   return `
     <label class="calendar-source">
-      ${renderCheckbox(true, `Show ${source.name}`, `data-calendar-source="${escapeHtml(source.id)}"`)}
+      ${renderCheckbox(checked, `Show ${source.name}`, `data-calendar-source="${escapeHtml(source.id)}"`)}
       <span>${escapeHtml(source.name)}${escapeHtml(provider)}</span>
     </label>
   `;
@@ -298,13 +304,15 @@ function openEditor(
     const allDay = data.get('allDay') === 'on';
     const startTime = String(data.get('starts') ?? '18:00');
     const endTime = String(data.get('ends') ?? '19:00');
+    const startDate = localDateTime(date, allDay ? '00:00' : startTime);
+    const endDate = allDay ? new Date(startDate.getTime() + 24 * 60 * 60 * 1000) : localDateTime(date, endTime);
     const nextEvent: CalendarEvent = {
       id: event?.id ?? `event:${Date.now()}`,
       calendarId: String(data.get('calendar') ?? source.id),
       title: String(data.get('title') ?? '').trim(),
       allDay,
-      startsAt: localDateTime(date, allDay ? '00:00' : startTime).toISOString(),
-      endsAt: localDateTime(date, allDay ? '00:00' : endTime).toISOString(),
+      startsAt: startDate.toISOString(),
+      endsAt: endDate.toISOString(),
       recurrence: String(data.get('recurrence') ?? '') || undefined,
       location: String(data.get('location') ?? '').trim() || undefined,
       notes: String(data.get('notes') ?? '').trim() || undefined,
