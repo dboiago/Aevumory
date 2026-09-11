@@ -1,11 +1,18 @@
 export type CalendarSourceProvider = 'aevumory' | 'google' | 'icloud';
 
+export type CalendarColourSelection = {
+  hueOffset: number;
+  chromaBias: number;
+  lightnessBias: number;
+};
+
 export type CalendarSource = {
   id: string;
   provider: CalendarSourceProvider;
   name: string;
   accountName?: string;
   writable: boolean;
+  colour?: CalendarColourSelection;
 };
 
 export type CalendarRecurrence = {
@@ -43,9 +50,9 @@ export interface CalendarQuery {
 const fixtureState: CalendarState = {
   sources: [
     { id: 'calendar:aevumory', provider: 'aevumory', name: 'Aevumory', writable: true },
-    { id: 'calendar:google-alex', provider: 'google', name: 'Alex', accountName: 'Google Calendar', writable: false },
-    { id: 'calendar:google-jordan', provider: 'google', name: 'Jordan', accountName: 'Google Calendar', writable: false },
-    { id: 'calendar:icloud-family', provider: 'icloud', name: 'Family', accountName: 'iCloud', writable: false },
+    { id: 'calendar:google-alex', provider: 'google', name: 'Alex', accountName: 'Google Calendar', writable: false, colour: { hueOffset: 100, chromaBias: 0.1, lightnessBias: 0 } },
+    { id: 'calendar:google-jordan', provider: 'google', name: 'Jordan', accountName: 'Google Calendar', writable: false, colour: { hueOffset: 200, chromaBias: -0.1, lightnessBias: 0.15 } },
+    { id: 'calendar:icloud-family', provider: 'icloud', name: 'Family', accountName: 'iCloud', writable: false, colour: { hueOffset: 300, chromaBias: 0, lightnessBias: -0.1 } },
   ],
   events: [
     { id: 'event:brush-teeth', calendarId: 'calendar:aevumory', title: 'Brush teeth', allDay: false, startsAt: '2026-09-02T07:30:00-04:00', endsAt: '2026-09-02T07:35:00-04:00', recurrence: { frequency: 'daily' }, taskLinked: true, eventHorizon: 'automatic', relevance: 'ordinary', significance: 'low' },
