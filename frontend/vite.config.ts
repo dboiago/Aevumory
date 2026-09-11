@@ -4,7 +4,7 @@ function calendarRoutePlugin(): Plugin {
   return {
     name: 'aevumory-calendar-route',
     transform(code, id) {
-      if (!id.endsWith('/src/main.ts')) return null;
+      if (!id.replaceAll('\\', '/').endsWith('/src/main.ts')) return null;
       return {
         code: `import './calendar-route';\n${code}`,
         map: null,
