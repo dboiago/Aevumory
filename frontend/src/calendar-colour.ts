@@ -24,11 +24,17 @@ export function generateCalendarColourOptions(theme: CalendarColourTheme, count 
   const reservedHues = theme.reserved.map(parseHex).map(rgbToOklch).filter((colour) => colour.c > 0.025).map((colour) => colour.h);
   const options: CalendarColourSelection[] = [];
   const rendered: CalendarColourRender[] = [];
+  const sectorSize = 360 / count;
+
+  // Start each candidate in a different hue sector, then randomise within that sector.
+  // Opening the picker therefore produces a fresh set while keeping the choices visibly separated.
+  const sectors = Array.from({ length: count }, (_, index) => index).sort(() => Math.random() - 0.5);
   let attempts = 0;
 
   while (options.length < count && attempts < 1200) {
     attempts += 1;
-    const hueOffset = Math.random() * 360;
+    const sector = sectors[options.length % sectors.length];
+    const hueOffset = sector * sectorSize + Math.random() * sectorSize;
     const hue = normaliseHue(base.h + hueOffset);
     if (circularDistance(hue, base.h) < 52) continue;
     if (reservedHues.some((reserved) => circularDistance(hue, reserved) < 34)) continue;
@@ -39,7 +45,7 @@ export function generateCalendarColourOptions(theme: CalendarColourTheme, count 
       lightnessBias: Math.random() * 2 - 1,
     };
     const colour = renderCalendarColour(candidate, theme);
-    if (rendered.some((existing) => colourDistance(existing.background, colour.background) < 0.085)) continue;
+    if (rendered.some((existing) => colourDistance(existing.background, colour.background) < 0.12)) continue;
 
     options.push(candidate);
     rendered.push(colour);
@@ -51,17 +57,22 @@ export function generateCalendarColourOptions(theme: CalendarColourTheme, count 
 export function renderCalendarColour(selection: CalendarColourSelection, theme: CalendarColourTheme): CalendarColourRender {
   const base = rgbToOklch(parseHex(theme.surface));
   const hue = normaliseHue(base.h + selection.hueOffset);
-  const chroma = clamp(base.c * 0.7 + 0.105 + selection.chromaBias * 0.025, 0.085, 0.17);
-  const lightness = base.l < 0.5
-    ? clamp(0.54 + selection.lightnessBias * 0.08, 0.44, 0.62)
-    : clamp(0.46 + selection.lightnessBias * 0.08, 0.36, 0.56);
+  const isDarkTheme = base.l < 0.5;
+  const chroma = clamp(base.c * 0.7 + 0.12 + selection.chromaBias * 0.03, 0.095, 0.18);
+  const lightness = isDarkTheme
+    ? clamp(0.54 + selection.lightnessBias * 0.06, 0.48, 0.60)
+    : clamp(0.80 + selection.lightnessBias * 0.06, 0.74, 0.86);
   const source = oklchToRgb({ l: lightness, c: chroma, h: hue });
   const surface = parseHex(theme.surface);
   const text = parseHex(theme.text);
   const baselineContrast = contrastRatio(text, surface);
-  let background = mixOklab(surface, source, base.l < 0.5 ? 0.58 : 0.16);
 
-  for (const weight of base.l < 0.5 ? [0.58, 0.5, 0.42, 0.34] : [0.16, 0.12, 0.08, 0.04]) {
+  // Keep the source colour visible rather than washing every option back into the surface.
+  // Light themes need substantially lighter event fills so the existing dark text remains readable.
+  const weights = isDarkTheme ? [0.48, 0.40, 0.32, 0.24, 0.16] : [0.34, 0.28, 0.22, 0.16, 0.10];
+  let background = mixOklab(surface, source, weights[weights.length - 1]);
+
+  for (const weight of weights) {
     const candidate = mixOklab(surface, source, weight);
     if (contrastRatio(text, candidate) >= baselineContrast * 0.95) {
       background = candidate;
@@ -69,7 +80,7 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
     }
   }
 
-  const border = mixOklab(background, source, base.l < 0.5 ? 0.62 : 0.48);
+  const border = mixOklab(background, source, isDarkTheme ? 0.62 : 0.48);
   return { background: toHex(background), border: toHex(border) };
 }
 
