@@ -1,5 +1,6 @@
 import './calendar.css';
 import type { CalendarEvent, CalendarQuery, CalendarRecurrence, CalendarSource } from './calendar';
+import { generateCalendarColourOptions, renderCalendarColour, type CalendarColourSelection } from './calendar-colour';
 
 const fixtureToday = '2026-09-02';
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -15,6 +16,7 @@ export async function renderCalendar(target: HTMLDivElement, query: CalendarQuer
   const render = (): void => {
     const events = state.events.filter((event) => (!event.taskLinked || showTasks) && sources.has(event.calendarId));
     target.innerHTML = renderPage(month, state.sources, sources, expand(events, month), showTasks);
+    applySourceColours(target, state.sources);
     wire(target, state, sources, () => render(), (offset) => { month = new Date(month.getFullYear(), month.getMonth() + offset, 1); render(); }, () => { month = new Date(2026, 8, 1); render(); }, (date) => openEditor(target, state, 'create', undefined, date, render), (event) => {
       const source = state.sources.find((item) => item.id === event.calendarId);
       openEditor(target, state, source?.writable ? 'edit' : 'view', event, event.occurrenceDate, render);
@@ -42,7 +44,8 @@ function renderPage(month: Date, sources: CalendarSource[], visible: Set<string>
 
 function sourceControl(source: CalendarSource, checked: boolean): string {
   const provider = source.provider === 'aevumory' ? '' : ` <span class="calendar-source-provider">· ${source.provider === 'google' ? 'Google' : 'iCloud'}</span>`;
-  return `<label class="calendar-source">${checkbox(checked, `Show ${source.name}`, `data-calendar-source="${escapeHtml(source.id)}"`)}<span>${escapeHtml(source.name)}${provider}</span></label>`;
+  const colourControl = source.provider === 'aevumory' ? '' : `<button type="button" class="calendar-source-colour" data-calendar-colour-source="${escapeHtml(source.id)}" data-calendar-source-id="${escapeHtml(source.id)}" aria-label="Choose colour for ${escapeHtml(source.name)}"></button>`;
+  return `<label class="calendar-source">${checkbox(checked, `Show ${source.name}`, `data-calendar-source="${escapeHtml(source.id)}"`)}<span>${escapeHtml(source.name)}${provider}</span>${colourControl}</label>`;
 }
 
 function checkbox(checked: boolean, label: string, attributes: string): string {
@@ -60,8 +63,7 @@ function renderDay(date: Date, month: number, events: Occurrence[]): string {
 function eventButton(event: Occurrence, showTime: boolean): string {
   const time = showTime && event.startsAt ? formatTime(event.startsAt) : '';
   const quiet = event.taskLinked || Boolean(event.recurrence);
-  const dot = event.significance === 'high' ? 'calendar-event-dot-strong' : quiet ? 'calendar-event-dot-quiet' : 'calendar-event-dot-normal';
-  return `<button type="button" class="calendar-event calendar-event-${event.significance}${quiet ? ' calendar-event-quiet' : ''}${event.recurrence ? ' calendar-event-recurring' : ''}" data-calendar-event="${escapeHtml(event.id)}" title="${escapeHtml(event.title)}"><span class="calendar-event-dot ${dot}" aria-hidden="true"></span><span class="calendar-event-time">${escapeHtml(time)}</span><span class="calendar-event-title">${escapeHtml(event.title)}</span></button>`;
+  return `<button type="button" class="calendar-event calendar-event-${event.significance}${quiet ? ' calendar-event-quiet' : ''}${event.recurrence ? ' calendar-event-recurring' : ''}" data-calendar-event="${escapeHtml(event.id)}" data-calendar-source-id="${escapeHtml(event.calendarId)}" title="${escapeHtml(event.title)}"><span class="calendar-event-time">${escapeHtml(time)}</span><span class="calendar-event-title">${escapeHtml(event.title)}</span></button>`;
 }
 
 function expand(events: CalendarEvent[], month: Date): Occurrence[] {
@@ -98,9 +100,70 @@ function wire(target: HTMLDivElement, state: { sources: CalendarSource[]; events
   target.querySelector('[data-calendar-add]')?.addEventListener('click', () => addEvent(fixtureToday));
   target.querySelectorAll<HTMLInputElement>('[data-calendar-source]').forEach((input) => input.addEventListener('change', () => { const id = input.dataset.calendarSource; if (id) { input.checked ? visible.add(id) : visible.delete(id); rerender(); } }));
   target.querySelector<HTMLInputElement>('[data-calendar-tasks]')?.addEventListener('change', (event) => tasks((event.currentTarget as HTMLInputElement).checked));
+  target.querySelectorAll<HTMLButtonElement>('[data-calendar-colour-source]').forEach((button) => button.addEventListener('click', () => openColourPicker(target, state, button.dataset.calendarColourSource ?? '', rerender)));
   target.querySelectorAll<HTMLButtonElement>('[data-calendar-event]').forEach((button) => button.addEventListener('click', () => { const event = state.events.find((item) => item.id === button.dataset.calendarEvent); if (event) openEvent({ ...event, occurrenceDate: button.closest<HTMLElement>('[data-date]')?.dataset.date ?? fixtureToday }); }));
   target.querySelectorAll<HTMLButtonElement>('[data-calendar-more]').forEach((button) => button.addEventListener('click', () => openDay(target, state, button.dataset.calendarMore ?? fixtureToday)));
   target.querySelectorAll<HTMLElement>('[data-date]').forEach((day) => day.addEventListener('dblclick', (event) => { if ((event.target as HTMLElement).closest('[data-calendar-event], [data-calendar-more]')) return; const date = day.dataset.date; if (date) addEvent(date); }));
+}
+
+function applySourceColours(target: HTMLDivElement, sources: CalendarSource[]): void {
+  const theme = readCalendarColourTheme();
+  target.querySelectorAll<HTMLElement>('[data-calendar-source-id]').forEach((element) => {
+    const source = sources.find((item) => item.id === element.dataset.calendarSourceId);
+    if (!source?.colour || source.provider === 'aevumory') return;
+    const colour = renderCalendarColour(source.colour, theme);
+    element.style.setProperty('--calendar-source-bg', colour.background);
+    element.style.setProperty('--calendar-source-border', colour.border);
+  });
+}
+
+function readCalendarColourTheme() {
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    surface: styles.getPropertyValue('--bg-surface').trim(),
+    text: styles.getPropertyValue('--text-muted').trim(),
+    reserved: ['--accent-primary', '--accent-alert', '--accent-success', '--border-active'].map((name) => styles.getPropertyValue(name).trim()),
+  };
+}
+
+function openColourPicker(target: HTMLDivElement, state: { sources: CalendarSource[]; events: CalendarEvent[] }, sourceId: string, rerender: () => void): void {
+  const source = state.sources.find((item) => item.id === sourceId);
+  if (!source || source.provider === 'aevumory') return;
+  target.querySelector('.calendar-colour-picker')?.remove();
+  const original = source.colour ? { ...source.colour } : undefined;
+  const options = generateCalendarColourOptions(readCalendarColourTheme(), 8);
+  const picker = document.createElement('div');
+  picker.className = 'calendar-colour-picker';
+  picker.setAttribute('role', 'dialog');
+  picker.setAttribute('aria-label', `Choose colour for ${source.name}`);
+  picker.innerHTML = `<div class="calendar-colour-picker-title"><strong>${escapeHtml(source.name)}</strong><span>Calendar colour</span></div><div class="calendar-colour-options">${options.map((option, index) => `<button type="button" class="calendar-colour-option" data-colour-index="${index}" aria-label="Colour option ${index + 1}"></button>`).join('')}</div><footer class="calendar-dialog-actions"><button type="button" class="calendar-dialog-secondary" data-colour-cancel>Cancel</button><button type="button" class="calendar-dialog-primary" data-colour-save>Save</button></footer>`;
+  target.append(picker);
+
+  const sourceButton = target.querySelector<HTMLButtonElement>(`[data-calendar-colour-source="${CSS.escape(sourceId)}"]`);
+  if (sourceButton) {
+    const rect = sourceButton.getBoundingClientRect();
+    picker.style.left = `${Math.min(window.innerWidth - picker.offsetWidth - 16, Math.max(16, rect.left))}px`;
+    picker.style.top = `${Math.min(window.innerHeight - picker.offsetHeight - 16, rect.bottom + 10)}px`;
+  }
+
+  const preview = (selection: CalendarColourSelection): void => {
+    source.colour = { ...selection };
+    applySourceColours(target, state.sources);
+    picker.querySelectorAll<HTMLButtonElement>('[data-colour-index]').forEach((button) => button.classList.remove('calendar-colour-option-selected'));
+  };
+  picker.querySelectorAll<HTMLButtonElement>('[data-colour-index]').forEach((button, index) => {
+    const colour = renderCalendarColour(options[index], readCalendarColourTheme());
+    button.style.setProperty('--calendar-option-bg', colour.background);
+    button.style.setProperty('--calendar-option-border', colour.border);
+    button.addEventListener('click', () => { preview(options[index]); button.classList.add('calendar-colour-option-selected'); });
+  });
+
+  picker.querySelector('[data-colour-cancel]')?.addEventListener('click', () => {
+    source.colour = original ? { ...original } : undefined;
+    applySourceColours(target, state.sources);
+    picker.remove();
+  });
+  picker.querySelector('[data-colour-save]')?.addEventListener('click', () => { picker.remove(); rerender(); });
 }
 
 function openDay(target: HTMLDivElement, state: { sources: CalendarSource[]; events: CalendarEvent[] }, date: string): void {
@@ -111,6 +174,7 @@ function openDay(target: HTMLDivElement, state: { sources: CalendarSource[]; eve
   dialog.className = 'calendar-dialog calendar-day-dialog';
   dialog.innerHTML = `<section class="calendar-dialog-form"><header class="calendar-dialog-header"><div><h2>${formatDayHeading(date)}</h2><p>All events</p></div><button type="button" class="calendar-dialog-close" data-day-close aria-label="Close">×</button></header><div class="calendar-day-list">${events.map((event) => dayListItem(event, state.sources)).join('')}</div></section>`;
   target.append(dialog); dialog.showModal();
+  applySourceColours(target, state.sources);
   dialog.querySelector('[data-day-close]')?.addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => dialog.remove(), { once: true });
 }
@@ -139,7 +203,7 @@ function dayListItem(event: Occurrence, sources: CalendarSource[]): string {
   const source = sources.find((item) => item.id === event.calendarId);
   const provider = source?.provider === 'aevumory' || !source ? '' : ` · ${source.provider === 'google' ? 'Google' : 'iCloud'}`;
   const time = event.allDay ? 'All day' : event.startsAt ? formatTime(event.startsAt) : '';
-  return `<article class="calendar-day-list-item"><span class="calendar-event-dot ${event.significance === 'high' ? 'calendar-event-dot-strong' : event.taskLinked || event.recurrence ? 'calendar-event-dot-quiet' : 'calendar-event-dot-normal'}" aria-hidden="true"></span><div><h3>${escapeHtml(event.title)}</h3><p>${escapeHtml(time)}${source ? ` · ${escapeHtml(source.name)}${provider}` : ''}</p></div></article>`;
+  return `<article class="calendar-day-list-item" data-calendar-source-id="${escapeHtml(event.calendarId)}"><div><h3>${escapeHtml(event.title)}</h3><p>${escapeHtml(time)}${source ? ` · ${escapeHtml(source.name)}${provider}` : ''}</p></div></article>`;
 }
 
 function openEditor(target: HTMLDivElement, state: { sources: CalendarSource[]; events: CalendarEvent[] }, mode: EditorMode, event: CalendarEvent | undefined, occurrenceDate: string, rerender: () => void): void {
