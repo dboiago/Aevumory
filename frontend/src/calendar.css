@@ -49,19 +49,20 @@ body:has(.calendar-page) { overflow-x: hidden; }
 .calendar-event-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-event-high { border-color: var(--border-active); }
 
-/* Quiet events are visually lighter, but retain the same surface/border structure as everything else. */
-.calendar-event-quiet { background: var(--bg-surface); color: var(--text-muted); border-color: var(--border-subtle); }
-.calendar-event-quiet .calendar-event-title { color: var(--text-muted); }
+/* Frequent/task-linked events are quieter through surface, text, and opacity, not by losing their structure. */
+.calendar-event-quiet { background: var(--action-resolved-bg); color: var(--action-resolved-text); border-color: var(--action-resolved-border); opacity: .86; }
+.calendar-event-quiet .calendar-event-title { color: var(--action-resolved-text); }
 .calendar-event-quiet .calendar-event-time { color: var(--text-soft); }
+.calendar-event-quiet:hover { background: var(--bg-surface-hover); border-color: var(--border-active); opacity: 1; }
 .calendar-event-task { background: var(--action-resolved-bg); border-color: var(--action-resolved-border); color: var(--action-resolved-text); }
 .calendar-event-task .calendar-event-title { color: var(--action-resolved-text); }
 .calendar-event-task .calendar-event-time { color: var(--text-soft); }
-.calendar-event-recurring { opacity: .9; }
+.calendar-event-recurring { opacity: .86; }
 
 .calendar-event-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }
 .calendar-event-dot-quiet { background: var(--text-soft); }
-.calendar-event-dot-normal { background: var(--accent-primary); }
-.calendar-event-dot-strong { width: 6px; height: 6px; background: var(--accent-alert); }
+.calendar-event-dot-normal { background: var(--text-muted); }
+.calendar-event-dot-strong { width: 6px; height: 6px; background: var(--text-muted); }
 
 .calendar-more { width: 100%; padding: 3px 5px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: .7rem; text-align: left; cursor: pointer; }
 .calendar-more:hover { color: var(--text-primary); }
