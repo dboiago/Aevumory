@@ -110,7 +110,7 @@ function rgbToOklab(rgb: Rgb): Oklab {
   const g = srgbToLinear(rgb.g / 255);
   const b = srgbToLinear(rgb.b / 255);
   const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
-  const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+  const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969563 * b;
   const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
   const lRoot = Math.cbrt(l);
   const mRoot = Math.cbrt(m);
@@ -157,5 +157,5 @@ function srgbToLinear(value: number): number { return value <= 0.04045 ? value /
 function normaliseHue(value: number): number { return (value % 360 + 360) % 360; }
 function circularDistance(first: number, second: number): number { const distance = Math.abs(first - second) % 360; return Math.min(distance, 360 - distance); }
 function clamp(value: number, min: number, max: number): number { return Math.min(max, Math.max(min, value)); }
-function clampByte(value: number): number { return Math.round(clamp(value * 255, 0, 1) * 255); }
+function clampByte(value: number): number { return Math.round(clamp(value * 255, 0, 255)); }
 function toHex(rgb: Rgb): string { return `#${[rgb.r, rgb.g, rgb.b].map((value) => value.toString(16).padStart(2, '0')).join('')}`; }
