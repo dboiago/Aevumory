@@ -7,6 +7,7 @@ export type CalendarColourSelection = {
 export type CalendarColourTheme = {
   surface: string;
   text: string;
+  accent: string;
   reserved: string[];
 };
 
@@ -20,7 +21,7 @@ type Oklab = { l: number; a: number; b: number };
 type Oklch = { l: number; c: number; h: number };
 
 export function generateCalendarColourOptions(theme: CalendarColourTheme, count = 8): CalendarColourSelection[] {
-  const base = rgbToOklch(parseHex(theme.surface));
+  const themeHue = rgbToOklch(parseHex(theme.accent)).h;
   const reservedHues = theme.reserved
     .map(parseHex)
     .map(rgbToOklch)
@@ -35,7 +36,7 @@ export function generateCalendarColourOptions(theme: CalendarColourTheme, count 
 
   for (let index = 0; index < count; index += 1) {
     let hueOffset = rotation + index * sectorSize + (Math.random() - 0.5) * sectorSize * 0.28;
-    let hue = normaliseHue(base.h + hueOffset);
+    let hue = normaliseHue(themeHue + hueOffset);
 
     // Reserved semantic colours are not hard exclusions. Move a candidate away from
     // them instead of rejecting it, which guarantees that the picker remains populated.
@@ -44,7 +45,7 @@ export function generateCalendarColourOptions(theme: CalendarColourTheme, count 
       if (distance < 28) {
         const direction = normaliseHue(hue - reserved) <= 180 ? 1 : -1;
         hue = normaliseHue(reserved + direction * 28);
-        hueOffset = normaliseHue(hue - base.h);
+        hueOffset = normaliseHue(hue - themeHue);
       }
     }
 
@@ -59,21 +60,23 @@ export function generateCalendarColourOptions(theme: CalendarColourTheme, count 
 }
 
 export function renderCalendarColour(selection: CalendarColourSelection, theme: CalendarColourTheme): CalendarColourRender {
-  const base = rgbToOklch(parseHex(theme.surface));
-  const hue = normaliseHue(base.h + selection.hueOffset);
+  const surface = parseHex(theme.surface);
+  const text = parseHex(theme.text);
+  const themeHue = rgbToOklch(parseHex(theme.accent)).h;
+  const base = rgbToOklch(surface);
+  const hue = normaliseHue(themeHue + selection.hueOffset);
   const isDarkTheme = base.l < 0.5;
   const chroma = clamp(0.14 + selection.chromaBias * 0.025, 0.115, 0.18);
   const lightness = isDarkTheme
-    ? clamp(0.54 + selection.lightnessBias * 0.045, 0.49, 0.59)
+    ? clamp(0.59 + selection.lightnessBias * 0.055, 0.535, 0.645)
     : clamp(0.82 + selection.lightnessBias * 0.045, 0.775, 0.865);
   const source = oklchToRgb({ l: lightness, c: chroma, h: hue });
-  const surface = parseHex(theme.surface);
-  const text = parseHex(theme.text);
   const baselineContrast = contrastRatio(text, surface);
 
-  // Keep enough of the selected hue in the fill to make neighbouring choices
-  // visibly different, while retaining the theme's existing text treatment.
-  const weights = isDarkTheme ? [0.52, 0.44, 0.36, 0.28, 0.20] : [0.42, 0.36, 0.30, 0.24, 0.18];
+  // Dark themes need substantially more of the selected colour in the event fill.
+  // Otherwise mixing a mid-tone colour back into a near-black surface turns every
+  // option into another dark block.
+  const weights = isDarkTheme ? [0.92, 0.84, 0.76, 0.68, 0.60] : [0.42, 0.36, 0.30, 0.24, 0.18];
   let background = mixOklab(surface, source, weights[weights.length - 1]);
 
   for (const weight of weights) {
