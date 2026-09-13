@@ -180,3 +180,54 @@ function openDay(target: HTMLDivElement, state: { sources: CalendarSource[]; eve
   applySourceColours(target, state.sources);
   dialog.querySelector('[data-day-close]')?.addEventListener('click', () => dialog.close());
 }
+
+/* Helper implementations referenced in render and dialog operations */
+
+function occurrencesForDate(event: CalendarEvent, date: string): Occurrence[] {
+  if (!event.startsAt) return [];
+  const start = new Date(`${date}T00:00:00`);
+  return expand([event], start).filter((item) => item.occurrenceDate === date);
+}
+
+function dayListItem(event: Occurrence, sources: CalendarSource[]): string {
+  const source = sources.find((item) => item.id === event.calendarId);
+  const time = event.startsAt ? formatTime(event.startsAt) : '';
+  return `<div class="calendar-day-item" data-calendar-source-id="${escapeHtml(event.calendarId)}"><strong>${escapeHtml(event.title)}</strong><span>${escapeHtml(source?.name ?? '')} · ${escapeHtml(time)}</span></div>`;
+}
+
+function formatDayHeading(dateKey: string): string {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function openEditor(
+  target: HTMLDivElement,
+  state: { sources: CalendarSource[]; events: CalendarEvent[] },
+  mode: EditorMode,
+  event?: CalendarEvent,
+  date?: string,
+  rerender?: () => void
+): void {
+  // Stub for editor implementation
+}
+
+function dateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function formatMonth(date: Date): string {
+  return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
+function formatTime(isoString: string): string {
+  return new Date(isoString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
