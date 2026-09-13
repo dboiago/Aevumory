@@ -179,3 +179,4 @@ function openDay(target: HTMLDivElement, state: { sources: CalendarSource[]; eve
   target.append(dialog); dialog.showModal();
   applySourceColours(target, state.sources);
   dialog.querySelector('[data-day-close]')?.addEventListener('click', () => dialog.close());
+}
