@@ -21,34 +21,38 @@ type Oklch = { l: number; c: number; h: number };
 
 export function generateCalendarColourOptions(theme: CalendarColourTheme, count = 8): CalendarColourSelection[] {
   const base = rgbToOklch(parseHex(theme.surface));
-  const reservedHues = theme.reserved.map(parseHex).map(rgbToOklch).filter((colour) => colour.c > 0.025).map((colour) => colour.h);
+  const reservedHues = theme.reserved
+    .map(parseHex)
+    .map(rgbToOklch)
+    .filter((colour) => colour.c > 0.025)
+    .map((colour) => colour.h);
   const options: CalendarColourSelection[] = [];
-  const rendered: CalendarColourRender[] = [];
+
+  // Always create one candidate per sector. A small random rotation and jitter keeps
+  // each opening fresh without allowing the options to collapse into the same few hues.
   const sectorSize = 360 / count;
+  const rotation = Math.random() * sectorSize;
 
-  // Start each candidate in a different hue sector, then randomise within that sector.
-  // Opening the picker therefore produces a fresh set while keeping the choices visibly separated.
-  const sectors = Array.from({ length: count }, (_, index) => index).sort(() => Math.random() - 0.5);
-  let attempts = 0;
+  for (let index = 0; index < count; index += 1) {
+    let hueOffset = rotation + index * sectorSize + (Math.random() - 0.5) * sectorSize * 0.28;
+    let hue = normaliseHue(base.h + hueOffset);
 
-  while (options.length < count && attempts < 1200) {
-    attempts += 1;
-    const sector = sectors[options.length % sectors.length];
-    const hueOffset = sector * sectorSize + Math.random() * sectorSize;
-    const hue = normaliseHue(base.h + hueOffset);
-    if (circularDistance(hue, base.h) < 52) continue;
-    if (reservedHues.some((reserved) => circularDistance(hue, reserved) < 34)) continue;
+    // Reserved semantic colours are not hard exclusions. Move a candidate away from
+    // them instead of rejecting it, which guarantees that the picker remains populated.
+    for (const reserved of reservedHues) {
+      const distance = circularDistance(hue, reserved);
+      if (distance < 28) {
+        const direction = normaliseHue(hue - reserved) <= 180 ? 1 : -1;
+        hue = normaliseHue(reserved + direction * 28);
+        hueOffset = normaliseHue(hue - base.h);
+      }
+    }
 
-    const candidate: CalendarColourSelection = {
+    options.push({
       hueOffset,
       chromaBias: Math.random() * 2 - 1,
       lightnessBias: Math.random() * 2 - 1,
-    };
-    const colour = renderCalendarColour(candidate, theme);
-    if (rendered.some((existing) => colourDistance(existing.background, colour.background) < 0.12)) continue;
-
-    options.push(candidate);
-    rendered.push(colour);
+    });
   }
 
   return options;
@@ -58,29 +62,29 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
   const base = rgbToOklch(parseHex(theme.surface));
   const hue = normaliseHue(base.h + selection.hueOffset);
   const isDarkTheme = base.l < 0.5;
-  const chroma = clamp(base.c * 0.7 + 0.12 + selection.chromaBias * 0.03, 0.095, 0.18);
+  const chroma = clamp(0.14 + selection.chromaBias * 0.025, 0.115, 0.18);
   const lightness = isDarkTheme
-    ? clamp(0.54 + selection.lightnessBias * 0.06, 0.48, 0.60)
-    : clamp(0.80 + selection.lightnessBias * 0.06, 0.74, 0.86);
+    ? clamp(0.54 + selection.lightnessBias * 0.045, 0.49, 0.59)
+    : clamp(0.82 + selection.lightnessBias * 0.045, 0.775, 0.865);
   const source = oklchToRgb({ l: lightness, c: chroma, h: hue });
   const surface = parseHex(theme.surface);
   const text = parseHex(theme.text);
   const baselineContrast = contrastRatio(text, surface);
 
-  // Keep the source colour visible rather than washing every option back into the surface.
-  // Light themes need substantially lighter event fills so the existing dark text remains readable.
-  const weights = isDarkTheme ? [0.48, 0.40, 0.32, 0.24, 0.16] : [0.34, 0.28, 0.22, 0.16, 0.10];
+  // Keep enough of the selected hue in the fill to make neighbouring choices
+  // visibly different, while retaining the theme's existing text treatment.
+  const weights = isDarkTheme ? [0.52, 0.44, 0.36, 0.28, 0.20] : [0.42, 0.36, 0.30, 0.24, 0.18];
   let background = mixOklab(surface, source, weights[weights.length - 1]);
 
   for (const weight of weights) {
     const candidate = mixOklab(surface, source, weight);
-    if (contrastRatio(text, candidate) >= baselineContrast * 0.95) {
+    if (contrastRatio(text, candidate) >= baselineContrast * 0.90) {
       background = candidate;
       break;
     }
   }
 
-  const border = mixOklab(background, source, isDarkTheme ? 0.62 : 0.48);
+  const border = mixOklab(background, source, isDarkTheme ? 0.66 : 0.54);
   return { background: toHex(background), border: toHex(border) };
 }
 
@@ -134,12 +138,6 @@ function mixOklab(first: Rgb, second: Rgb, weight: number): Rgb {
   return oklabToRgb({ l: a.l + (b.l - a.l) * weight, a: a.a + (b.a - a.a) * weight, b: a.b + (b.b - a.b) * weight });
 }
 
-function colourDistance(first: string, second: string): number {
-  const a = rgbToOklab(parseHex(first));
-  const b = rgbToOklab(parseHex(second));
-  return Math.hypot(a.l - b.l, a.a - b.a, a.b - b.b);
-}
-
 function contrastRatio(first: Rgb, second: Rgb): number {
   const firstL = relativeLuminance(first);
   const secondL = relativeLuminance(second);
@@ -159,5 +157,5 @@ function srgbToLinear(value: number): number { return value <= 0.04045 ? value /
 function normaliseHue(value: number): number { return (value % 360 + 360) % 360; }
 function circularDistance(first: number, second: number): number { const distance = Math.abs(first - second) % 360; return Math.min(distance, 360 - distance); }
 function clamp(value: number, min: number, max: number): number { return Math.min(max, Math.max(min, value)); }
-function clampByte(value: number): number { return Math.round(clamp(value * 255, 0, 255)); }
+function clampByte(value: number): number { return Math.round(clamp(value * 255, 0, 1) * 255); }
 function toHex(rgb: Rgb): string { return `#${[rgb.r, rgb.g, rgb.b].map((value) => value.toString(16).padStart(2, '0')).join('')}`; }
