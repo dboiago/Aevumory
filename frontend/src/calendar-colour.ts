@@ -82,27 +82,26 @@ export function generateCalendarColourOptions(theme: CalendarColourTheme, count 
 }
 
 export function renderCalendarColour(selection: CalendarColourSelection, theme: CalendarColourTheme): CalendarColourRender {
-  const surface = parseHex(theme.surface);
-  const text = parseHex(theme.text);
+  const surface = parseHex(theme?.surface);
+  const text = parseHex(theme?.text);
   const anchor = resolveThemeAnchor(theme);
   const base = rgbToOklch(surface);
   const hue = normaliseHue(anchor.h + (selection?.hueOffset ?? 0));
   const isDarkTheme = base.l < 0.5;
 
-  // Chroma tuned for clear visual distinction without becoming neon
+  // Strict OKLCH bands tailored to theme mode
   const chroma = isDarkTheme
-    ? clamp(0.055 + (selection?.chromaBias ?? 0) * 0.010, 0.042, 0.068)
-    : clamp(0.045 + (selection?.chromaBias ?? 0) * 0.008, 0.035, 0.055);
+    ? clamp(0.052 + (selection?.chromaBias ?? 0) * 0.008, 0.044, 0.062)
+    : clamp(0.024 + (selection?.chromaBias ?? 0) * 0.004, 0.018, 0.028);
 
-  // Target lightness separated from base surface to ensure fills read clearly as colored cards
   let targetLightness = isDarkTheme
-    ? clamp(base.l + 0.10 + (selection?.lightnessBias ?? 0) * 0.02, 0.25, 0.30)
-    : clamp(base.l - 0.035 + (selection?.lightnessBias ?? 0) * 0.015, 0.87, 0.91);
+    ? clamp(0.36 + (selection?.lightnessBias ?? 0) * 0.03, 0.33, 0.41)
+    : clamp(0.90 + (selection?.lightnessBias ?? 0) * 0.015, 0.87, 0.92);
 
   let backgroundRgb = oklchToRgb({ l: targetLightness, c: chroma, h: hue });
 
-  // Safety fallback for text legibility
-  const minContrast = isDarkTheme ? 2.4 : contrastRatio(text, surface) * 0.82;
+  // Minimal contrast floor to preserve legibility without breaking target lightness band
+  const minContrast = isDarkTheme ? 2.2 : 1.25;
   if (contrastRatio(text, backgroundRgb) < minContrast) {
     const step = isDarkTheme ? 0.015 : -0.015;
     for (let i = 0; i < 4; i++) {
@@ -115,14 +114,13 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
     }
   }
 
-  // Define clear card borders derived from background hue
   const bgOklch = rgbToOklch(backgroundRgb);
-  const borderLightness = isDarkTheme ? bgOklch.l + 0.09 : bgOklch.l - 0.12;
-  const borderChroma = bgOklch.c * 1.5;
+  const borderLightness = isDarkTheme ? bgOklch.l + 0.08 : bgOklch.l - 0.10;
+  const borderChroma = isDarkTheme ? bgOklch.c * 1.2 : bgOklch.c * 1.4;
 
   const borderRgb = oklchToRgb({
-    l: clamp(borderLightness, 0.10, 0.94),
-    c: clamp(borderChroma, 0.03, 0.09),
+    l: clamp(borderLightness, 0.10, 0.95),
+    c: clamp(borderChroma, 0.02, 0.08),
     h: bgOklch.h,
   });
 
