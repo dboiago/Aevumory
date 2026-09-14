@@ -86,23 +86,22 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
   const hue = normaliseHue(anchor.h + selection.hueOffset);
   const isDarkTheme = base.l < 0.5;
 
-  // Strict low-chroma limits to match muted/moody design system
+  // Mid-tone chroma & lightness for dark mode tags; muted pastel surface tones for light mode tags
   const chroma = isDarkTheme
-    ? clamp(0.022 + selection.chromaBias * 0.008, 0.018, 0.032)
-    : clamp(0.014 + selection.chromaBias * 0.006, 0.010, 0.022);
+    ? clamp(0.072 + selection.chromaBias * 0.015, 0.055, 0.095)
+    : clamp(0.038 + selection.chromaBias * 0.010, 0.028, 0.052);
 
-  // Keep background lightness locked close to the theme's base surface
-  const targetLightness = isDarkTheme
-    ? clamp(base.l + 0.03 + selection.lightnessBias * 0.015, 0.16, 0.26)
-    : clamp(base.l + selection.lightnessBias * 0.01, 0.90, 0.95);
+  let targetLightness = isDarkTheme
+    ? clamp(0.34 + selection.lightnessBias * 0.04, 0.29, 0.40)
+    : clamp(0.89 + selection.lightnessBias * 0.02, 0.85, 0.93);
 
   let backgroundRgb = oklchToRgb({ l: targetLightness, c: chroma, h: hue });
 
-  // Contrast safeguard: minor adjustment if text contrast falls below baseline
-  const minContrast = contrastRatio(text, surface) * 0.88;
+  // Safeguard legibility against theme text
+  const minContrast = isDarkTheme ? 2.4 : contrastRatio(text, surface) * 0.82;
   if (contrastRatio(text, backgroundRgb) < minContrast) {
-    const step = isDarkTheme ? -0.01 : 0.01;
-    for (let i = 0; i < 4; i++) {
+    const step = isDarkTheme ? 0.015 : -0.015;
+    for (let i = 0; i < 5; i++) {
       const adjustedL = targetLightness + step * (i + 1);
       const candidate = oklchToRgb({ l: adjustedL, c: chroma, h: hue });
       if (contrastRatio(text, candidate) >= minContrast) {
@@ -112,14 +111,13 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
     }
   }
 
-  // Border carries the visual identity: subtle inset edge for light mode, crisp accent edge for dark mode
   const bgOklch = rgbToOklch(backgroundRgb);
-  const borderLightness = isDarkTheme ? bgOklch.l + 0.12 : bgOklch.l - 0.09;
-  const borderChroma = isDarkTheme ? clamp(bgOklch.c * 2.2, 0.04, 0.075) : clamp(bgOklch.c * 1.8, 0.02, 0.045);
+  const borderLightness = isDarkTheme ? bgOklch.l + 0.10 : bgOklch.l - 0.14;
+  const borderChroma = isDarkTheme ? bgOklch.c * 1.25 : bgOklch.c * 1.5;
 
   const borderRgb = oklchToRgb({
-    l: clamp(borderLightness, 0.08, 0.92),
-    c: borderChroma,
+    l: clamp(borderLightness, 0.10, 0.95),
+    c: clamp(borderChroma, 0.03, 0.12),
     h: bgOklch.h,
   });
 
@@ -127,22 +125,24 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
 }
 
 function resolveThemeAnchor(theme: CalendarColourTheme): Oklch {
-  const parsedAnchor = parseHex(theme.harmonyAnchor ?? theme.reserved[0] ?? theme.surface);
-  let anchor = rgbToOklch(parsedAnchor);
+  // Always prioritize the primary text color as the main chromatic anchor over low-chroma surfaces
+  const textRgb = parseHex(theme.text);
+  const textOklch = rgbToOklch(textRgb);
 
-  if (anchor.c <= 0.03) {
-    const chromaticReserved = theme.reserved
-      .map(parseHex)
-      .map(rgbToOklch)
-      .filter((colour) => colour.c > 0.03);
-
-    if (chromaticReserved.length > 0) {
-      anchor = chromaticReserved.reduce((prev, curr) => (curr.c > prev.c ? curr : prev), chromaticReserved[0]);
-    } else {
-      anchor.h = 250; // Fallback default hue for purely monochromatic themes
-    }
+  if (textOklch.c > 0.025) {
+    return textOklch;
   }
-  return anchor;
+
+  const chromaticReserved = theme.reserved
+    .map(parseHex)
+    .map(rgbToOklch)
+    .filter((colour) => colour.c > 0.025);
+
+  if (chromaticReserved.length > 0) {
+    return chromaticReserved.reduce((prev, curr) => (curr.c > prev.c ? curr : prev), chromaticReserved[0]);
+  }
+
+  return { l: 0.6, c: 0.08, h: 250 };
 }
 
 function scoreHue(hue: number, anchorHue: number, vocabularyHues: number[]): number {
