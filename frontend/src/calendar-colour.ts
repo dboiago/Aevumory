@@ -90,13 +90,15 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
   const isDarkTheme = base.l < 0.5;
 
   // Strict OKLCH bands tailored to theme mode
+  // 1. CHROMA: Lower for Light Mode, slightly higher for Dark Mode
   const chroma = isDarkTheme
-    ? clamp(0.052 + (selection?.chromaBias ?? 0) * 0.008, 0.044, 0.062)
-    : clamp(0.024 + (selection?.chromaBias ?? 0) * 0.004, 0.018, 0.028);
+    ? clamp(0.065 + (selection?.chromaBias ?? 0) * 0.008, 0.050, 0.075)
+    : clamp(0.014 + (selection?.chromaBias ?? 0) * 0.004, 0.010, 0.018);
 
+  // 2. LIGHTNESS: Pushed higher in BOTH modes
   let targetLightness = isDarkTheme
-    ? clamp(0.36 + (selection?.lightnessBias ?? 0) * 0.03, 0.33, 0.41)
-    : clamp(0.90 + (selection?.lightnessBias ?? 0) * 0.015, 0.87, 0.92);
+    ? clamp(0.48 + (selection?.lightnessBias ?? 0) * 0.03, 0.43, 0.53)  // Brings dark out of black void
+    : clamp(0.94 + (selection?.lightnessBias ?? 0) * 0.015, 0.92, 0.96); // Softens light fills
 
   let backgroundRgb = oklchToRgb({ l: targetLightness, c: chroma, h: hue });
 
