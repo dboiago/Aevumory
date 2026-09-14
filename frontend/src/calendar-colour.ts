@@ -86,34 +86,40 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
   const hue = normaliseHue(anchor.h + selection.hueOffset);
   const isDarkTheme = base.l < 0.5;
 
-  // Dark themes require higher chroma and lightness elevation to read as distinct tints
+  // Strict low-chroma limits to match muted/moody design system
   const chroma = isDarkTheme
-    ? clamp(0.052 + selection.chromaBias * 0.012, 0.038, 0.068)
-    : clamp(0.034 + selection.chromaBias * 0.008, 0.022, 0.046);
+    ? clamp(0.022 + selection.chromaBias * 0.008, 0.018, 0.032)
+    : clamp(0.014 + selection.chromaBias * 0.006, 0.010, 0.022);
 
-  let targetLightness = isDarkTheme
-    ? clamp(base.l + 0.085 + selection.lightnessBias * 0.025, 0.23, 0.32)
-    : clamp(base.l + selection.lightnessBias * 0.015, 0.86, 0.95);
+  // Keep background lightness locked close to the theme's base surface
+  const targetLightness = isDarkTheme
+    ? clamp(base.l + 0.03 + selection.lightnessBias * 0.015, 0.16, 0.26)
+    : clamp(base.l + selection.lightnessBias * 0.01, 0.90, 0.95);
 
   let backgroundRgb = oklchToRgb({ l: targetLightness, c: chroma, h: hue });
 
-  // Ensure text legibility: adjust lightness step if contrast drops below baseline requirement
-  const minContrast = contrastRatio(text, surface) * 0.85;
+  // Contrast safeguard: minor adjustment if text contrast falls below baseline
+  const minContrast = contrastRatio(text, surface) * 0.88;
   if (contrastRatio(text, backgroundRgb) < minContrast) {
-    const step = isDarkTheme ? -0.015 : 0.015;
-    for (let i = 0; i < 5; i++) {
-      targetLightness += step;
-      backgroundRgb = oklchToRgb({ l: targetLightness, c: chroma, h: hue });
-      if (contrastRatio(text, backgroundRgb) >= minContrast) break;
+    const step = isDarkTheme ? -0.01 : 0.01;
+    for (let i = 0; i < 4; i++) {
+      const adjustedL = targetLightness + step * (i + 1);
+      const candidate = oklchToRgb({ l: adjustedL, c: chroma, h: hue });
+      if (contrastRatio(text, candidate) >= minContrast) {
+        backgroundRgb = candidate;
+        break;
+      }
     }
   }
 
-  // Calculate high-contrast border: brighter edge for dark themes, darker edge for light themes
+  // Border carries the visual identity: subtle inset edge for light mode, crisp accent edge for dark mode
   const bgOklch = rgbToOklch(backgroundRgb);
-  const borderLightness = isDarkTheme ? bgOklch.l + 0.08 : bgOklch.l - 0.07;
+  const borderLightness = isDarkTheme ? bgOklch.l + 0.12 : bgOklch.l - 0.09;
+  const borderChroma = isDarkTheme ? clamp(bgOklch.c * 2.2, 0.04, 0.075) : clamp(bgOklch.c * 1.8, 0.02, 0.045);
+
   const borderRgb = oklchToRgb({
-    l: clamp(borderLightness, 0.05, 0.96),
-    c: clamp(bgOklch.c * 1.45, 0.03, 0.10),
+    l: clamp(borderLightness, 0.08, 0.92),
+    c: borderChroma,
     h: bgOklch.h,
   });
 
