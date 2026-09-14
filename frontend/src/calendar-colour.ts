@@ -86,33 +86,38 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
   const hue = normaliseHue(anchor.h + selection.hueOffset);
   const isDarkTheme = base.l < 0.5;
 
-  const chroma = clamp(0.035 + selection.chromaBias * 0.01, 0.025, 0.048);
-  const targetLightness = isDarkTheme
-    ? clamp(base.l + 0.06 + selection.lightnessBias * 0.02, 0.15, 0.42)
-    : clamp(base.l + selection.lightnessBias * 0.015, 0.85, 0.96);
+  // Dark themes require higher chroma and lightness elevation to read as distinct tints
+  const chroma = isDarkTheme
+    ? clamp(0.052 + selection.chromaBias * 0.012, 0.038, 0.068)
+    : clamp(0.034 + selection.chromaBias * 0.008, 0.022, 0.046);
 
-  const source = oklchToRgb({ l: targetLightness, c: chroma, h: hue });
-  const baselineContrast = contrastRatio(text, surface);
-  const weights = isDarkTheme ? [0.75, 0.60, 0.45, 0.30] : [0.70, 0.55, 0.40, 0.25];
-  
-  let background = mixOklab(surface, source, weights[weights.length - 1]);
-  for (const weight of weights) {
-    const candidate = mixOklab(surface, source, weight);
-    if (contrastRatio(text, candidate) >= baselineContrast * 0.88) {
-      background = candidate;
-      break;
+  let targetLightness = isDarkTheme
+    ? clamp(base.l + 0.085 + selection.lightnessBias * 0.025, 0.23, 0.32)
+    : clamp(base.l + selection.lightnessBias * 0.015, 0.86, 0.95);
+
+  let backgroundRgb = oklchToRgb({ l: targetLightness, c: chroma, h: hue });
+
+  // Ensure text legibility: adjust lightness step if contrast drops below baseline requirement
+  const minContrast = contrastRatio(text, surface) * 0.85;
+  if (contrastRatio(text, backgroundRgb) < minContrast) {
+    const step = isDarkTheme ? -0.015 : 0.015;
+    for (let i = 0; i < 5; i++) {
+      targetLightness += step;
+      backgroundRgb = oklchToRgb({ l: targetLightness, c: chroma, h: hue });
+      if (contrastRatio(text, backgroundRgb) >= minContrast) break;
     }
   }
 
-  const bgOklch = rgbToOklch(background);
-  const borderLightness = isDarkTheme ? bgOklch.l + 0.08 : bgOklch.l - 0.08;
+  // Calculate high-contrast border: brighter edge for dark themes, darker edge for light themes
+  const bgOklch = rgbToOklch(backgroundRgb);
+  const borderLightness = isDarkTheme ? bgOklch.l + 0.08 : bgOklch.l - 0.07;
   const borderRgb = oklchToRgb({
-    l: clamp(borderLightness, 0.05, 0.98),
-    c: bgOklch.c * 1.6,
+    l: clamp(borderLightness, 0.05, 0.96),
+    c: clamp(bgOklch.c * 1.45, 0.03, 0.10),
     h: bgOklch.h,
   });
 
-  return { background: toHex(background), border: toHex(borderRgb) };
+  return { background: toHex(backgroundRgb), border: toHex(borderRgb) };
 }
 
 function resolveThemeAnchor(theme: CalendarColourTheme): Oklch {
