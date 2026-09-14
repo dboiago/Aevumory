@@ -27,51 +27,41 @@ type HueCandidate = {
 
 export function generateCalendarColourOptions(theme: CalendarColourTheme, count = 8): CalendarColourSelection[] {
   const anchor = resolveThemeAnchor(theme);
-  const reservedList = theme.reserved ?? [];
 
-  const vocabulary = reservedList
-    .map(parseHex)
-    .map(rgbToOklch)
-    .filter((colour) => colour.c > 0.025);
-  const vocabularyHues = vocabulary.map((colour) => colour.h);
+  // Classical color harmony relationships relative to the primary anchor
+  const HARMONY_RELATIONSHIPS = [
+    0,           // Anchor / Monochromatic base
+    30, -30,     // Analogous
+    150, 210,    // Split-Complementary
+    120, -120,   // Triadic
+    90, -90,     // Square / Tetradic
+    180,         // Direct Complementary
+  ];
 
-  // Broad hue steps guarantee each generated calendar option looks visually distinct
-  const offsets = [0, 35, -35, 75, -75, 120, -120, 160, -160, 210, 270];
-  const candidates: HueCandidate[] = [];
+  // Generate candidates around formal relationships with tight, constrained variation
+  const candidates: number[] = HARMONY_RELATIONSHIPS.map((offset) => {
+    const jitter = (Math.random() * 12) - 6; // +/- 6° variation around true harmony angle
+    return normaliseHue(anchor.h + offset + jitter);
+  });
 
-  for (const offset of offsets) {
-    const hue = normaliseHue(anchor.h + offset);
-    candidates.push({
-      hue,
-      score: scoreHue(hue, anchor.h, vocabularyHues),
-    });
-  }
-
-  for (const vocabHue of vocabularyHues) {
-    for (const offset of [0, 30, -30]) {
-      const hue = normaliseHue(vocabHue + offset);
-      candidates.push({
-        hue,
-        score: scoreHue(hue, anchor.h, vocabularyHues) + 0.2,
-      });
-    }
-  }
-
-  const ranked = candidates
-    .sort((first, second) => second.score - first.score)
-    .map((candidate) => candidate.hue);
-
+  // Pick visually distinct candidates while preserving true relationship distribution
   const selectedHues: number[] = [];
-  for (const hue of shuffled(ranked)) {
-    if (selectedHues.some((selected) => circularDistance(selected, hue) < 28)) continue;
+  const pool = shuffled(candidates);
+
+  // Primary pass: enforce a strict minimum circular distance (24°)
+  for (const hue of pool) {
+    if (selectedHues.some((selected) => circularDistance(selected, hue) < 24)) continue;
     selectedHues.push(hue);
     if (selectedHues.length === count) break;
   }
 
-  for (const hue of ranked) {
-    if (selectedHues.length === count) break;
-    if (selectedHues.some((selected) => circularDistance(selected, hue) < 18)) continue;
-    selectedHues.push(hue);
+  // Secondary pass fallback if strict separation returns fewer than requested options
+  if (selectedHues.length < count) {
+    for (const hue of candidates) {
+      if (selectedHues.length === count) break;
+      if (selectedHues.some((selected) => circularDistance(selected, hue) < 12)) continue;
+      selectedHues.push(hue);
+    }
   }
 
   return selectedHues.slice(0, count).map((hue) => ({
