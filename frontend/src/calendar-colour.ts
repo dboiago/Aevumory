@@ -20,58 +20,67 @@ type Rgb = { r: number; g: number; b: number };
 type Oklab = { l: number; a: number; b: number };
 type Oklch = { l: number; c: number; h: number };
 
+type HueCandidate = {
+  hue: number;
+  score: number;
+};
+
 export function generateCalendarColourOptions(theme: CalendarColourTheme, count = 8): CalendarColourSelection[] {
   const anchor = rgbToOklch(parseHex(theme.harmonyAnchor ?? theme.reserved[0] ?? theme.surface));
   const vocabulary = theme.reserved
     .map(parseHex)
     .map(rgbToOklch)
     .filter((colour) => colour.c > 0.025);
+  const vocabularyHues = vocabulary.map((colour) => colour.h);
 
-  const relationships = [0, 180, 30, -30, 60, -60, 120, -120];
-  const vocabularyHues = vocabulary.flatMap((colour) => [
-    colour.h,
-    colour.h + 180,
-  ]);
+  // Build the palette from relationships to the theme's actual chromatic vocabulary.
+  // The harmony offsets provide structure, while the vocabulary keeps the result grounded
+  // in this theme rather than producing a generic rainbow around one hue.
+  const offsets = [0, 24, -24, 48, -48, 90, 120, 150, 180, 210, 240, 270, 312, 336];
+  const candidates: HueCandidate[] = [];
 
-  const targets = [
-    anchor.h,
-    ...vocabularyHues,
-    ...relationships.map((offset) => anchor.h + offset),
-  ].map(normaliseHue);
+  for (const offset of offsets) {
+    const hue = normaliseHue(anchor.h + offset);
+    candidates.push({
+      hue,
+      score: scoreHue(hue, anchor.h, vocabularyHues),
+    });
+  }
+
+  for (const vocabularyHue of vocabularyHues) {
+    for (const offset of [0, 24, -24, 180]) {
+      const hue = normaliseHue(vocabularyHue + offset);
+      candidates.push({
+        hue,
+        score: scoreHue(hue, anchor.h, vocabularyHues) + 0.15,
+      });
+    }
+  }
+
+  const ranked = candidates
+    .sort((first, second) => second.score - first.score)
+    .map((candidate) => candidate.hue);
 
   const selectedHues: number[] = [];
-  const options: CalendarColourSelection[] = [];
-  const shuffled = targets
-    .map((hue) => ({ hue, sort: Math.random() }))
-    .sort((first, second) => first.sort - second.sort)
-    .map((item) => item.hue);
-
-  for (const target of shuffled) {
-    if (selectedHues.some((hue) => circularDistance(hue, target) < 22)) continue;
-    selectedHues.push(target);
-    options.push({
-      hueOffset: normaliseHue(target - anchor.h),
-      chromaBias: Math.random() * 2 - 1,
-      lightnessBias: Math.random() * 2 - 1,
-    });
-    if (options.length === count) break;
+  for (const hue of shuffled(ranked)) {
+    if (selectedHues.some((selected) => circularDistance(selected, hue) < 22)) continue;
+    selectedHues.push(hue);
+    if (selectedHues.length === count) break;
   }
 
-  // Always fill the requested count, but only after exhausting meaningful theme relationships.
-  let fallbackOffset = 0;
-  while (options.length < count) {
-    const target = normaliseHue(anchor.h + fallbackOffset);
-    fallbackOffset += 47;
-    if (selectedHues.some((hue) => circularDistance(hue, target) < 18)) continue;
-    selectedHues.push(target);
-    options.push({
-      hueOffset: normaliseHue(target - anchor.h),
-      chromaBias: Math.random() * 2 - 1,
-      lightnessBias: Math.random() * 2 - 1,
-    });
+  // If a theme has a very small chromatic vocabulary, use the remaining harmony positions
+  // rather than introducing unrelated arbitrary hues.
+  for (const hue of ranked) {
+    if (selectedHues.length === count) break;
+    if (selectedHues.some((selected) => circularDistance(selected, hue) < 16)) continue;
+    selectedHues.push(hue);
   }
 
-  return options;
+  return selectedHues.slice(0, count).map((hue) => ({
+    hueOffset: normaliseHue(hue - anchor.h),
+    chromaBias: randomBias(),
+    lightnessBias: randomBias(),
+  }));
 }
 
 export function renderCalendarColour(selection: CalendarColourSelection, theme: CalendarColourTheme): CalendarColourRender {
@@ -105,6 +114,38 @@ export function renderCalendarColour(selection: CalendarColourSelection, theme: 
   return { background: toHex(background), border: toHex(border) };
 }
 
+function scoreHue(hue: number, anchorHue: number, vocabularyHues: number[]): number {
+  const anchorDistance = circularDistance(hue, anchorHue);
+  const vocabularyDistance = vocabularyHues.length === 0
+    ? 180
+    : Math.min(...vocabularyHues.map((vocabularyHue) => circularDistance(hue, vocabularyHue)));
+
+  // Prefer hues that are either part of the theme vocabulary or sit at deliberate
+  // harmony distances from the anchor. Penalise the empty space between them.
+  const harmonyDistance = nearestHarmonyDistance(hue, anchorHue);
+  return (1 - vocabularyDistance / 180) * 0.65
+    + (1 - harmonyDistance / 180) * 0.25
+    + (1 - anchorDistance / 180) * 0.10;
+}
+
+function nearestHarmonyDistance(hue: number, anchorHue: number): number {
+  const harmonyOffsets = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
+  return Math.min(...harmonyOffsets.map((offset) =>
+    circularDistance(hue, normaliseHue(anchorHue + offset)),
+  ));
+}
+
+function shuffled(values: number[]): number[] {
+  return values
+    .map((value) => ({ value, sort: Math.random() }))
+    .sort((first, second) => first.sort - second.sort)
+    .map((item) => item.value);
+}
+
+function randomBias(): number {
+  return Math.random() * 2 - 1;
+}
+
 function parseHex(value: string): Rgb {
   const match = value.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (!match) return { r: 128, g: 128, b: 128 };
@@ -132,6 +173,6 @@ function relativeLuminance(rgb: Rgb): number { const r = srgbToLinear(rgb.r / 25
 function srgbToLinear(value: number): number { return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4; }
 function normaliseHue(value: number): number { return (value % 360 + 360) % 360; }
 function circularDistance(first: number, second: number): number { const distance = Math.abs(first - second) % 360; return Math.min(distance, 360 - distance); }
-function clamp(value: number, min: number, max: number): number { return Math.min(max, Math.max(min, value)); }
+function clamp(value: number, min: number, max: number): number { return Math.min(min, Math.max(min, value)); }
 function clampByte(value: number): number { return Math.round(clamp(value * 255, 0, 255)); }
 function toHex(rgb: Rgb): string { return `#${[rgb.r, rgb.g, rgb.b].map((value) => value.toString(16).padStart(2, '0')).join('')}`; }
