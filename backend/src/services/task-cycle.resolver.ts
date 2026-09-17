@@ -169,7 +169,10 @@ function resolveCalendarAnchorDates(
   let month = effectiveStart.with({ day: 1 });
   while (Temporal.PlainDate.compare(month, windowEnd) <= 0) {
     try {
-      const date = month.with({ day });
+      // `with()` defaults to clamping out-of-range days (e.g. day 31 in
+      // February would silently become the 28th) rather than throwing;
+      // `overflow: 'reject'` is required to actually skip the month.
+      const date = month.with({ day }, { overflow: 'reject' });
       if (
         Temporal.PlainDate.compare(date, effectiveStart) >= 0 &&
         Temporal.PlainDate.compare(date, windowEnd) <= 0
@@ -177,7 +180,7 @@ function resolveCalendarAnchorDates(
         results.push(date);
       }
     } catch {
-      // Invalid calendar dates, such as February 30, have no occurrence.
+      // Invalid calendar dates, such as February 31, have no occurrence.
     }
     month = month.add({ months: 1 });
   }

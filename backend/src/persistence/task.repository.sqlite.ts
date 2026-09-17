@@ -174,8 +174,10 @@ export class SqliteTaskRepository implements TaskRepository {
   }
 
   deleteTask(task_id: string): Promise<void> {
-    this.db.prepare('DELETE FROM tasks WHERE task_id = ?').run(task_id);
+    // task_cycles.task_id references tasks(task_id) — delete the child rows
+    // first so this doesn't trip a foreign key constraint.
     this.db.prepare('DELETE FROM task_cycles WHERE task_id = ?').run(task_id);
+    this.db.prepare('DELETE FROM tasks WHERE task_id = ?').run(task_id);
     return Promise.resolve();
   }
 

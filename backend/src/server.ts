@@ -7,7 +7,7 @@
  */
 
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import Database from 'better-sqlite3';
@@ -469,7 +469,16 @@ const main = async () => {
   });
 };
 
-main().catch((error) => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
+// Only actually start listening when this file is run directly (`node
+// src/server.ts` / `npm run dev`) — not when test files import `createServer`
+// from it. Without this guard, every test file that imports this module
+// tries to bind the real port, racing/colliding across parallel test files.
+const isMainModule = process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMainModule) {
+  main().catch((error) => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
+}
