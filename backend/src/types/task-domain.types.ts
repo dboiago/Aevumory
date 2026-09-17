@@ -272,6 +272,14 @@ export type UserTaskState =
  * inferred from ExecutionEvent or RewardTransaction rows, and must not be
  * re-added to `Task` (that would make it global across all cycles/users).
  * Absence of a row means the implicit initial state, `'active'`.
+ *
+ * `foothold_established` is an earned intermediate execution state, not
+ * partial completion and not a generic task-progress tracker — it
+ * recognises meaningful real-world initiation of a task when full
+ * completion isn't yet appropriate, and is deliberately separate from
+ * `TaskCycle.status`/`CycleStatus`. It applies to any task with
+ * `supports_foothold === true` the model calls for; it is a general
+ * execution concept, not a medical/accommodation-specific feature.
  */
 export interface UserTaskCycleState {
   task_id: string;
@@ -332,6 +340,17 @@ export interface TaskCycle {
 // EXECUTION EVENT
 // ----------------------------------------------------------------------------
 
+/**
+ * `deductively_pruned` covers ORDINARY (non-completion) cycle resolution —
+ * the condition no longer applies, another action already satisfied it, or
+ * investigation found the work unnecessary. Recording one of these is not
+ * itself an earned reward. The name is kept as-is (rather than e.g.
+ * `resolved`) because a future, domain-specific Inquiry mechanic will also
+ * be called "Deductive Pruning" and may award a bounded reward when the
+ * resolution reflects genuine investigative work — that distinction lives
+ * in the reward layer (see `RewardEventType`), not as a second outcome type
+ * here.
+ */
 export type ExecutionOutcomeType =
   | 'completed'
   | 'deductively_pruned';
@@ -405,6 +424,12 @@ export interface RewardYield {
  * Foothold initiation reward and a later completion reward on the same
  * task/cycle/owner do not collide under the same idempotency key (Phase 3
  * planning correction — FUNCTIONAL_FOUNDATION_PLAN.md Phase 3).
+ *
+ * `deductive_pruning` is reserved for a future, domain-specific Inquiry
+ * mechanic and is NOT produced by ordinary cycle resolution today —
+ * resolving a cycle without completing it earns no reward by itself (see
+ * `TaskExecutionService.pruneCycle`). That future reward must never be
+ * inferred merely because a cycle was resolved.
  */
 export type RewardEventType =
   | 'foothold_initiation'

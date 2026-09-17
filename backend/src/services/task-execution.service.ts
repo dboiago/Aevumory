@@ -3,9 +3,22 @@
  *
  * Application-service boundary for Task→Cycle→ExecutionEvent→RewardTransaction
  * (FUNCTIONAL_FOUNDATION_PLAN.md Phase 3): completion, Foothold initiation,
- * Deductive Pruning, and administrative reward-adjustment corrections.
- * Route handlers must not talk to ExecutionRepository/LedgerRepository/
- * UserTaskStateRepository directly.
+ * ordinary (non-completion) cycle resolution, and administrative
+ * reward-adjustment corrections. Route handlers must not talk to
+ * ExecutionRepository/LedgerRepository/UserTaskStateRepository directly.
+ *
+ * Four distinct outcomes, deliberately not collapsed into one another:
+ *   - Completion: the task was actually done; earns the (remaining) base yield.
+ *   - Foothold: meaningful initiation was actually done; earns a defined
+ *     partial share of the base yield (see `establishFoothold`).
+ *   - Ordinary resolution (`pruneCycle`): the cycle is resolved without being
+ *     completed (condition no longer applies, another action satisfied it,
+ *     etc.) — recorded for provenance/audit only. Resolving a cycle is not
+ *     itself an earned reward.
+ *   - Future Deductive Pruning: a not-yet-implemented, domain-specific
+ *     Inquiry mechanic where genuine investigative work behind a resolution
+ *     may justify a bounded reward. That reward must never be inferred
+ *     merely because a cycle was resolved (see `pruneCycle`).
  *
  * Idempotency: every RewardTransaction carries an `idempotency_key` of
  * `${task_id}:${cycle_id}:${reward_owner_user_id ?? 'unassigned'}:${reward_event_type}`.
@@ -37,7 +50,7 @@ import type { LedgerRepository } from '../repositories/ledger.repository.js';
 import type { UserTaskStateRepository } from '../repositories/user-task-state.repository.js';
 import { REASON_ENGINE_CONFIG } from '../config/engine.config.js';
 import { TaskNotFoundError, TaskService } from './task.service.js';
-import { computeBaseYield, computeReasonYield, scaleYield } from './reward-yield.engine.js';
+import { computeBaseYield, scaleYield } from './reward-yield.engine.js';
 
 export class InvalidCycleStateError extends Error {
   constructor(cycle_id: string, reason: string) {
@@ -113,6 +126,17 @@ export class TaskExecutionService {
   ) {}
 
   /**
+   * Establishes a Foothold: an earned intermediate execution state that
+   * recognises meaningful real-world initiation of a supported task when
+   * full completion is not yet appropriate. It is not partial completion,
+   * and it is deliberately separate from generic task-progress tracking —
+   * there is no percentage/step state, only active -> foothold_established
+   * -> completed (`UserTaskCycleState`). The Foothold yield is earned by
+   * that real initiation; a later completion earns the remaining yield (see
+   * `completeCycle`). This applies to any task with `supports_foothold ===
+   * true` where the model calls for it — Foothold is a general execution
+   * concept, not a medical/accommodation-specific feature.
+   *
    * TASK_LIFECYCLE.md §2: a task instance may receive exactly one initiation
    * reward during its active lifecycle. Repeating this action once Foothold
    * is already established (or the cycle is already completed) is an
@@ -176,13 +200,13 @@ export class TaskExecutionService {
   }
 
   /**
-   * Completion never repeats: a cycle may transition pending -> satisfied
-   * exactly once. If a Foothold was previously established for the
-   * responsible/acting participant, the completion reward is the remaining
-   * share of the base yield (base yield minus the already-awarded Foothold
-   * share) so the total awarded across both events never exceeds the task's
-   * ordinary base yield — see FUNCTIONAL_FOUNDATION_PLAN.md Phase 3 report
-   * for this explicit reward-safety decision.
+   * Completion: the task was actually done. A cycle may transition pending
+   * -> satisfied exactly once. If a Foothold was previously established for
+   * the responsible/acting participant, the completion reward is the
+   * remaining share of the base yield (base yield minus the already-awarded
+   * Foothold share) so the total awarded across both events never exceeds
+   * the task's ordinary base yield — see FUNCTIONAL_FOUNDATION_PLAN.md
+   * Phase 3 report for this explicit reward-safety decision.
    */
   async completeCycle(cycle_id: string, input: CompleteCycleInput): Promise<ExecutionResult> {
     const cycle = await this.taskService.getOrMaterializeCycle(cycle_id);
@@ -261,12 +285,23 @@ export class TaskExecutionService {
   }
 
   /**
-   * Deductive Pruning (TASK_LIFECYCLE.md §6): an alternative execution
-   * outcome, not a deletion. Reuses the task's own base-yield magnitude (its
-   * only documented measure of "burden") attributed to the `reason`
-   * Discipline with zero Credits, since the physical work did not occur.
-   * `superseded` is the closest existing CycleStatus to "work is no longer
-   * required" — no new CycleStatus literal is introduced.
+   * Ordinary (non-completion) cycle resolution (TASK_LIFECYCLE.md §6): the
+   * condition no longer applies, another action already satisfied it, or
+   * investigation established the work is unnecessary. This records *what
+   * happened and why* as an immutable, provenance-bearing ExecutionEvent —
+   * it does NOT itself earn a reward. `superseded` is the closest existing
+   * CycleStatus to "work is no longer required"; no new CycleStatus literal
+   * is introduced.
+   *
+   * A future, domain-specific Inquiry mechanic ("Deductive Pruning") may
+   * award a bounded reward when the resolution reflects real investigative
+   * work — but that reward must never be inferred merely because a cycle
+   * was resolved, and is deliberately NOT implemented here (see
+   * `computeReasonYield` in reward-yield.engine.ts, reserved/unused pending
+   * that future mechanic). The `prune`/`deductively_pruned` naming is kept
+   * as-is (matching the already-documented `ExecutionOutcomeType` literal in
+   * task-domain.types.ts) rather than introducing a second, competing name
+   * for the same generic-resolution concept.
    */
   async pruneCycle(cycle_id: string, input: PruneCycleInput): Promise<ExecutionResult> {
     const cycle = await this.taskService.getOrMaterializeCycle(cycle_id);
@@ -275,6 +310,8 @@ export class TaskExecutionService {
     if (cycle.status !== 'pending') throw new InvalidCycleStateError(cycle_id, `cycle status is '${cycle.status}'`);
 
     const reward_owner_user_id = cycle.responsible_user_id;
+<<<<<<< HEAD
+=======
     const { idempotency_key, reusableExisting } = await this.resolveRewardTransactionSlot(
       task.task_id,
       cycle_id,
@@ -284,18 +321,7 @@ export class TaskExecutionService {
     if (reusableExisting) {
       return { cycle, transaction: reusableExisting, executionEvent: null, state: null };
     }
-
-    const transaction: RewardTransaction = {
-      transaction_id: randomUUID(),
-      idempotency_key,
-      task_id: task.task_id,
-      cycle_id,
-      reward_event_type: 'deductive_pruning',
-      reward_owner_user_id,
-      yield: computeReasonYield(task),
-      processed_at: new Date().toISOString(),
-    };
-    await this.ledgerRepository.saveTransaction(transaction);
+>>>>>>> 14b89a001be444c0ff9623f94dcc6d33e2860d5f
 
     const now = new Date().toISOString();
     const executionEvent: ExecutionEvent = {
@@ -316,7 +342,7 @@ export class TaskExecutionService {
     const updatedCycle: TaskCycle = { ...cycle, status: 'superseded', resolved_at: now };
     await this.taskRepository.saveCycle(updatedCycle);
 
-    return { cycle: updatedCycle, transaction, executionEvent, state: null };
+    return { cycle: updatedCycle, transaction: null, executionEvent, state: null };
   }
 
   /**
@@ -348,6 +374,9 @@ export class TaskExecutionService {
     const cycle = await this.taskRepository.getCycle(original.cycle_id);
     if (!cycle) return { adjustment, cycle: null };
 
+    // 'deductive_pruning' is not produced by pruneCycle today (ordinary
+    // resolution earns no reward) but stays handled here so a future
+    // Inquiry-mechanic transaction of that type is reversible the same way.
     if (original.reward_event_type === 'completion' || original.reward_event_type === 'deductive_pruning') {
       const reopened: TaskCycle = {
         ...cycle,
@@ -433,5 +462,36 @@ export class TaskExecutionService {
     const task = await this.taskService.getTask(task_id);
     if (!task) throw new TaskNotFoundError(task_id);
     return task;
+  }
+
+  /**
+   * Resolves the idempotency key + any existing transaction to reuse for a
+   * given (task, cycle, owner, event type). A matching transaction with no
+   * reward adjustments against it is a genuine retry and is reused as-is. A
+   * matching transaction that HAS been reversed is "used up" — that
+   * generation is skipped and the next numbered generation (`${baseKey}:2`,
+   * `:3`, ...) is tried, since a legitimate subsequent event (e.g.
+   * re-completing after an admin reversal) must not collide with the
+   * reversed transaction's key nor be mistaken for a duplicate of it. This
+   * never weakens the `reward_transactions.idempotency_key` UNIQUE
+   * constraint — it only ever picks a fresh, still-unused key for a
+   * genuinely new logical event.
+   */
+  private async resolveRewardTransactionSlot(
+    task_id: string,
+    cycle_id: string,
+    reward_owner_user_id: string | undefined,
+    reward_event_type: RewardEventType,
+  ): Promise<{ idempotency_key: string; reusableExisting: RewardTransaction | null }> {
+    const baseKey = buildIdempotencyKey(task_id, cycle_id, reward_owner_user_id, reward_event_type);
+
+    for (let attempt = 1; ; attempt += 1) {
+      const candidateKey = attempt === 1 ? baseKey : `${baseKey}:${attempt}`;
+      const existing = await this.ledgerRepository.getTransactionByIdempotencyKey(candidateKey);
+      if (!existing) return { idempotency_key: candidateKey, reusableExisting: null };
+
+      const adjustments = await this.ledgerRepository.listAdjustmentsForTransaction(existing.transaction_id);
+      if (adjustments.length === 0) return { idempotency_key: candidateKey, reusableExisting: existing };
+    }
   }
 }

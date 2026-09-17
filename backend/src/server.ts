@@ -322,6 +322,10 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
     }
   });
 
+  // Ordinary (non-completion) cycle resolution — records why the cycle was
+  // resolved without being completed; earns no reward by itself (see
+  // TaskExecutionService.pruneCycle). Endpoint name kept as `/prune` to match
+  // the already-documented `deductively_pruned` ExecutionOutcomeType.
   fastify.post('/api/task-cycles/:id/prune', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as

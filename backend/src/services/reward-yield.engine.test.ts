@@ -40,7 +40,7 @@ describe('computeBaseYield', () => {
   });
 });
 
-describe('computeReasonYield', () => {
+describe('computeReasonYield (reserved for a future Inquiry mechanic — not called by pruneCycle today)', () => {
   it('attributes the avoided task\'s base-yield magnitude to the reason Discipline with zero Credits', () => {
     const task = makeTask({ primary_discipline: 'motion', duration_tier: 'sustained' });
     const yieldValue = computeReasonYield(task);

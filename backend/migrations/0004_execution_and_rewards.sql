@@ -47,9 +47,9 @@ CREATE TABLE execution_events (
 
   completed_at TEXT NOT NULL,
   source_type TEXT NOT NULL,
-  outcome_type TEXT NOT NULL, -- 'completed' | 'deductively_pruned'
+  outcome_type TEXT NOT NULL, -- 'completed' | 'deductively_pruned' (ordinary resolution; earns no reward by itself)
 
-  -- Deductive Pruning provenance only (TASK_LIFECYCLE.md §6)
+  -- Ordinary-resolution provenance (TASK_LIFECYCLE.md §6)
   prune_reason_code TEXT,
   prune_note TEXT,
   prune_linked_task_id TEXT
@@ -64,7 +64,7 @@ CREATE TABLE reward_transactions (
 
   task_id TEXT NOT NULL REFERENCES tasks(task_id),
   cycle_id TEXT NOT NULL REFERENCES task_cycles(cycle_id),
-  reward_event_type TEXT NOT NULL, -- 'foothold_initiation' | 'completion' | 'deductive_pruning'
+  reward_event_type TEXT NOT NULL, -- 'foothold_initiation' | 'completion' | 'deductive_pruning' (latter reserved for a future Inquiry mechanic, not produced today)
   reward_owner_user_id TEXT,
 
   primary_discipline TEXT NOT NULL,

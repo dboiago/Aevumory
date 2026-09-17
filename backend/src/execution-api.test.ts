@@ -153,7 +153,7 @@ describe('Execution & Reward API (Phase 3)', () => {
     expect(response.statusCode).toBe(409);
   });
 
-  it('prunes a pending cycle with a reason code', async () => {
+  it('resolves a pending cycle via /prune with a reason code, without creating a reward', async () => {
     const cookie = await authorize();
     const taskId = await createTask(cookie);
     const cycleId = `${taskId}:2026-01-05`;
@@ -166,6 +166,7 @@ describe('Execution & Reward API (Phase 3)', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().cycle.status).toBe('superseded');
+    expect(response.json().transaction).toBeNull();
   });
 
   it('requires reason_code to prune a cycle', async () => {

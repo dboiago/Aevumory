@@ -191,7 +191,7 @@ describe('TaskExecutionService — Foothold', () => {
   });
 });
 
-describe('TaskExecutionService — Deductive Pruning', () => {
+describe('TaskExecutionService — ordinary cycle resolution (pruneCycle)', () => {
   it('records a deductively_pruned execution event and supersedes the cycle', async () => {
     const { taskService, executionService, taskRepository } = makeHarness();
     const task = await taskService.createTask(createTaskInput());
@@ -204,15 +204,42 @@ describe('TaskExecutionService — Deductive Pruning', () => {
     expect((await taskRepository.getCycle(cycleId))?.status).toBe('superseded');
   });
 
-  it('awards Reason Discipline XP with zero Credits, not the task\'s own primary Discipline reward', async () => {
+  it('records the supplied reason/provenance on the execution event', async () => {
+    const { taskService, executionService } = makeHarness();
+    const task = await taskService.createTask(createTaskInput());
+    const cycleId = `${task.task_id}:2026-01-05`;
+
+    const result = await executionService.pruneCycle(cycleId, {
+      reason_code: 'satisfied_externally',
+      note: 'Neighbour already did it',
+      linked_task_id: 'task-2',
+    });
+
+    expect(result.executionEvent?.prune_reason_code).toBe('satisfied_externally');
+    expect(result.executionEvent?.prune_note).toBe('Neighbour already did it');
+    expect(result.executionEvent?.prune_linked_task_id).toBe('task-2');
+  });
+
+  it('does not create a reward transaction — ordinary resolution is not itself an earned reward', async () => {
     const { taskService, executionService } = makeHarness();
     const task = await taskService.createTask(createTaskInput({ primary_discipline: 'motion' }));
     const cycleId = `${task.task_id}:2026-01-05`;
 
     const result = await executionService.pruneCycle(cycleId, { reason_code: 'condition_no_longer_exists' });
 
-    expect(result.transaction?.yield.primary_discipline).toBe('reason');
-    expect(result.transaction?.yield.credits_earned).toBe(0);
+    expect(result.transaction).toBeNull();
+  });
+
+  it('does not add XP/Credits to the participant ledger after ordinary resolution', async () => {
+    const { taskService, executionService } = makeHarness();
+    const task = await taskService.createTask(createTaskInput());
+    const cycleId = `${task.task_id}:2026-01-05`;
+
+    await executionService.pruneCycle(cycleId, { reason_code: 'external_event_resolved' });
+
+    const ledger = await executionService.getParticipantLedger('participant-1');
+    expect(ledger.transactions).toEqual([]);
+    expect(ledger.balance).toBe(0);
   });
 
   it('rejects pruning a cycle that is not pending', async () => {
