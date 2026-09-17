@@ -4,6 +4,8 @@ import { horizonPosition, horizonVisual, type HorizonEvent } from './horizon';
 import { FixtureTaskBoardQuery, type HouseholdParticipant } from './tasks';
 import { FixtureTaskBoardStore } from './task-board';
 import { FixtureTemporalQuery, type TemporalOccurrence } from './temporal';
+import { FixtureCalendarQuery } from './calendar';
+import { renderCalendar } from './calendar-view';
 
 type AmbientContext =
   | { kind: 'ordinary'; date: string; time: string; weather: string }
@@ -29,12 +31,18 @@ let context: AmbientContext = {
 const now = '2026-09-02T18:00:00-04:00';
 const temporalQuery = new FixtureTemporalQuery();
 const taskBoardQuery = new FixtureTaskBoardQuery();
+const calendarQuery = new FixtureCalendarQuery();
 
 void render(root);
 window.addEventListener('hashchange', () => void render(root));
 
 async function render(target: HTMLDivElement): Promise<void> {
   const hash = window.location.hash;
+
+  if (hash === '#calendar') {
+    await renderCalendar(target, calendarQuery);
+    return;
+  }
 
   if (hash === '#tasks') {
     const state = await taskBoardQuery.getBoard();
