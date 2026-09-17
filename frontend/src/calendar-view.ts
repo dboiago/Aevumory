@@ -65,7 +65,11 @@ function renderDay(date: Date, month: number, events: Occurrence[]): string {
 function eventButton(event: Occurrence, showTime: boolean): string {
   const time = showTime && event.startsAt ? formatTime(event.startsAt) : '';
   const quiet = event.taskLinked || Boolean(event.recurrence);
-  return `<button type="button" class="calendar-event calendar-event-${event.significance}${quiet ? ' calendar-event-quiet' : ''}${event.recurrence ? ' calendar-event-recurring' : ''}" data-calendar-event="${escapeHtml(event.id)}" data-calendar-source-id="${escapeHtml(event.calendarId)}" title="${escapeHtml(event.title)}"><span class="calendar-event-time">${escapeHtml(time)}</span><span class="calendar-event-title">${escapeHtml(event.title)}</span></button>`;
+  const multiDay =
+    event.allDay &&
+    Boolean(event.endsAt) &&
+    dateKey(new Date(event.endsAt)) !== event.occurrenceDate;
+  return `<button type="button" class="calendar-event calendar-event-${event.significance}${quiet ? ' calendar-event-quiet' : ''}${event.recurrence ? ' calendar-event-recurring' : ''}${multiDay ? ' calendar-event-multi-day' : ''}" data-calendar-event="${escapeHtml(event.id)}" data-calendar-source-id="${escapeHtml(event.calendarId)}" title="${escapeHtml(event.title)}"><span class="calendar-event-time">${escapeHtml(time)}</span><span class="calendar-event-title">${escapeHtml(event.title)}</span></button>`;
 }
 
 function expand(events: CalendarEvent[], month: Date): Occurrence[] {

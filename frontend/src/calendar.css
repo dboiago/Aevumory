@@ -58,6 +58,11 @@ body:has(.calendar-page) { overflow-x: hidden; }
 .calendar-event-recurring { opacity: .82; }
 .calendar-event-recurring:hover { opacity: 1; }
 
+/* Adding a stronger border to visually link multi-day events */
+.calendar-event-multi-day {
+  border-color: var(--action-primary-border);
+}
+
 .calendar-more { width: 100%; padding: 3px 5px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: .7rem; text-align: left; cursor: pointer; }
 .calendar-more:hover { color: var(--text-primary); }
 .calendar-actions { display: flex; justify-content: flex-end; padding-top: 12px; }
