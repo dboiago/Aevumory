@@ -1,7 +1,7 @@
 import './styles.css';
 import { renderAmbientDisplay } from './ambient-display';
 import { horizonPosition, horizonVisual, type HorizonEvent } from './horizon';
-import { FixtureTaskBoardQuery, type HouseholdParticipant } from './tasks';
+import { ApiTaskBoardQuery, type HouseholdParticipant } from './tasks';
 import { FixtureTaskBoardStore } from './task-board';
 import { FixtureTemporalQuery, type TemporalOccurrence } from './temporal';
 import { FixtureCalendarQuery } from './calendar';
@@ -32,7 +32,7 @@ let context: AmbientContext = {
 
 const now = '2026-09-02T18:00:00-04:00';
 const temporalQuery = new FixtureTemporalQuery();
-const taskBoardQuery = new FixtureTaskBoardQuery();
+const taskBoardQuery = new ApiTaskBoardQuery();
 const calendarQuery = new FixtureCalendarQuery();
 
 void render(root);
@@ -53,7 +53,7 @@ async function render(target: HTMLDivElement): Promise<void> {
 
   if (hash === '#tasks') {
     const state = await taskBoardQuery.getBoard();
-    renderTaskBoard(target, new FixtureTaskBoardStore(state));
+    renderTaskBoard(target, new FixtureTaskBoardStore(state, () => taskBoardQuery.getBoard()));
     return;
   }
 
@@ -179,9 +179,9 @@ function renderTaskBoard(
   });
 
   target.querySelectorAll<HTMLButtonElement>('[data-action="complete"]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       const scrollState = captureTaskBoardScrollState(target);
-      store.apply({ kind: 'complete', taskId: button.dataset.taskId ?? '' });
+      await store.apply({ kind: 'complete', taskId: button.dataset.taskId ?? '' });
       renderTaskBoard(target, store, scrollState);
     });
   });
@@ -294,14 +294,14 @@ function clearTouchDropTargets(target: HTMLDivElement): void {
   target.querySelectorAll('.task-column-drag-over').forEach((column) => column.classList.remove('task-column-drag-over'));
 }
 
-function applyTaskAssignment(
+async function applyTaskAssignment(
   target: HTMLDivElement,
   store: FixtureTaskBoardStore,
   taskId: string,
   responsibleUserId: string | undefined,
-): void {
+): Promise<void> {
   const scrollState = captureTaskBoardScrollState(target);
-  store.apply({
+  await store.apply({
     kind: 'assign',
     taskId,
     responsibleUserId,
@@ -334,7 +334,12 @@ function restoreTaskListScrollPositions(target: HTMLDivElement, positions: TaskL
 }
 
 function isTaskForToday(task: ReturnType<FixtureTaskBoardStore['getState']>['tasks'][number]): boolean {
-  return !task.dueAt || task.dueAt.startsWith(now.slice(0, 10));
+  // Task Board data is real (FUNCTIONAL_FOUNDATION_PLAN.md Phase 2) and
+  // already scoped to today's real window by ApiTaskBoardQuery; this only
+  // needs to compare against the real current date, not the fixture `now`
+  // used elsewhere on this page for the ambient/calendar/horizon screens.
+  const today = new Date().toISOString().slice(0, 10);
+  return !task.dueAt || task.dueAt.startsWith(today);
 }
 
 function renderParticipantColumn(

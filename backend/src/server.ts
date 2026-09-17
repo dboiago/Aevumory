@@ -16,11 +16,19 @@ import { runMigrations } from './persistence/migrate.js';
 import { SqliteTemporalRepository } from './persistence/temporal.repository.sqlite.js';
 import { SqliteHouseholdRepository } from './persistence/household.repository.sqlite.js';
 import { SqliteParticipantRepository } from './persistence/participant.repository.sqlite.js';
+import { SqliteTaskRepository } from './persistence/task.repository.sqlite.js';
 import { HouseholdService } from './services/household.service.js';
 import {
   ParticipantNotFoundError,
   ParticipantService,
 } from './services/participant.service.js';
+import {
+  TaskCycleNotFoundError,
+  TaskNotFoundError,
+  TaskService,
+  type CreateTaskInput,
+  type UpdateTaskInput,
+} from './services/task.service.js';
 import {
   AdminAuthService,
   AdminPinAlreadyConfiguredError,
@@ -60,10 +68,12 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
   const temporalRepository = new SqliteTemporalRepository(db);
   const householdRepository = new SqliteHouseholdRepository(db);
   const participantRepository = new SqliteParticipantRepository(db);
+  const taskRepository = new SqliteTaskRepository(db);
 
   // Create application services
   const householdService = new HouseholdService(householdRepository);
   const participantService = new ParticipantService(participantRepository);
+  const taskService = new TaskService(taskRepository);
   const adminAuthService = new AdminAuthService(householdService);
   const requireAdmin = createRequireAdminHook(adminAuthService);
 
@@ -138,6 +148,109 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
     const { id } = request.params as { id: string };
     await participantService.remove(id);
     reply.code(204).send();
+  });
+
+  // ============================================================================
+  // Task & Task Cycle Endpoints (Phase 2)
+  //
+  // Task definition mutations are admin-gated. Task/cycle reads and cycle
+  // reassignment are ordinary household actions and require no admin session
+  // (CORE_BASELINE.md §2: "Task Reassignment ... is an ordinary household
+  // action, not a separate game mode").
+  // ============================================================================
+
+  fastify.get('/api/tasks', async (request, reply) => {
+    return taskService.listTasks();
+  });
+
+  fastify.post('/api/tasks', { onRequest: requireAdmin }, async (request, reply) => {
+    const body = request.body as Partial<CreateTaskInput> | undefined;
+    if (!body?.title || !body.primary_discipline || !body.source_type ||
+        !body.created_by_user_id || !body.assignment || !body.schedule ||
+        !body.duration_tier || !body.effort_type || !body.cognitive_load) {
+      reply.code(400).send({ error: 'title, primary_discipline, source_type, created_by_user_id, assignment, schedule, duration_tier, effort_type, and cognitive_load are required' });
+      return;
+    }
+
+    try {
+      const task = await taskService.createTask(body as CreateTaskInput);
+      reply.code(201);
+      return task;
+    } catch (error) {
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.patch('/api/tasks/:id', { onRequest: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as UpdateTaskInput | undefined;
+
+    try {
+      return await taskService.updateTask(id, body ?? {});
+    } catch (error) {
+      if (error instanceof TaskNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.delete('/api/tasks/:id', { onRequest: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await taskService.deleteTask(id);
+    reply.code(204).send();
+  });
+
+  fastify.get('/api/tasks/:id/cycles', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    try {
+      return await taskService.listPersistedCyclesForTask(id);
+    } catch (error) {
+      if (error instanceof TaskNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      throw error;
+    }
+  });
+
+  // window format: "<starts_at>,<ends_at>" (ISO date or date-time strings).
+  fastify.get('/api/task-cycles', async (request, reply) => {
+    const { window } = request.query as { window?: string };
+    if (!window) {
+      reply.code(400).send({ error: 'window query parameter is required, formatted as "<starts_at>,<ends_at>"' });
+      return;
+    }
+
+    const [starts_at, ends_at] = window.split(',');
+    if (!starts_at || !ends_at) {
+      reply.code(400).send({ error: 'window query parameter must be formatted as "<starts_at>,<ends_at>"' });
+      return;
+    }
+
+    try {
+      return await taskService.listCyclesInWindow({ starts_at, ends_at });
+    } catch (error) {
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.post('/api/task-cycles/:id/assign', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { responsible_user_id?: string | null } | undefined;
+    const responsible_user_id = body?.responsible_user_id ?? undefined;
+
+    try {
+      return await taskService.reassignCycle(id, responsible_user_id);
+    } catch (error) {
+      if (error instanceof TaskCycleNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
   });
 
   // ============================================================================

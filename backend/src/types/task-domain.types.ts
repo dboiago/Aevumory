@@ -89,6 +89,19 @@ export type TaskSourceType =
   | 'event';
 
 // ----------------------------------------------------------------------------
+// DESCRIPTIVE TRAIT PROFILES
+// ----------------------------------------------------------------------------
+//
+// Reconciled from the superseded `task.ts` (see FUNCTIONAL_FOUNDATION_PLAN.md
+// Phase 2). CORE_BASELINE.md §2 names these fields explicitly and states they
+// are "descriptive metadata only ... not dynamic difficulty statistics" — they
+// carry no reward-calculation behavior themselves.
+
+export type DurationTier = 'quick' | 'moderate' | 'sustained' | 'heavy';
+export type EffortType = 'physical' | 'mental' | 'balanced';
+export type CognitiveLoad = 'low' | 'medium' | 'high';
+
+// ----------------------------------------------------------------------------
 // ASSIGNMENT
 // ----------------------------------------------------------------------------
 
@@ -222,6 +235,22 @@ export interface Task {
   assignment: TaskAssignmentPolicy;
   schedule: SchedulePolicy;
   lifecycle: LifecyclePolicy;
+
+  /**
+   * Reconciled from the superseded `task.ts` (TASK_LIFECYCLE.md §2: a task
+   * must explicitly support Foothold through `supports_foothold === true`).
+   * Data only until Phase 3 implements the Foothold state machine.
+   */
+  supports_foothold: boolean;
+
+  /**
+   * Descriptive metadata only (CORE_BASELINE.md §2). `duration_tier` feeds
+   * `TASK_YIELD_ENGINE_CONFIG.duration_tier_base_minutes` (engine.config.ts)
+   * for the later reward engine; it has no effect in Phase 2.
+   */
+  duration_tier: DurationTier;
+  effort_type: EffortType;
+  cognitive_load: CognitiveLoad;
 }
 
 // ----------------------------------------------------------------------------

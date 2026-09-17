@@ -1,5 +1,5 @@
 import { renderParticipantProfile } from './participant-profile';
-import { FixtureTaskBoardQuery } from './tasks';
+import { ApiTaskBoardQuery } from './tasks';
 
 const themes = ['overgrown', 'nebula', 'vernal', 'maritime', 'memoix'] as const;
 type Theme = (typeof themes)[number];
@@ -32,7 +32,7 @@ function applyTheme(theme: Theme): void {
   window.localStorage.setItem('aevumory-prototype-theme', theme);
 }
 
-const profileQuery = new FixtureTaskBoardQuery();
+const profileQuery = new ApiTaskBoardQuery();
 
 window.addEventListener('hashchange', () => {
   const match = window.location.hash.match(/^#participant\/(.+)$/);

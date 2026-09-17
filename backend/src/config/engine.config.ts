@@ -36,3 +36,24 @@ export const REWARD_ENGINE_CONFIG = {
   /** Default yield conversion multiplier if base yields are scaled */
   credit_yield_multiplier: 1.0,
 } as const;
+
+/**
+ * duration_tier -> base minutes, feeding the "1 Base XP ~= 1 minute" yield
+ * anchor (CORE_BASELINE.md S3) once the reward engine (Phase 3) exists.
+ *
+ * CORE_BASELINE.md S2 documents `duration_tier` as descriptive-only task
+ * metadata but does not enumerate its values or a tier-to-minutes mapping;
+ * this is this plan's resolution of that gap (see FUNCTIONAL_FOUNDATION_PLAN.md
+ * Phase 2). Each tier resolves to exactly one fixed minutes value always -
+ * no scaling, no per-task override - so duration_tier stays descriptive
+ * metadata, never an editable reward number. The four tier names reuse the
+ * vocabulary already established by the superseded `task.ts`.
+ */
+export const TASK_YIELD_ENGINE_CONFIG = {
+  duration_tier_base_minutes: {
+    quick: 5,
+    moderate: 15,
+    sustained: 30,
+    heavy: 60,
+  },
+} as const;

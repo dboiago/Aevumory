@@ -80,3 +80,111 @@ export const adminApi = {
   login: (pin: string): Promise<{ ok: true }> =>
     apiRequest('/api/admin/session', { method: 'POST', body: { pin } }),
 };
+
+// ============================================================================
+// Task / Task Cycle (Phase 2)
+// ============================================================================
+
+export interface TaskAssignmentPolicyDto {
+  scope: 'individual' | 'household';
+  assigned_user_id?: string;
+  owner_id: string;
+}
+
+export interface SchedulePolicyDto {
+  cadence_type: 'one_off' | 'interval' | 'calendar_anchor';
+  interval_days?: number;
+  series_anchor_date?: string;
+  calendar_anchor?: { unit: 'week' | 'month'; value: number };
+  delay_policy: 'none' | 'bounded' | 'flexible';
+  has_strict_window: boolean;
+  window_start_time?: string;
+  window_end_time?: string;
+  max_daily_completions?: number;
+  cooldown_hours?: number;
+}
+
+export interface LifecyclePolicyDto {
+  expires_at?: string;
+  on_expiration?: 'archive' | 'expire_quietly';
+  ttl_hours?: number;
+}
+
+export interface TaskDto {
+  task_id: string;
+  title: string;
+  description?: string;
+  primary_discipline: string;
+  secondary_disciplines: string[];
+  source_type: string;
+  source_event_id?: string;
+  created_at: string;
+  created_by_user_id: string;
+  assignment: TaskAssignmentPolicyDto;
+  schedule: SchedulePolicyDto;
+  lifecycle: LifecyclePolicyDto;
+  supports_foothold: boolean;
+  duration_tier: 'quick' | 'moderate' | 'sustained' | 'heavy';
+  effort_type: 'physical' | 'mental' | 'balanced';
+  cognitive_load: 'low' | 'medium' | 'high';
+}
+
+export interface TaskCycleDto {
+  cycle_id: string;
+  task_id: string;
+  target_date: string;
+  window_start: string;
+  window_end: string;
+  window_source: 'base' | 'precision_elastic';
+  status: 'pending' | 'satisfied' | 'deferred' | 'historical_absence' | 'superseded';
+  responsible_user_id?: string;
+  satisfied_at?: string;
+  satisfied_by_user_id?: string;
+  resolved_at?: string;
+}
+
+export interface CreateTaskDtoInput {
+  title: string;
+  description?: string;
+  primary_discipline: string;
+  secondary_disciplines?: string[];
+  source_type: string;
+  source_event_id?: string;
+  created_by_user_id: string;
+  assignment: TaskAssignmentPolicyDto;
+  schedule: SchedulePolicyDto;
+  lifecycle?: LifecyclePolicyDto;
+  supports_foothold?: boolean;
+  duration_tier: 'quick' | 'moderate' | 'sustained' | 'heavy';
+  effort_type: 'physical' | 'mental' | 'balanced';
+  cognitive_load: 'low' | 'medium' | 'high';
+}
+
+export const tasksApi = {
+  list: (): Promise<TaskDto[]> => apiRequest('/api/tasks'),
+
+  create: (input: CreateTaskDtoInput): Promise<TaskDto> =>
+    apiRequest('/api/tasks', { method: 'POST', body: input }),
+
+  update: (taskId: string, input: Partial<CreateTaskDtoInput>): Promise<TaskDto> =>
+    apiRequest(`/api/tasks/${encodeURIComponent(taskId)}`, { method: 'PATCH', body: input }),
+
+  remove: (taskId: string): Promise<void> =>
+    apiRequest(`/api/tasks/${encodeURIComponent(taskId)}`, { method: 'DELETE' }),
+
+  listCycles: (taskId: string): Promise<TaskCycleDto[]> =>
+    apiRequest(`/api/tasks/${encodeURIComponent(taskId)}/cycles`),
+};
+
+export const taskCyclesApi = {
+  listInWindow: (window: { starts_at: string; ends_at: string }): Promise<TaskCycleDto[]> => {
+    const params = new URLSearchParams({ window: `${window.starts_at},${window.ends_at}` });
+    return apiRequest(`/api/task-cycles?${params.toString()}`);
+  },
+
+  assign: (cycleId: string, responsibleUserId: string | undefined): Promise<TaskCycleDto> =>
+    apiRequest(`/api/task-cycles/${encodeURIComponent(cycleId)}/assign`, {
+      method: 'POST',
+      body: { responsible_user_id: responsibleUserId ?? null },
+    }),
+};

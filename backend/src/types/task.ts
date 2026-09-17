@@ -1,68 +1,14 @@
 /**
- * Core Task Interface and Type Definitions for Aevumory System
+ * SUPERSEDED — do not use.
+ *
+ * This duplicate Task model has been reconciled into and replaced by
+ * `task-domain.types.ts` (the sole authoritative Task shape; see
+ * FUNCTIONAL_FOUNDATION_PLAN.md Phase 2). `supports_foothold`, `duration_tier`,
+ * `effort_type`, and `cognitive_load` now live on the authoritative `Task`.
+ *
+ * This file is left as an empty, unreferenced placeholder only because the
+ * current tooling cannot delete files in this workspace. It must be deleted
+ * (e.g. `git rm backend/src/types/task.ts`) the next time this repo is
+ * edited from a normal local clone.
  */
-
-export type TaskDomain = 'kinetic' | 'erudite' | 'form' | 'keeping';
-
-export type DisciplineTag =
-  | 'inquiry'
-  | 'reason'
-  | 'synthesis'
-  | 'motion'
-  | 'force'
-  | 'precision'
-  | 'making'
-  | 'composition'
-  | 'craft'
-  | 'care'
-  | 'order'
-  | 'renewal';
-
-export type DurationTier = 'quick' | 'moderate' | 'sustained' | 'heavy';
-export type EffortType = 'physical' | 'mental' | 'balanced';
-export type CognitiveLoad = 'low' | 'medium' | 'high';
-export type TaskSourceType = 'core' | 'event' | 'encounter';
-
-export type TaskState = 'active' | 'foothold_established' | 'completed';
-
-export interface Task {
-  /** Identity & Discovery */
-  id: string;
-  title: string;
-  description?: string;
-  is_hidden: boolean;               // Inquiry: Discovered via perception threshold
-  visible_to_user_ids?: string[];   // Inquiry: Targeted individual discovery
-
-  /** Domain & Discipline Attribution */
-  domain: TaskDomain;
-  primary_discipline: DisciplineTag;
-  secondary_discipline?: DisciplineTag; // Synthesis: Cross-discipline yield
-
-  /** Descriptive Trait Profiles */
-  duration_tier: DurationTier;
-  effort_type: EffortType;
-  cognitive_load: CognitiveLoad;
-
-  /** Engine Hooks & Behavioral Flags */
-  supports_foothold: boolean;       // Reason: Point-of-entry state enabled
-  has_strict_window: boolean;       // Care: Evaluated by schedule engine
-  is_major_reset?: boolean;         // Renewal: Explicit recovery trigger requirement
-
-  /** Yield & Execution Constraints */
-  base_practice_yield: number;      // Base XP
-  max_daily_completions: number;
-  cooldown_hours: number;
-
-  /** Origin Tracking */
-  source_type: TaskSourceType;
-  origin_id?: string;
-}
-
-export interface TaskStateRecord {
-  task_id: string;
-  user_id: string;
-  state: TaskState;
-  foothold_reward_claimed: boolean;
-  created_at: string; // ISO Timestamp
-  updated_at: string; // ISO Timestamp
-}
+export {};
