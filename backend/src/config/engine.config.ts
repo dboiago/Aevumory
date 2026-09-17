@@ -3,8 +3,8 @@
  */
 
 export const RENEWAL_ENGINE_CONFIG = {
-  recovery_window_hours: 24,[cite: 3]
-  reward_cost_reduction: 0.25,[cite: 3]
+  recovery_window_hours: 24,
+  reward_cost_reduction: 0.25,
   max_window_horizon_hours: 48, // Maximum cap when extending active windows
 } as const;
 
