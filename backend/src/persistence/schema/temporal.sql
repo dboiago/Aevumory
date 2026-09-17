@@ -30,19 +30,6 @@ CREATE TABLE household_events (
   local_end TEXT,
   local_start_date TEXT,
   local_end_date TEXT,
-  CHECK (
-    (schedule_kind = 'timed'
-      AND local_start IS NOT NULL
-      AND local_end IS NOT NULL
-      AND local_start_date IS NULL
-      AND local_end_date IS NULL)
-    OR
-    (schedule_kind = 'all_day'
-      AND local_start IS NULL
-      AND local_end IS NULL
-      AND local_start_date IS NOT NULL
-      AND local_end_date IS NOT NULL)
-  ),
 
   relevance TEXT NOT NULL CHECK (relevance IN ('ordinary', 'meaningful')),
   significance TEXT NOT NULL CHECK (significance IN ('low', 'normal', 'high')),
@@ -55,7 +42,21 @@ CREATE TABLE household_events (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
 
-  UNIQUE (source_id, external_identity_key)
+  UNIQUE (source_id, external_identity_key),
+
+  CHECK (
+    (schedule_kind = 'timed'
+      AND local_start IS NOT NULL
+      AND local_end IS NOT NULL
+      AND local_start_date IS NULL
+      AND local_end_date IS NULL)
+    OR
+    (schedule_kind = 'all_day'
+      AND local_start IS NULL
+      AND local_end IS NULL
+      AND local_start_date IS NOT NULL
+      AND local_end_date IS NOT NULL)
+  )
 );
 
 CREATE TABLE event_occurrences (
