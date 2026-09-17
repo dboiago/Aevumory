@@ -68,7 +68,7 @@ function eventButton(event: Occurrence, showTime: boolean): string {
   const multiDay =
     event.allDay &&
     Boolean(event.endsAt) &&
-    dateKey(new Date(event.endsAt)) !== event.occurrenceDate;
+    dateKey(new Date(event.endsAt as string)) !== event.occurrenceDate;
   return `<button type="button" class="calendar-event calendar-event-${event.significance}${quiet ? ' calendar-event-quiet' : ''}${event.recurrence ? ' calendar-event-recurring' : ''}${multiDay ? ' calendar-event-multi-day' : ''}" data-calendar-event="${escapeHtml(event.id)}" data-calendar-source-id="${escapeHtml(event.calendarId)}" title="${escapeHtml(event.title)}"><span class="calendar-event-time">${escapeHtml(time)}</span><span class="calendar-event-title">${escapeHtml(event.title)}</span></button>`;
 }
 
