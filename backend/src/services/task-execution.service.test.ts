@@ -261,6 +261,8 @@ describe('TaskExecutionService — reward adjustments (corrective reversal)', ()
 
     const secondCompletion = await executionService.completeCycle(cycleId, {});
     expect(secondCompletion.transaction?.transaction_id).not.toBe(completion.transaction?.transaction_id);
+    expect(secondCompletion.transaction?.idempotency_key).not.toBe(completion.transaction?.idempotency_key);
+    expect(secondCompletion.transaction?.idempotency_key).toBe(`${completion.transaction?.idempotency_key}:2`);
   });
 
   it('resets Foothold state to active on reversal so a fresh Foothold can be legitimately re-earned', async () => {
@@ -281,6 +283,8 @@ describe('TaskExecutionService — reward adjustments (corrective reversal)', ()
 
     const secondFoothold = await executionService.establishFoothold(cycleId, {});
     expect(secondFoothold.transaction).not.toBeNull();
+    expect(secondFoothold.transaction?.transaction_id).not.toBe(foothold.transaction?.transaction_id);
+    expect(secondFoothold.transaction?.idempotency_key).toBe(`${foothold.transaction?.idempotency_key}:2`);
   });
 });
 
