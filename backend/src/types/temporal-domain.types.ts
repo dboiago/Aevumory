@@ -15,7 +15,7 @@
  * ============================================================================
  */
 
-import type { EventSchedule } from './event-schedule.types';
+import type { EventSchedule } from './event-schedule.types.js';
 
 export type TemporalSourceKind = 'local' | 'external';
 

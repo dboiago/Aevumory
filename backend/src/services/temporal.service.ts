@@ -3,13 +3,13 @@ import type {
   EventOccurrence,
   HouseholdEvent,
   TemporalSource,
-} from '../types/temporal-domain.types';
+} from '../types/temporal-domain.types.js';
 import type {
   OccurrenceQuery,
   TemporalEventQuery,
   TemporalRepository,
-} from '../repositories/temporal.repository';
-import { resolveEventOccurrences } from './recurrence.resolver';
+} from '../repositories/temporal.repository.js';
+import { resolveEventOccurrences } from './recurrence.resolver.js';
 
 export interface OccurrenceWindow {
   starts_at: string;

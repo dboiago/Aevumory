@@ -2,12 +2,12 @@ import { Temporal } from '@js-temporal/polyfill';
 import type {
   AllDayEventSchedule,
   TimedEventSchedule,
-} from '../types/event-schedule.types.js';
+} from '../types/event-schedule.types.js.js';
 import type {
   EventOccurrence,
   HouseholdEvent,
   RecurrenceRule,
-} from '../types/temporal-domain.types.js';
+} from '../types/temporal-domain.types.js.js';
 
 export interface RecurrenceResolutionWindow {
   starts_at: string;

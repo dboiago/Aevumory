@@ -11,9 +11,9 @@ import { fileURLToPath } from 'url';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import Database from 'better-sqlite3';
-import { getAppConfig } from './app.config';
-import { runMigrations } from './persistence/migrate';
-import { SqliteTemporalRepository } from './persistence/temporal.repository.sqlite';
+import { getAppConfig } from './app.config.js';
+import { runMigrations } from './persistence/migrate.js';
+import { SqliteTemporalRepository } from './persistence/temporal.repository.sqlite.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

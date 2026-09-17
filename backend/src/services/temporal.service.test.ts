@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { InMemoryTemporalRepository } from '../persistence/temporal.repository.memory';
-import type { HouseholdEvent } from '../types/temporal-domain.types';
-import { DefaultTemporalService } from './temporal.service';
+import { InMemoryTemporalRepository } from '../persistence/temporal.repository.memory.js';
+import type { HouseholdEvent } from '../types/temporal-domain.types.js';
+import { DefaultTemporalService } from './temporal.service.js';
 
 describe('DefaultTemporalService.listOccurrencesInWindow', () => {
   const timestamps = {

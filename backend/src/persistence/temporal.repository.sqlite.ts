@@ -10,13 +10,13 @@ import type {
   EventOccurrence,
   HouseholdEvent,
   TemporalSource,
-} from '../types/temporal-domain.types';
+} from '../types/temporal-domain.types.js';
 import type {
   OccurrenceQuery,
   TemporalEventQuery,
   TemporalRepository,
-} from '../repositories/temporal.repository';
-import type { EventSchedule } from '../types/event-schedule.types.js';
+} from '../repositories/temporal.repository.js';
+import type { EventSchedule } from '../types/event-schedule.types.js.js';
 
 export class SqliteTemporalRepository implements TemporalRepository {
   constructor(private readonly db: Database.Database) {}

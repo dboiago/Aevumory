@@ -2,12 +2,12 @@ import type {
   EventOccurrence,
   HouseholdEvent,
   TemporalSource,
-} from '../types/temporal-domain.types';
+} from '../types/temporal-domain.types.js';
 import type {
   OccurrenceQuery,
   TemporalEventQuery,
   TemporalRepository,
-} from '../repositories/temporal.repository';
+} from '../repositories/temporal.repository.js';
 
 export class InMemoryTemporalRepository implements TemporalRepository {
   private readonly sources = new Map<string, TemporalSource>();

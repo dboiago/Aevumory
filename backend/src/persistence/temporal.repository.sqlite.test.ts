@@ -12,9 +12,9 @@ import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { unlinkSync } from 'fs';
-import { SqliteTemporalRepository } from './temporal.repository.sqlite';
-import { runMigrations } from './migrate';
-import type { TemporalSource, HouseholdEvent } from '../types/temporal-domain.types';
+import { SqliteTemporalRepository } from './temporal.repository.sqlite.js';
+import { runMigrations } from './migrate.js';
+import type { TemporalSource, HouseholdEvent } from '../types/temporal-domain.types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

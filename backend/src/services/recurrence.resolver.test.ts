@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { resolveEventOccurrences } from './recurrence.resolver';
-import type { HouseholdEvent } from '../types/temporal-domain.types';
+import { resolveEventOccurrences } from './recurrence.resolver.js';
+import type { HouseholdEvent } from '../types/temporal-domain.types.js';
 
 const timestamps = {
   created_at: '2026-09-02T00:00:00Z',

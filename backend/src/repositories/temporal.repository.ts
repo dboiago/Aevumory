@@ -2,7 +2,7 @@ import type {
   EventOccurrence,
   HouseholdEvent,
   TemporalSource,
-} from '../types/temporal-domain.types';
+} from '../types/temporal-domain.types.js';
 
 export interface TemporalEventQuery {
   starts_before?: string;

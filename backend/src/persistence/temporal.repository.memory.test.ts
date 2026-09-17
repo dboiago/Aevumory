@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { InMemoryTemporalRepository } from './temporal.repository.memory';
+import { InMemoryTemporalRepository } from './temporal.repository.memory.js';
 
 describe('InMemoryTemporalRepository', () => {
   it('stores and retrieves sources and events', async () => {
