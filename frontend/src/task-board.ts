@@ -20,17 +20,25 @@ export class FixtureTaskBoardStore {
     if (!task) throw new Error(`Task not found: ${action.taskId}`);
 
     if (action.kind === 'complete') {
-      // Phase 2 implements Task/TaskCycle persistence only; execution and
-      // reward attribution are Phase 3 (FUNCTIONAL_FOUNDATION_PLAN.md), so
-      // this toggle stays local and is not sent to the backend.
+      // Phase 3 owns real, persisted, reward-bearing completion
+      // (FUNCTIONAL_FOUNDATION_PLAN.md) — there is no "uncomplete" concept,
+      // so a cycle already showing as completed is a no-op here rather than
+      // a local toggle. The backend is authoritative for the reward value.
       if (task.status === 'completed') {
-        task.status = 'pending';
-        task.completedAt = undefined;
-        task.completionReward = undefined;
-      } else {
-        task.status = 'completed';
-        task.completedAt = new Date().toISOString();
-        task.completionReward = structuredClone(task.reward);
+        return this.getState();
+      }
+
+      try {
+        const result = await taskCyclesApi.complete(action.taskId);
+        task.status = result.cycle.status === 'satisfied' ? 'completed' : task.status;
+        task.completedAt = result.cycle.satisfied_at;
+        task.completionReward = result.transaction
+          ? { experience: result.transaction.yield.primary_xp, credits: result.transaction.yield.credits_earned }
+          : undefined;
+        if (this.refetch) this.state = await this.refetch();
+      } catch {
+        // Backend unreachable/rejected — do not fabricate a completed state
+        // or reward for a reward-bearing action; leave the task unchanged.
       }
       return this.getState();
     }

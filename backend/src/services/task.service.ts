@@ -199,12 +199,23 @@ export class TaskService {
 
   /** Ordinary household action — dragging a task to a participant or the household bucket. */
   async reassignCycle(cycle_id: string, responsible_user_id: string | undefined): Promise<TaskCycle> {
+    const cycle = await this.getOrMaterializeCycle(cycle_id);
+    const updated: TaskCycle = { ...cycle, responsible_user_id };
+    await this.repository.saveCycle(updated);
+    return updated;
+  }
+
+  /**
+   * Returns the persisted cycle if one already exists, otherwise materializes
+   * (persists) the generated/virtual cycle so a caller can attach further
+   * state to a real row — shared by reassignCycle and, as of Phase 3,
+   * TaskExecutionService (completion/Foothold/pruning all need a persisted
+   * TaskCycle to transition, per FUNCTIONAL_FOUNDATION_PLAN.md Phase 3: "Do
+   * not duplicate the Phase 2 cycle-resolution logic").
+   */
+  async getOrMaterializeCycle(cycle_id: string): Promise<TaskCycle> {
     const existing = await this.repository.getCycle(cycle_id);
-    if (existing) {
-      const updated: TaskCycle = { ...existing, responsible_user_id };
-      await this.repository.saveCycle(updated);
-      return updated;
-    }
+    if (existing) return existing;
 
     const [task_id, target_date] = cycle_id.split(':');
     const task = task_id && target_date ? await this.repository.getTask(task_id) : null;
@@ -213,9 +224,8 @@ export class TaskService {
     const [generated] = resolveTaskCycles(task, { starts_at: target_date, ends_at: target_date });
     if (!generated) throw new TaskCycleNotFoundError(cycle_id);
 
-    const materialized: TaskCycle = { ...generated, responsible_user_id };
-    await this.repository.saveCycle(materialized);
-    return materialized;
+    await this.repository.saveCycle(generated);
+    return generated;
   }
 }
 

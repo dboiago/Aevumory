@@ -160,6 +160,33 @@ export interface CreateTaskDtoInput {
   cognitive_load: 'low' | 'medium' | 'high';
 }
 
+// ============================================================================
+// Execution / Rewards (Phase 3)
+// ============================================================================
+
+export interface RewardYieldDto {
+  primary_discipline: string;
+  primary_xp: number;
+  secondary_yields: Array<{ discipline: string; xp: number }>;
+  credits_earned: number;
+}
+
+export interface RewardTransactionDto {
+  transaction_id: string;
+  idempotency_key: string;
+  task_id: string;
+  cycle_id: string;
+  reward_event_type: 'foothold_initiation' | 'completion' | 'deductive_pruning';
+  reward_owner_user_id?: string;
+  yield: RewardYieldDto;
+  processed_at: string;
+}
+
+export interface CompleteCycleResultDto {
+  cycle: TaskCycleDto;
+  transaction: RewardTransactionDto | null;
+}
+
 export const tasksApi = {
   list: (): Promise<TaskDto[]> => apiRequest('/api/tasks'),
 
@@ -187,4 +214,7 @@ export const taskCyclesApi = {
       method: 'POST',
       body: { responsible_user_id: responsibleUserId ?? null },
     }),
+
+  complete: (cycleId: string, input: { completed_by_user_id?: string } = {}): Promise<CompleteCycleResultDto> =>
+    apiRequest(`/api/task-cycles/${encodeURIComponent(cycleId)}/complete`, { method: 'POST', body: input }),
 };

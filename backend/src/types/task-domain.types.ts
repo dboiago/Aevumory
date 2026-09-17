@@ -262,6 +262,30 @@ export type UserTaskState =
   | 'foothold_established'
   | 'completed';
 
+/**
+ * Persisted home for `UserTaskState` (Phase 3 gap resolution — see
+ * FUNCTIONAL_FOUNDATION_PLAN.md Phase 3). Scoped to (cycle_id, user_id): a
+ * task instance's active lifecycle is the specific scheduled occurrence a
+ * participant is engaging with, matching the granularity `RewardTransaction`
+ * already uses for its idempotency key (`task_id:cycle_id:reward_owner_id`).
+ * This is the single authoritative home for Foothold state — it must not be
+ * inferred from ExecutionEvent or RewardTransaction rows, and must not be
+ * re-added to `Task` (that would make it global across all cycles/users).
+ * Absence of a row means the implicit initial state, `'active'`.
+ */
+export interface UserTaskCycleState {
+  task_id: string;
+  cycle_id: string;
+  user_id: string;
+
+  state: UserTaskState;
+
+  foothold_established_at?: string;
+  completed_at?: string;
+
+  updated_at: string;
+}
+
 // ----------------------------------------------------------------------------
 // TASK CYCLE
 // ----------------------------------------------------------------------------
@@ -335,6 +359,15 @@ export interface ExecutionEvent {
   source_type: TaskSourceType;
 
   outcome_type: ExecutionOutcomeType;
+
+  /**
+   * Deductive Pruning provenance (TASK_LIFECYCLE.md §6 / PROGRESSION_SPEC.md
+   * §12: "sufficient provenance to reconstruct ... the reason or linked
+   * task"). Only meaningful when outcome_type === 'deductively_pruned'.
+   */
+  prune_reason_code?: string;
+  prune_note?: string;
+  prune_linked_task_id?: string;
 }
 
 // ----------------------------------------------------------------------------
@@ -367,18 +400,34 @@ export interface RewardYield {
 // REWARD TRANSACTION
 // ----------------------------------------------------------------------------
 
+/**
+ * Discriminates *why* a reward transaction was created. Required so a
+ * Foothold initiation reward and a later completion reward on the same
+ * task/cycle/owner do not collide under the same idempotency key (Phase 3
+ * planning correction — FUNCTIONAL_FOUNDATION_PLAN.md Phase 3).
+ */
+export type RewardEventType =
+  | 'foothold_initiation'
+  | 'completion'
+  | 'deductive_pruning';
+
 export interface RewardTransaction {
   transaction_id: string;
 
   /**
-   * `${task_id}:${cycle_id}:${reward_owner_id}`
+   * `${task_id}:${cycle_id}:${reward_owner_id}:${reward_event_type}`
    *
    * Reward ownership is based on task responsibility, not physical executor.
+   * `reward_event_type` is the explicit discriminator distinguishing e.g. a
+   * Foothold initiation reward from a later completion reward on the same
+   * task/cycle/owner triple, which would otherwise collide.
    */
   idempotency_key: string;
 
   task_id: string;
   cycle_id: string;
+
+  reward_event_type: RewardEventType;
 
   /**
    * Participant whose assigned responsibility earns the ordinary reward.

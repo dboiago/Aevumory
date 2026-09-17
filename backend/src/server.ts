@@ -17,6 +17,9 @@ import { SqliteTemporalRepository } from './persistence/temporal.repository.sqli
 import { SqliteHouseholdRepository } from './persistence/household.repository.sqlite.js';
 import { SqliteParticipantRepository } from './persistence/participant.repository.sqlite.js';
 import { SqliteTaskRepository } from './persistence/task.repository.sqlite.js';
+import { SqliteExecutionRepository } from './persistence/execution.repository.sqlite.js';
+import { SqliteLedgerRepository } from './persistence/ledger.repository.sqlite.js';
+import { SqliteUserTaskStateRepository } from './persistence/user-task-state.repository.sqlite.js';
 import { HouseholdService } from './services/household.service.js';
 import {
   ParticipantNotFoundError,
@@ -29,6 +32,14 @@ import {
   type CreateTaskInput,
   type UpdateTaskInput,
 } from './services/task.service.js';
+import {
+  FootholdNotSupportedError,
+  InvalidCycleStateError,
+  RewardTransactionNotFoundError,
+  TaskExecutionService,
+  type CreateRewardAdjustmentInput,
+} from './services/task-execution.service.js';
+import { ProgressionService } from './services/progression.service.js';
 import {
   AdminAuthService,
   AdminPinAlreadyConfiguredError,
@@ -69,11 +80,22 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
   const householdRepository = new SqliteHouseholdRepository(db);
   const participantRepository = new SqliteParticipantRepository(db);
   const taskRepository = new SqliteTaskRepository(db);
+  const executionRepository = new SqliteExecutionRepository(db);
+  const ledgerRepository = new SqliteLedgerRepository(db);
+  const userTaskStateRepository = new SqliteUserTaskStateRepository(db);
 
   // Create application services
   const householdService = new HouseholdService(householdRepository);
   const participantService = new ParticipantService(participantRepository);
   const taskService = new TaskService(taskRepository);
+  const taskExecutionService = new TaskExecutionService(
+    taskService,
+    taskRepository,
+    executionRepository,
+    ledgerRepository,
+    userTaskStateRepository,
+  );
+  const progressionService = new ProgressionService(ledgerRepository);
   const adminAuthService = new AdminAuthService(householdService);
   const requireAdmin = createRequireAdminHook(adminAuthService);
 
@@ -251,6 +273,120 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
       }
       reply.code(400).send({ error: (error as Error).message });
     }
+  });
+
+  // ============================================================================
+  // Execution & Reward Endpoints (Phase 3)
+  //
+  // Completion, Foothold initiation, and Deductive Pruning are ordinary
+  // household actions (matching /assign) and require no admin session.
+  // Reward-adjustment corrections are admin-only (CORE_BASELINE.md §6:
+  // "Corrective Transactions").
+  // ============================================================================
+
+  fastify.post('/api/task-cycles/:id/complete', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { completed_by_user_id?: string } | undefined;
+
+    try {
+      return await taskExecutionService.completeCycle(id, { completed_by_user_id: body?.completed_by_user_id });
+    } catch (error) {
+      if (error instanceof TaskNotFoundError || error instanceof TaskCycleNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      if (error instanceof InvalidCycleStateError) {
+        reply.code(409).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.post('/api/task-cycles/:id/foothold', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { completed_by_user_id?: string } | undefined;
+
+    try {
+      return await taskExecutionService.establishFoothold(id, { completed_by_user_id: body?.completed_by_user_id });
+    } catch (error) {
+      if (error instanceof TaskNotFoundError || error instanceof TaskCycleNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      if (error instanceof FootholdNotSupportedError || error instanceof InvalidCycleStateError) {
+        reply.code(409).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.post('/api/task-cycles/:id/prune', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as
+      | { reason_code?: string; note?: string; linked_task_id?: string; completed_by_user_id?: string }
+      | undefined;
+
+    if (!body?.reason_code) {
+      reply.code(400).send({ error: 'reason_code is required' });
+      return;
+    }
+
+    try {
+      return await taskExecutionService.pruneCycle(id, {
+        reason_code: body.reason_code,
+        note: body.note,
+        linked_task_id: body.linked_task_id,
+        completed_by_user_id: body.completed_by_user_id,
+      });
+    } catch (error) {
+      if (error instanceof TaskNotFoundError || error instanceof TaskCycleNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      if (error instanceof InvalidCycleStateError) {
+        reply.code(409).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.post('/api/reward-adjustments', { onRequest: requireAdmin }, async (request, reply) => {
+    const body = request.body as Partial<CreateRewardAdjustmentInput> | undefined;
+    if (
+      !body?.original_transaction_id ||
+      !body.reason ||
+      !body.xp_adjustments ||
+      body.credits_delta === undefined ||
+      !body.created_by_user_id
+    ) {
+      reply
+        .code(400)
+        .send({ error: 'original_transaction_id, reason, xp_adjustments, credits_delta, and created_by_user_id are required' });
+      return;
+    }
+
+    try {
+      return await taskExecutionService.createRewardAdjustment(body as CreateRewardAdjustmentInput);
+    } catch (error) {
+      if (error instanceof RewardTransactionNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.get('/api/participants/:id/ledger', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    return taskExecutionService.getParticipantLedger(id);
+  });
+
+  fastify.get('/api/participants/:id/progression', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    return progressionService.getParticipantProgression(id);
   });
 
   // ============================================================================
