@@ -1,3 +1,5 @@
+import { participantsApi } from './api-client';
+
 export type TaskDomain = 'kinetic' | 'erudite' | 'form' | 'keeping';
 
 export type TaskAssignment = 'individual' | 'household';
@@ -258,6 +260,22 @@ export interface TaskBoardQuery {
 
 export class FixtureTaskBoardQuery implements TaskBoardQuery {
   async getBoard(): Promise<TaskBoardState> {
-    return structuredClone(fixtureState);
+    const state = structuredClone(fixtureState);
+
+    // Phase 1 wires real household participants into the board; task
+    // definitions themselves remain fixture data until Phase 2 implements
+    // the Task domain (see FUNCTIONAL_FOUNDATION_PLAN.md Phase 1/2).
+    try {
+      const participants = await participantsApi.list();
+      state.participants = participants.map((participant) => ({
+        id: participant.participant_id,
+        name: participant.display_name,
+        avatarUrl: participant.representation_ref,
+      }));
+    } catch {
+      // Backend unreachable; fall back to fixture participants.
+    }
+
+    return state;
   }
 }

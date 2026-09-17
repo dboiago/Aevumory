@@ -6,6 +6,8 @@ import { FixtureTaskBoardStore } from './task-board';
 import { FixtureTemporalQuery, type TemporalOccurrence } from './temporal';
 import { FixtureCalendarQuery } from './calendar';
 import { renderCalendar } from './calendar-view';
+import { renderHouseholdSetup } from './household-setup';
+import { participantsApi } from './api-client';
 
 type AmbientContext =
   | { kind: 'ordinary'; date: string; time: string; weather: string }
@@ -39,6 +41,11 @@ window.addEventListener('hashchange', () => void render(root));
 async function render(target: HTMLDivElement): Promise<void> {
   const hash = window.location.hash;
 
+  if (hash === '#household-setup') {
+    await renderHouseholdSetup(target);
+    return;
+  }
+
   if (hash === '#calendar') {
     await renderCalendar(target, calendarQuery);
     return;
@@ -61,6 +68,16 @@ async function render(target: HTMLDivElement): Promise<void> {
     const participant = state.participants.find((item) => item.id === decodeURIComponent(participantMatch[1]));
     if (participant) {
       renderParticipantProfileScaffold(target, participant);
+      return;
+    }
+  }
+
+  // The setup flow handles the uninitialized/empty state explicitly: a fresh
+  // household with no participants has nothing meaningful to show ambiently yet.
+  if (hash === '') {
+    const participants = await participantsApi.list().catch(() => null);
+    if (participants && participants.length === 0) {
+      window.location.hash = '#household-setup';
       return;
     }
   }

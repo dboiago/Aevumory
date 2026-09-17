@@ -1,0 +1,50 @@
+.household-setup-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: clamp(32px, 5vw, 72px) clamp(24px, 6vw, 96px) 40px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+html:has(.household-setup-page), body:has(.household-setup-page), #app:has(.household-setup-page) { height: auto; min-height: 100vh; overflow-y: auto; }
+
+.household-setup-header, .household-setup-card { width: min(640px, 100%); margin-inline: auto; }
+.household-setup-header { margin-bottom: clamp(24px, 4vw, 40px); }
+.household-setup-back { margin: 0 0 24px; padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.household-setup-back:hover { color: var(--text-primary); }
+.household-setup-header h1 { margin: 0; font-family: var(--font-heading, Georgia, serif); font-size: clamp(30px, 4vw, 48px); font-weight: 500; letter-spacing: -.025em; }
+
+.household-setup-error { width: min(640px, 100%); margin: 0 auto 16px; padding: 10px 14px; border: 1px solid var(--accent-alert); border-radius: 6px; background: var(--bg-surface); color: var(--accent-alert); font-size: 13px; }
+
+.household-setup-card { margin-bottom: 20px; padding: 22px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--bg-surface); }
+.household-setup-card h2 { margin: 0 0 8px; font-family: var(--font-heading); font-size: 18px; font-weight: 500; }
+.household-setup-card p { margin: 0 0 14px; color: var(--text-soft); font-size: 13px; }
+.household-setup-status { margin: 0; color: var(--accent-success); font-size: 13px; }
+
+.household-setup-form { display: grid; gap: 14px; }
+.household-setup-form label { display: grid; gap: 6px; color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.household-setup-form input { width: 100%; box-sizing: border-box; padding: 8px 9px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); font: inherit; font-size: 13px; letter-spacing: normal; text-transform: none; }
+.household-setup-form input:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+
+.household-setup-primary-action, .household-setup-secondary-action { justify-self: start; border: 1px solid var(--action-primary-border); border-radius: 7px; background: var(--action-primary-bg); color: var(--accent-primary); cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 7px 12px; white-space: nowrap; }
+.household-setup-primary-action:hover, .household-setup-secondary-action:hover { border-color: var(--border-active); background: var(--action-primary-hover-bg); }
+.household-setup-primary-action:focus-visible, .household-setup-secondary-action:focus-visible, .household-setup-inline-action:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+
+.household-setup-empty { margin: 0 0 14px; color: var(--text-soft); font-size: 13px; }
+
+.household-setup-participant-list { display: grid; gap: 0; margin: 0 0 16px; padding: 0; list-style: none; border: 1px solid var(--border-subtle); border-radius: 8px; overflow: hidden; }
+.household-setup-participant-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--bg-primary); border-bottom: 1px solid var(--border-subtle); }
+.household-setup-participant-row:last-child { border-bottom: 0; }
+.household-setup-participant-name { font-size: 14px; }
+.household-setup-participant-actions { display: flex; gap: 8px; }
+.household-setup-inline-action { padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.household-setup-inline-action:hover { color: var(--text-primary); }
+
+.household-setup-inline-form { display: flex; align-items: center; gap: 8px; width: 100%; }
+.household-setup-inline-form input { flex: 1; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); font: inherit; font-size: 13px; }
+
+.household-setup-add-form { grid-template-columns: 1fr auto; align-items: end; gap: 12px; }
+.household-setup-add-form label { grid-column: 1; }
+.household-setup-add-form button { grid-column: 2; }
+
+@media (max-width: 650px) { .household-setup-page { padding: 20px 12px 40px; } .household-setup-add-form { grid-template-columns: 1fr; } .household-setup-add-form button { grid-column: 1; justify-self: start; } }

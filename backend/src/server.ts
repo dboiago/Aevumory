@@ -14,6 +14,22 @@ import Database from 'better-sqlite3';
 import { getAppConfig } from './app.config.js';
 import { runMigrations } from './persistence/migrate.js';
 import { SqliteTemporalRepository } from './persistence/temporal.repository.sqlite.js';
+import { SqliteHouseholdRepository } from './persistence/household.repository.sqlite.js';
+import { SqliteParticipantRepository } from './persistence/participant.repository.sqlite.js';
+import { HouseholdService } from './services/household.service.js';
+import {
+  ParticipantNotFoundError,
+  ParticipantService,
+} from './services/participant.service.js';
+import {
+  AdminAuthService,
+  AdminPinAlreadyConfiguredError,
+  AdminPinNotConfiguredError,
+  InvalidAdminPinError,
+  isValidAdminPin,
+} from './services/admin-auth.service.js';
+import { createRequireAdminHook, setAdminSessionCookie } from './http/require-admin.js';
+import type { Participant } from './types/household.types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,13 +51,24 @@ const initializeDatabase = (dbPath: string): Database.Database => {
 /**
  * Create and configure the Fastify server.
  */
-const createServer = async (db: Database.Database) => {
+export const createServer = async (db: Database.Database, options: { logger?: boolean } = {}) => {
   const fastify = Fastify({
-    logger: true,
+    logger: options.logger ?? true,
   });
 
   // Create repositories
   const temporalRepository = new SqliteTemporalRepository(db);
+  const householdRepository = new SqliteHouseholdRepository(db);
+  const participantRepository = new SqliteParticipantRepository(db);
+
+  // Create application services
+  const householdService = new HouseholdService(householdRepository);
+  const participantService = new ParticipantService(participantRepository);
+  const adminAuthService = new AdminAuthService(householdService);
+  const requireAdmin = createRequireAdminHook(adminAuthService);
+
+  // Structural bootstrap only — never seed/demo data. Safe to run every start.
+  await householdService.ensureBootstrapped();
 
   // ============================================================================
   // Health Check Endpoint
@@ -52,6 +79,113 @@ const createServer = async (db: Database.Database) => {
       status: 'ok',
       timestamp: new Date().toISOString(),
     };
+  });
+
+  // ============================================================================
+  // Household & Participant Endpoints
+  // ============================================================================
+
+  fastify.get('/api/household', async (request, reply) => {
+    const household = await householdService.getHousehold();
+    return {
+      household_id: household.household_id,
+      name: household.name,
+      created_at: household.created_at,
+      admin_pin_set: household.admin_pin_hash !== null,
+    };
+  });
+
+  fastify.get('/api/participants', async (request, reply) => {
+    const household = await householdService.getHousehold();
+    const participants = await participantService.list(household.household_id);
+    return participants.map(toParticipantDto);
+  });
+
+  fastify.post('/api/participants', { onRequest: requireAdmin }, async (request, reply) => {
+    const body = request.body as { display_name?: string; representation_ref?: string } | undefined;
+    if (!body?.display_name || !body.display_name.trim()) {
+      reply.code(400).send({ error: 'display_name is required' });
+      return;
+    }
+
+    const household = await householdService.getHousehold();
+    const participant = await participantService.create(household.household_id, {
+      display_name: body.display_name,
+      representation_ref: body.representation_ref,
+    });
+
+    reply.code(201);
+    return toParticipantDto(participant);
+  });
+
+  fastify.patch('/api/participants/:id', { onRequest: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { display_name?: string; representation_ref?: string | null } | undefined;
+
+    try {
+      const participant = await participantService.update(id, body ?? {});
+      return toParticipantDto(participant);
+    } catch (error) {
+      if (error instanceof ParticipantNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.delete('/api/participants/:id', { onRequest: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await participantService.remove(id);
+    reply.code(204).send();
+  });
+
+  // ============================================================================
+  // Admin PIN Endpoints
+  // ============================================================================
+
+  fastify.post('/api/admin/pin/setup', async (request, reply) => {
+    const body = request.body as { pin?: string } | undefined;
+    if (!isValidAdminPin(body?.pin)) {
+      reply.code(400).send({ error: 'A numeric PIN of 4-12 digits is required' });
+      return;
+    }
+
+    try {
+      const token = await adminAuthService.setupPin(body.pin);
+      setAdminSessionCookie(reply, token, request.protocol === 'https');
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof AdminPinAlreadyConfiguredError) {
+        reply.code(409).send({ error: error.message });
+        return;
+      }
+      throw error;
+    }
+  });
+
+  fastify.post('/api/admin/session', async (request, reply) => {
+    const body = request.body as { pin?: string } | undefined;
+    if (!isValidAdminPin(body?.pin)) {
+      reply.code(400).send({ error: 'A numeric PIN of 4-12 digits is required' });
+      return;
+    }
+
+    try {
+      const token = await adminAuthService.verifyPin(body.pin);
+      setAdminSessionCookie(reply, token, request.protocol === 'https');
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof AdminPinNotConfiguredError) {
+        reply.code(409).send({ error: error.message });
+        return;
+      }
+      if (error instanceof InvalidAdminPinError) {
+        reply.code(401).send({ error: error.message });
+        return;
+      }
+      throw error;
+    }
   });
 
   // ============================================================================
@@ -158,6 +292,17 @@ const createServer = async (db: Database.Database) => {
 
   return fastify;
 };
+
+function toParticipantDto(participant: Participant) {
+  return {
+    participant_id: participant.participant_id,
+    household_id: participant.household_id,
+    display_name: participant.display_name,
+    representation_ref: participant.representation_ref,
+    created_at: participant.created_at,
+    updated_at: participant.updated_at,
+  };
+}
 
 /**
  * Main entry point.
