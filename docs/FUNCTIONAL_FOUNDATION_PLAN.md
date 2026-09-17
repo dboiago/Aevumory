@@ -52,11 +52,20 @@ Corrected model (superseding an earlier draft that over-gated ordinary interacti
 
 The request specifically asked whether the existing docs already define how to stop a household member from manufacturing an artificially high-value self-rewarding task, rather than inventing a new mechanism. They do:
 
-1. **`Task` has no user-settable reward-value field at all.** Re-reading `task-domain.types.ts` directly confirms this: `Task` carries `primary_discipline`, `secondary_disciplines`, `schedule`, `lifecycle`, and `assignment` — there is no `credits`/`xp`/`reward_value` field anywhere on it. `RewardYield`/`RewardTransaction` are only ever produced by the engine **at execution time**, computed from the base yield anchor (`1 Base XP ≈ 1 minute`, `10 minutes = 1.0 Credit`, per `CORE_BASELINE.md`/`GAME_RULES.md`) applied to the task's *descriptive* effort classification. Nobody — admin or household member — ever types in a Credit/XP number for a task. This is the existing, documented safeguard, not something this plan needs to add.
-2. **Descriptive metadata is explicitly non-authoritative for difficulty.** `CORE_BASELINE.md`: "Fields like `cognitive_load`, `duration_tier`, `effort_type` describe, NOT dynamic difficulty," and "Admin defines valid task and worthy activities." These fields exist today only on the *superseded* `task.ts`, not on the authoritative `Task` in `task-domain.types.ts` — reconciling that is called out as required work below, not a new invention.
-3. **Admin retains revoke/edit/correct authority** over any task, including ones a household member created (`CORE_BASELINE.md`: "Household members may create legitimate tasks; Admin retains authority to revoke, edit, assign, or correct"), and any inappropriate reward is unwound via an immutable, auditable `RewardAdjustmentTransaction` (`TASK_LIFECYCLE.md`), never by silently editing history.
+1. **`Task` has no user-settable reward-value field at all.** Re-reading `task-domain.types.ts` directly confirms this: `Task` carries `primary_discipline`, `secondary_disciplines`, `schedule`, `lifecycle`, and `assignment` — there is no `credits`/`xp`/`reward_value` field anywhere on it. `RewardYield`/`RewardTransaction` are only ever produced by the engine **at execution time**, computed from the base yield anchor (`1 Base XP ≈ 1 minute`, `10 minutes = 1.0 Credit`, per `CORE_BASELINE.md` §3/§7) applied to the task's *descriptive* effort classification. Nobody — admin or household member — ever types in a Credit/XP number for a task. This is the existing, documented safeguard, not something this plan needs to add.
+2. **Descriptive metadata is explicitly non-authoritative for difficulty.** `CORE_BASELINE.md` §2, verbatim: "Fields such as `cognitive_load`, `duration_tier`, and `effort_type` describe task characteristics. They are not dynamic difficulty statistics and must not be treated as combat-style attributes." These fields exist today only on the *superseded* `task.ts`, not on the authoritative `Task` in `task-domain.types.ts` — reconciling that is required work in Phase 2 (with a precise per-field verification table), not a new invention. See that section for the one genuine gap the docs leave open (the tier → minutes mapping itself).
+3. **Admin retains revoke/edit/correct authority** over any task, including ones a household member created (`CORE_BASELINE.md` §2: "Household members may create legitimate tasks. Administration may retain the authority to revoke, edit, assign, or correct tasks and their reward values where appropriate"), and any inappropriate reward is unwound via an immutable, auditable `RewardAdjustmentTransaction` (`TASK_LIFECYCLE.md` §6, "Historical reward transactions are immutable... the system records a compensating transaction rather than mutating history"), never by silently editing history.
 
-**Gap the docs do not resolve, called out rather than guessed**: the authoritative `Task` type has no field at all for the effort/duration classification the engine needs to compute base yield minutes. Phase 2 below adds this by merging the relevant descriptive fields from the superseded `task.ts` (an enumerated `duration_tier`, not a free number) onto the authoritative `Task`, with the tier → minutes mapping living in `engine.config.ts` (matching the existing `RENEWAL_ENGINE_CONFIG`/`MOTION_ENGINE_CONFIG`-style tunable-constant pattern), not as a per-task editable value. A household member creating an `ad_hoc` task picks from a small fixed set of tiers; the minute-value each tier resolves to is engine configuration, not something any task creator (admin or not) sets directly. This is the smallest extension consistent with the existing documented model, not a new reward economy.
+**Per-field verification against the docs** (not a new design exercise — checking what already exists):
+
+| Field | Documented? | Where | Belongs on `Task`? | Status |
+|---|---|---|---|---|
+| `supports_foothold` | Yes, literally | `TASK_LIFECYCLE.md` §2: "A task must explicitly support Foothold through `supports_foothold === true`" — the exact identifier and boolean semantics are given verbatim in the spec, not inferred | Yes — it's a static property of a task *definition* (does this task ever support the Foothold lifecycle branch), not per-cycle or per-execution state | Pure reconciliation: the authoritative `Task` type is simply missing a field the lifecycle spec already names explicitly. No new behavior is introduced by adding it — the Foothold state machine in `TASK_LIFECYCLE.md` §2 is implemented as documented in Phase 3. |
+| `duration_tier` | Yes, by name | `CORE_BASELINE.md` §2 (quoted above) | Yes — it's descriptive metadata of the task definition itself | Partial gap: the **field's existence and descriptive-only nature** are documented, but the docs do **not** give its enum values, nor do they specify a mapping from tier to a concrete minutes figure. See resolution below. |
+| `effort_type` | Yes, by name | Same `CORE_BASELINE.md` §2 sentence as `duration_tier` | Yes, same reasoning | Documented concept, but currently has **no consumer** in this plan — the Discipline mechanic that would read it (Motion's Kinetic-activity recognition, `TASK_LIFECYCLE.md` §7) is explicitly deferred (see Phase 3 scope boundary). Reconciling the field onto `Task` now is cheap and correct (it's real domain metadata), but it remains inert until a later phase implements Motion clustering. |
+| `cognitive_load` | Yes, by name | Same `CORE_BASELINE.md` §2 sentence | Yes, same reasoning | Same status as `effort_type`: documented, descriptive-only, no consumer in this plan. Included in Phase 2 for parity with the other two fields in the same documented list, not because anything currently reads it. |
+
+**Gap the docs do not resolve, called out rather than guessed**: `CORE_BASELINE.md` establishes the base yield anchor ("1 Base XP ≈ 1 minute ... of qualifying focused real-world effort", "10 minutes of qualifying Practice = 1.0 Base Credit") and separately establishes that `duration_tier` exists and is descriptive-only, but **nowhere states that `duration_tier` is the mechanism that supplies the "minutes of qualifying effort" figure**, nor does it enumerate the tier values themselves. Using `duration_tier` as the source of the base-minutes figure is this plan's proposed reconciliation (something has to supply that number, and no other field in the domain model carries a duration estimate) — it is consistent with the "not a dynamic difficulty statistic" warning as long as each tier resolves to one fixed minutes value every time (no scaling, no multiplier behavior), living in `engine.config.ts` (matching the existing `RENEWAL_ENGINE_CONFIG`/`MOTION_ENGINE_CONFIG` tunable-constant pattern) rather than as a per-task editable number. But the specific tier enum members and their minute values are **not doc-established** — this plan treats them as an implementation detail to be chosen during Phase 2, not a documented rule being followed. A household member creating an `ad_hoc` task still only ever picks from this small fixed set of tiers; nobody sets a minutes/Credit/XP number directly, which is what actually prevents self-inflated rewards regardless of where the exact tier values land.
 
 ### Fresh household state is genuinely empty
 
@@ -118,7 +127,15 @@ Each phase is independently verifiable. Phase 0 is a hard dependency for everyth
 
 **Builds on**: Phase 1; `task-domain.types.ts` as sole authoritative shape; `recurrence.resolver.ts` as the direct pattern.
 
-**Domain changes**: adopt `task-domain.types.ts` as authoritative; add the minimal descriptive-effort fields needed for engine yield computation (enumerated `duration_tier`, `effort_type`, `supports_foothold` — not free numbers) onto the authoritative `Task`. **Delete `task.ts`** once confirmed unreferenced. Add `duration_tier → base minutes` mapping to `engine.config.ts` (`TASK_YIELD_ENGINE_CONFIG`), matching the existing tunable-constant pattern.
+**Domain changes**: adopt `task-domain.types.ts` as authoritative. Reconcile three fields from the superseded
+`task.ts` back onto the authoritative `Task` — `supports_foothold` (verbatim-documented in `TASK_LIFECYCLE.md` §2,
+required for the Foothold state machine in Phase 3), `duration_tier` and `effort_type` (both named explicitly in
+`CORE_BASELINE.md` §2 as descriptive-only task metadata), plus `cognitive_load` for parity with that same documented
+list even though nothing consumes it yet. None of these are new concepts — see the per-field verification table
+above. **Delete `task.ts`** once confirmed unreferenced. Add a `duration_tier → base minutes` mapping to
+`engine.config.ts` (`TASK_YIELD_ENGINE_CONFIG`), matching the existing tunable-constant pattern — this specific
+mapping is this plan's proposed resolution of the one real gap identified above (docs establish the minutes-based
+yield anchor and the existence of `duration_tier`, but not the tier values or the tier-to-minutes mapping itself).
 
 **Backend changes**: `task.repository.ts` (Task + TaskCycle CRUD); `task-cycle.resolver.ts` — pure function generating `TaskCycle` rows from `Task.schedule`, mirroring `recurrence.resolver.ts` including anchor immutability; `task.service.ts` — CRUD (definition mutations admin-gated), cycle listing, reassignment (drag to participant/household bucket) as an **ordinary, non-admin** action matching today's UX.
 
@@ -140,7 +157,23 @@ Each phase is independently verifiable. Phase 0 is a hard dependency for everyth
 
 **Builds on**: Phase 2; `TASK_LIFECYCLE.md` (foothold, deductive pruning, lifecycle disposition) and `PROGRESSION_SPEC.md` (XP/Credit anchor, level curve) exactly.
 
-**Backend changes**: `execution.repository.ts`/`ledger.repository.ts` (SQLite + in-memory) — a participant's Credit/XP total is always `SUM(reward_transactions) + SUM(reward_adjustments)`, never a stored mutable field. `task-execution.service.ts` implements Task→Cycle→Execution→RewardTransaction exactly per `TASK_LIFECYCLE.md`: binary completion; `UserTaskState` (`active`/`foothold_established`/`completed`) only when `supports_foothold`; one initiation reward per active lifecycle; `deductively_pruned` outcome with immutable audit entry and admin-reversal producing a compensating `RewardAdjustmentTransaction` that reopens the cycle; idempotent completion via `idempotency_key`. Base yield computed only from the documented anchor applied to `duration_tier`'s configured minutes.
+**Backend changes**: `execution.repository.ts`/`ledger.repository.ts` (SQLite + in-memory). **Experience and Credits
+are kept as the two independent layers `CORE_BASELINE.md` §3/§7 describes** ("Experience and Credits are independent
+progression/economic layers"; "Experience measures permanent personal history... Base Credits are independently
+derived from qualifying Practice effort") — they are never collapsed into one generic "reward points" balance. A
+single `RewardTransaction` row carries both `RewardYield.primary_xp`/`secondary_yields` (XP, per Discipline) and
+`RewardYield.credits_earned` (Credits) together only because one task completion legitimately produces both effects
+at once (exactly what "both may be awarded from the same completed task" means) — but every read/report/balance
+computation treats them as two separate sums: a participant's **Credit balance** is
+`SUM(credits_earned) + SUM(credit adjustments)` from the ledger, and each Discipline's **cumulative XP** is
+`SUM(primary_xp/secondary xp for that discipline) + SUM(xp adjustments)` — computed and exposed independently
+(`/ledger` vs. `/progression`, see API changes below), never merged. `task-execution.service.ts` implements
+Task→Cycle→Execution→RewardTransaction exactly per `TASK_LIFECYCLE.md`: binary completion; `UserTaskState`
+(`active`/`foothold_established`/`completed`) only when `supports_foothold`; one initiation reward per active
+lifecycle; `deductively_pruned` outcome with immutable audit entry and admin-reversal producing a compensating
+`RewardAdjustmentTransaction` that reopens the cycle; idempotent completion via `idempotency_key`. Base yield
+computed only from the documented anchor applied to `duration_tier`'s configured minutes (per the Phase 2 gap
+resolution above).
 
 **Scope boundary, called out explicitly**: Discipline modifier engines (Motion clustering, Order maintenance-resonance, Care relief, Renewal recovery windows, Composition/Continuity, exceptional outcomes) are **not implemented in this plan** — consistent with the request's own allowance that rewards needn't be a "fully populated economy" yet. A single `applyModifiers(baseYield, context)` no-op extension point is left for later.
 
@@ -148,7 +181,10 @@ Each phase is independently verifiable. Phase 0 is a hard dependency for everyth
 
 **Persistence changes**: `0004_execution_and_rewards.sql` — `execution_events`, `reward_transactions`, `reward_adjustments`.
 
-**API changes**: `POST /api/task-cycles/:id/complete` (ordinary); `POST /api/task-cycles/:id/prune` (ordinary); `POST /api/reward-adjustments` (admin-only); `GET /api/participants/:id/ledger`; `GET /api/participants/:id/progression`.
+**API changes**: `POST /api/task-cycles/:id/complete` (ordinary); `POST /api/task-cycles/:id/prune` (ordinary);
+`POST /api/reward-adjustments` (admin-only); `GET /api/participants/:id/ledger` (Credit transaction history and
+balance only); `GET /api/participants/:id/progression` (per-Discipline cumulative XP and level only) — two distinct
+endpoints/read-models by design, matching the documented separation of Experience and Credits.
 
 **Frontend changes**: Task Board `Complete` calls the completion endpoint and refetches.
 
