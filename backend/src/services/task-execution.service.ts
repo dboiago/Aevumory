@@ -310,18 +310,6 @@ export class TaskExecutionService {
     if (cycle.status !== 'pending') throw new InvalidCycleStateError(cycle_id, `cycle status is '${cycle.status}'`);
 
     const reward_owner_user_id = cycle.responsible_user_id;
-<<<<<<< HEAD
-=======
-    const { idempotency_key, reusableExisting } = await this.resolveRewardTransactionSlot(
-      task.task_id,
-      cycle_id,
-      reward_owner_user_id,
-      'deductive_pruning',
-    );
-    if (reusableExisting) {
-      return { cycle, transaction: reusableExisting, executionEvent: null, state: null };
-    }
->>>>>>> 14b89a001be444c0ff9623f94dcc6d33e2860d5f
 
     const now = new Date().toISOString();
     const executionEvent: ExecutionEvent = {
@@ -427,35 +415,6 @@ export class TaskExecutionService {
       completed_at: undefined,
       updated_at: new Date().toISOString(),
     });
-  }
-
-  /**
-   * Resolves the idempotency key + any existing transaction to reuse for a
-   * given (task, cycle, owner, event type). Starts at the base key; a
-   * matching transaction with no reward adjustments against it is a genuine
-   * retry and is reused as-is. A matching transaction that HAS been
-   * reversed is "used up" — this generation is skipped and the next
-   * numbered generation (`${baseKey}:2`, `:3`, ...) is tried, since a
-   * legitimate subsequent event (e.g. re-completing after an admin reversal)
-   * must not collide with the reversed transaction's key nor be mistaken for
-   * a duplicate of it.
-   */
-  private async resolveRewardTransactionSlot(
-    task_id: string,
-    cycle_id: string,
-    reward_owner_user_id: string | undefined,
-    reward_event_type: RewardEventType,
-  ): Promise<{ idempotency_key: string; reusableExisting: RewardTransaction | null }> {
-    const baseKey = buildIdempotencyKey(task_id, cycle_id, reward_owner_user_id, reward_event_type);
-
-    for (let attempt = 1; ; attempt += 1) {
-      const candidateKey = attempt === 1 ? baseKey : `${baseKey}:${attempt}`;
-      const existing = await this.ledgerRepository.getTransactionByIdempotencyKey(candidateKey);
-      if (!existing) return { idempotency_key: candidateKey, reusableExisting: null };
-
-      const adjustments = await this.ledgerRepository.listAdjustmentsForTransaction(existing.transaction_id);
-      if (adjustments.length === 0) return { idempotency_key: candidateKey, reusableExisting: existing };
-    }
   }
 
   private async requireTask(task_id: string): Promise<Task> {
