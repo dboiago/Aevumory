@@ -16,7 +16,7 @@ import type {
   TemporalEventQuery,
   TemporalRepository,
 } from '../repositories/temporal.repository.js';
-import type { EventSchedule } from '../types/event-schedule.types.js.js';
+import type { EventSchedule } from '../types/event-schedule.types.js';
 
 export class SqliteTemporalRepository implements TemporalRepository {
   constructor(private readonly db: Database.Database) {}

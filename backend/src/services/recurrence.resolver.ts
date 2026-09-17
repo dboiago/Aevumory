@@ -2,12 +2,12 @@ import { Temporal } from '@js-temporal/polyfill';
 import type {
   AllDayEventSchedule,
   TimedEventSchedule,
-} from '../types/event-schedule.types.js.js';
+} from '../types/event-schedule.types.js';
 import type {
   EventOccurrence,
   HouseholdEvent,
   RecurrenceRule,
-} from '../types/temporal-domain.types.js.js';
+} from '../types/temporal-domain.types.js';
 
 export interface RecurrenceResolutionWindow {
   starts_at: string;
@@ -72,7 +72,7 @@ function validateRecurrence(rule: RecurrenceRule): void {
     throw new Error('Recurrence interval must be a positive integer');
   }
 
-  if (rule.by_weekday?.some((day) => !Number.isInteger(day) || day < 1 || day > 7)) {
+  if (rule.by_weekday?.some((day: number) => !Number.isInteger(day) || day < 1 || day > 7)) {
     throw new Error('Recurrence weekdays must use ISO values 1 through 7');
   }
 
