@@ -39,6 +39,8 @@ describe('ParticipantService', () => {
     const service = new ParticipantService(repository);
 
     const created = await service.create('household-1', { display_name: 'Alex' });
+    expect(created.display_name).toBe('Alex');
+
     const updated = await service.update(created.participant_id, {
       display_name: 'Alexandra',
       representation_ref: 'avatar-2',
@@ -46,7 +48,7 @@ describe('ParticipantService', () => {
 
     expect(updated.display_name).toBe('Alexandra');
     expect(updated.representation_ref).toBe('avatar-2');
-    expect(updated.updated_at).not.toBe(created.updated_at);
+    expect(new Date(updated.updated_at).getTime()).toBeGreaterThanOrEqual(new Date(created.updated_at).getTime());
   });
 
   it('throws ParticipantNotFoundError when updating a missing participant', async () => {

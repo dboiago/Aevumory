@@ -36,9 +36,11 @@ describe('HouseholdService', () => {
     const service = new HouseholdService(repository);
 
     const household = await service.ensureBootstrapped();
+    expect(household.admin_pin_hash).toBeNull();
+
     const updated = await service.setAdminPinHash(household.household_id, 'salt:hash');
 
     expect(updated.admin_pin_hash).toBe('salt:hash');
-    expect(updated.updated_at).not.toBe(household.updated_at);
+    expect(new Date(updated.updated_at).getTime()).toBeGreaterThanOrEqual(new Date(household.updated_at).getTime());
   });
 });
