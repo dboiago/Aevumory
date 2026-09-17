@@ -1,5 +1,13 @@
 import { Temporal } from '@js-temporal/polyfill';
-import type { EventOccurrence, HouseholdEvent, RecurrenceRule } from '../types/temporal-domain.types';
+import type {
+  AllDayEventSchedule,
+  TimedEventSchedule,
+} from '../types/event-schedule.types.js';
+import type {
+  EventOccurrence,
+  HouseholdEvent,
+  RecurrenceRule,
+} from '../types/temporal-domain.types.js';
 
 export interface RecurrenceResolutionWindow {
   starts_at: string;
@@ -36,8 +44,18 @@ export function resolveEventOccurrences(
   const localWindowEnd = windowEnd.toZonedDateTimeISO(event.timezone);
 
   const starts = event.schedule.kind === 'timed'
-    ? resolveTimedStarts(event, localWindowStart.toPlainDate(), localWindowEnd.toPlainDate())
-    : resolveAllDayStarts(event, localWindowStart.toPlainDate(), localWindowEnd.toPlainDate());
+    ? resolveTimedStarts(
+        event.schedule,
+        event.recurrence,
+        localWindowStart.toPlainDate(),
+        localWindowEnd.toPlainDate(),
+      )
+    : resolveAllDayStarts(
+        event.schedule,
+        event.recurrence,
+        localWindowStart.toPlainDate(),
+        localWindowEnd.toPlainDate(),
+      );
 
   return starts
     .map((start) => buildOccurrence(event, start))
@@ -58,38 +76,55 @@ function validateRecurrence(rule: RecurrenceRule): void {
     throw new Error('Recurrence weekdays must use ISO values 1 through 7');
   }
 
-  if (rule.by_month_day !== undefined &&
-      (!Number.isInteger(rule.by_month_day) || rule.by_month_day < 1 || rule.by_month_day > 31)) {
+  if (
+    rule.by_month_day !== undefined &&
+    (!Number.isInteger(rule.by_month_day) ||
+      rule.by_month_day < 1 ||
+      rule.by_month_day > 31)
+  ) {
     throw new Error('Recurrence month day must be between 1 and 31');
   }
 }
 
 function resolveTimedStarts(
-  event: HouseholdEvent,
+  schedule: TimedEventSchedule,
+  rule: RecurrenceRule,
   windowStart: Temporal.PlainDate,
   windowEnd: Temporal.PlainDate,
 ): Temporal.PlainDateTime[] {
-  const anchor = Temporal.PlainDateTime.from(event.schedule.local_start);
-  const rule = event.recurrence!;
+  const anchor = Temporal.PlainDateTime.from(schedule.local_start);
   const until = rule.until ? Temporal.PlainDate.from(rule.until) : undefined;
   const results: Temporal.PlainDateTime[] = [];
 
-  for (const date of recurrenceDates(anchor.toPlainDate(), windowStart, windowEnd, rule, until)) {
-    results.push(anchor.with({ year: date.year, month: date.month, day: date.day }));
+  for (const date of recurrenceDates(
+    anchor.toPlainDate(),
+    windowStart,
+    windowEnd,
+    rule,
+    until,
+  )) {
+    results.push(anchor.with({
+      year: date.year,
+      month: date.month,
+      day: date.day,
+    }));
   }
 
   return dedupeDateTimes(results);
 }
 
 function resolveAllDayStarts(
-  event: HouseholdEvent,
+  schedule: AllDayEventSchedule,
+  rule: RecurrenceRule,
   windowStart: Temporal.PlainDate,
   windowEnd: Temporal.PlainDate,
 ): Temporal.PlainDate[] {
-  const anchor = Temporal.PlainDate.from(event.schedule.local_start_date);
-  const rule = event.recurrence!;
+  const anchor = Temporal.PlainDate.from(schedule.local_start_date);
   const until = rule.until ? Temporal.PlainDate.from(rule.until) : undefined;
-  return dedupeDates(recurrenceDates(anchor, windowStart, windowEnd, rule, until));
+
+  return dedupeDates(
+    recurrenceDates(anchor, windowStart, windowEnd, rule, until),
+  );
 }
 
 function recurrenceDates(
@@ -108,14 +143,19 @@ function recurrenceDates(
   switch (rule.frequency) {
     case 'daily': {
       let date = anchor;
+
       if (Temporal.PlainDate.compare(date, searchStart) < 0) {
         const days = anchor.until(searchStart, { largestUnit: 'days' }).days;
-        date = anchor.add({ days: Math.floor(days / rule.interval) * rule.interval });
+        date = anchor.add({
+          days: Math.floor(days / rule.interval) * rule.interval,
+        });
       }
 
       while (Temporal.PlainDate.compare(date, searchEnd) <= 0) {
         if (until && Temporal.PlainDate.compare(date, until) > 0) break;
-        if (Temporal.PlainDate.compare(date, searchStart) >= 0) results.push(date);
+        if (Temporal.PlainDate.compare(date, searchStart) >= 0) {
+          results.push(date);
+        }
         date = date.add({ days: rule.interval });
       }
       break;
@@ -132,13 +172,25 @@ function recurrenceDates(
       while (Temporal.PlainDate.compare(week, searchEnd) <= 0) {
         for (const weekday of weekdays) {
           const date = week.add({ days: weekday - 1 });
-          if (Temporal.PlainDate.compare(date, searchStart) < 0 ||
-              Temporal.PlainDate.compare(date, searchEnd) > 0) continue;
-          if (until && Temporal.PlainDate.compare(date, until) > 0) return results;
+
+          if (
+            Temporal.PlainDate.compare(date, searchStart) < 0 ||
+            Temporal.PlainDate.compare(date, searchEnd) > 0
+          ) {
+            continue;
+          }
+
+          if (until && Temporal.PlainDate.compare(date, until) > 0) {
+            return results;
+          }
+
           results.push(date);
         }
+
         weekIndex += 1;
-        week = anchorWeek.add({ weeks: weekIndex * rule.interval });
+        week = anchorWeek.add({
+          weeks: weekIndex * rule.interval,
+        });
       }
       break;
     }
@@ -148,22 +200,33 @@ function recurrenceDates(
       const firstMonth = searchStart.with({ day: 1 });
       const monthsFromAnchor = anchorMonth.until(firstMonth, { largestUnit: 'months' }).months;
       let monthIndex = Math.max(0, Math.floor(monthsFromAnchor / rule.interval));
-      let month = anchorMonth.add({ months: monthIndex * rule.interval });
+      let month = anchorMonth.add({
+        months: monthIndex * rule.interval,
+      });
       const day = rule.by_month_day ?? anchor.day;
 
       while (Temporal.PlainDate.compare(month, searchEnd) <= 0) {
         try {
           const date = month.with({ day });
-          if (until && Temporal.PlainDate.compare(date, until) > 0) break;
-          if (Temporal.PlainDate.compare(date, searchStart) >= 0 &&
-              Temporal.PlainDate.compare(date, searchEnd) <= 0) {
+
+          if (until && Temporal.PlainDate.compare(date, until) > 0) {
+            break;
+          }
+
+          if (
+            Temporal.PlainDate.compare(date, searchStart) >= 0 &&
+            Temporal.PlainDate.compare(date, searchEnd) <= 0
+          ) {
             results.push(date);
           }
         } catch {
           // Invalid calendar dates, such as February 31, have no occurrence.
         }
+
         monthIndex += 1;
-        month = anchorMonth.add({ months: monthIndex * rule.interval });
+        month = anchorMonth.add({
+          months: monthIndex * rule.interval,
+        });
       }
       break;
     }
@@ -173,21 +236,35 @@ function recurrenceDates(
       const firstYear = searchStart.with({ month: 1, day: 1 });
       const yearsFromAnchor = anchorYear.until(firstYear, { largestUnit: 'years' }).years;
       let yearIndex = Math.max(0, Math.floor(yearsFromAnchor / rule.interval));
-      let year = anchorYear.add({ years: yearIndex * rule.interval });
+      let year = anchorYear.add({
+        years: yearIndex * rule.interval,
+      });
 
       while (Temporal.PlainDate.compare(year, searchEnd) <= 0) {
         try {
-          const date = year.with({ month: anchor.month, day: anchor.day });
-          if (until && Temporal.PlainDate.compare(date, until) > 0) break;
-          if (Temporal.PlainDate.compare(date, searchStart) >= 0 &&
-              Temporal.PlainDate.compare(date, searchEnd) <= 0) {
+          const date = year.with({
+            month: anchor.month,
+            day: anchor.day,
+          });
+
+          if (until && Temporal.PlainDate.compare(date, until) > 0) {
+            break;
+          }
+
+          if (
+            Temporal.PlainDate.compare(date, searchStart) >= 0 &&
+            Temporal.PlainDate.compare(date, searchEnd) <= 0
+          ) {
             results.push(date);
           }
         } catch {
           // Invalid calendar dates, such as February 29 in a non-leap year, have no occurrence.
         }
+
         yearIndex += 1;
-        year = anchorYear.add({ years: yearIndex * rule.interval });
+        year = anchorYear.add({
+          years: yearIndex * rule.interval,
+        });
       }
       break;
     }
@@ -197,9 +274,12 @@ function recurrenceDates(
 }
 
 function resolveSingleOccurrence(event: HouseholdEvent): EventOccurrence {
-  return buildOccurrence(event, event.schedule.kind === 'timed'
-    ? Temporal.PlainDateTime.from(event.schedule.local_start)
-    : Temporal.PlainDate.from(event.schedule.local_start_date));
+  return buildOccurrence(
+    event,
+    event.schedule.kind === 'timed'
+      ? Temporal.PlainDateTime.from(event.schedule.local_start)
+      : Temporal.PlainDate.from(event.schedule.local_start_date),
+  );
 }
 
 function buildOccurrence(
@@ -270,20 +350,29 @@ function occurrenceIntersectsWindow(
       .toZonedDateTime({ timeZone: event.timezone });
     const end = Temporal.PlainDate.from(occurrence.local_end_date)
       .toZonedDateTime({ timeZone: event.timezone });
+
     return Temporal.Instant.compare(start.toInstant(), windowEnd) < 0 &&
       Temporal.Instant.compare(end.toInstant(), windowStart) > 0;
   }
 
-  return Temporal.Instant.compare(Temporal.Instant.from(occurrence.starts_at!), windowEnd) < 0 &&
-    Temporal.Instant.compare(Temporal.Instant.from(occurrence.ends_at!), windowStart) > 0;
+  return Temporal.Instant.compare(
+    Temporal.Instant.from(occurrence.starts_at!),
+    windowEnd,
+  ) < 0 &&
+    Temporal.Instant.compare(
+      Temporal.Instant.from(occurrence.ends_at!),
+      windowStart,
+    ) > 0;
 }
 
 function dedupeDates(values: Temporal.PlainDate[]): Temporal.PlainDate[] {
-  return [...new Map(values.map((value) => [value.toString(), value])).values()]
-    .sort((a, b) => Temporal.PlainDate.compare(a, b));
+  return [...new Map(
+    values.map((value) => [value.toString(), value]),
+  ).values()].sort((a, b) => Temporal.PlainDate.compare(a, b));
 }
 
 function dedupeDateTimes(values: Temporal.PlainDateTime[]): Temporal.PlainDateTime[] {
-  return [...new Map(values.map((value) => [value.toString(), value])).values()]
-    .sort((a, b) => Temporal.PlainDateTime.compare(a, b));
+  return [...new Map(
+    values.map((value) => [value.toString(), value]),
+  ).values()].sort((a, b) => Temporal.PlainDateTime.compare(a, b));
 }

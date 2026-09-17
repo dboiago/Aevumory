@@ -16,6 +16,7 @@ import type {
   TemporalEventQuery,
   TemporalRepository,
 } from '../repositories/temporal.repository';
+import type { EventSchedule } from '../types/event-schedule.types.js';
 
 export class SqliteTemporalRepository implements TemporalRepository {
   constructor(private readonly db: Database.Database) {}
@@ -391,12 +392,21 @@ export class SqliteTemporalRepository implements TemporalRepository {
   // ============================================================================
 
   private _rowToHouseholdEvent(row: any): HouseholdEvent {
-    const schedule = {
-      kind: row.schedule_kind as 'timed' | 'all_day',
-      ...(row.schedule_kind === 'timed'
-        ? { local_start: row.local_start, local_end: row.local_end }
-        : { local_start_date: row.local_start_date, local_end_date: row.local_end_date }),
-    };
+    let schedule: EventSchedule;
+
+    if (row.schedule_kind === 'timed') {
+      schedule = {
+        kind: 'timed',
+        local_start: row.local_start,
+        local_end: row.local_end,
+      };
+    } else {
+      schedule = {
+        kind: 'all_day',
+        local_start_date: row.local_start_date,
+        local_end_date: row.local_end_date,
+      };
+    }
 
     return {
       event_id: row.event_id,
