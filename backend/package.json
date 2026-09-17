@@ -4,12 +4,17 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev": "node src/server.ts"
   },
   "dependencies": {
-    "@js-temporal/polyfill": "^0.5.1"
+    "@fastify/static": "^7.0.0",
+    "@js-temporal/polyfill": "^0.5.1",
+    "better-sqlite3": "^11.1.2",
+    "fastify": "^4.28.1"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }
