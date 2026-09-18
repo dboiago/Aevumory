@@ -1,5 +1,12 @@
 import './calendar.css';
-import { attachPolling, startPolling } from './api-client';
+import {
+  attachPolling,
+  calendarEventsApi,
+  startPolling,
+  type CreateCalendarEventDtoInput,
+  type EventScheduleDto,
+  type RecurrenceRuleDto,
+} from './api-client';
 import type { CalendarEvent, CalendarQuery, CalendarRecurrence, CalendarSource } from './calendar';
 import { generateCalendarColourOptions, renderCalendarColour, type CalendarColourSelection } from './calendar-colour';
 
@@ -14,13 +21,26 @@ export async function renderCalendar(target: HTMLDivElement, query: CalendarQuer
   let month = new Date(2026, 8, 1);
   const sources = new Set(state.sources.map((item) => item.id));
   let showTasks = false;
+
+  // Refetches the real persisted state in place (same array identities the
+  // poll tick below already relies on) so a successful editor save/delete and
+  // the next poll both flow through the single CalendarQuery source of truth
+  // — no second client-side copy of persisted events is maintained.
+  const refresh = async (): Promise<void> => {
+    const fresh = await query.getState();
+    state.sources.splice(0, state.sources.length, ...fresh.sources);
+    state.events.splice(0, state.events.length, ...fresh.events);
+    for (const source of fresh.sources) if (!sources.has(source.id)) sources.add(source.id);
+    for (const id of [...sources]) if (!fresh.sources.some((source) => source.id === id)) sources.delete(id);
+  };
+
   const render = (): void => {
     const events = state.events.filter((event) => (!event.taskLinked || showTasks) && sources.has(event.calendarId));
     target.innerHTML = renderPage(month, state.sources, sources, expand(events, month), showTasks);
     applySourceColours(target, state.sources);
-    wire(target, state, sources, () => render(), (offset) => { month = new Date(month.getFullYear(), month.getMonth() + offset, 1); render(); }, () => { month = new Date(2026, 8, 1); render(); }, (date) => openEditor(target, state, 'create', undefined, date, render), (event) => {
+    wire(target, state, sources, () => render(), (offset) => { month = new Date(month.getFullYear(), month.getMonth() + offset, 1); render(); }, () => { month = new Date(2026, 8, 1); render(); }, (date) => openEditor(target, state, 'create', undefined, date, refresh, render), (event) => {
       const source = state.sources.find((item) => item.id === event.calendarId);
-      openEditor(target, state, source?.writable ? 'edit' : 'view', event, event.occurrenceDate, render);
+      openEditor(target, state, source?.writable ? 'edit' : 'view', event, event.occurrenceDate, refresh, render);
     }, (value) => { showTasks = value; render(); });
   };
   render();
@@ -28,14 +48,10 @@ export async function renderCalendar(target: HTMLDivElement, query: CalendarQuer
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   attachPolling(target, startPolling(async () => {
-    // Skip mid-edit — a wholesale re-render would close an open day/colour dialog.
-    if (target.querySelector('.calendar-day-dialog, .calendar-colour-picker')) return;
+    // Skip mid-edit — a wholesale re-render would close an open day/colour/event dialog.
+    if (target.querySelector('.calendar-day-dialog, .calendar-colour-picker, .calendar-event-dialog')) return;
 
-    const fresh = await query.getState();
-    state.sources.splice(0, state.sources.length, ...fresh.sources);
-    state.events.splice(0, state.events.length, ...fresh.events);
-    for (const source of fresh.sources) if (!sources.has(source.id)) sources.add(source.id);
-    for (const id of [...sources]) if (!fresh.sources.some((source) => source.id === id)) sources.delete(id);
+    await refresh();
     render();
   }));
 }
@@ -221,11 +237,160 @@ function openEditor(
   target: HTMLDivElement,
   state: { sources: CalendarSource[]; events: CalendarEvent[] },
   mode: EditorMode,
-  event?: CalendarEvent,
-  date?: string,
-  rerender?: () => void
+  event: CalendarEvent | undefined,
+  occurrenceDate: string,
+  refresh: () => Promise<void>,
+  rerender: () => void
 ): void {
-  // Stub for editor implementation
+  target.querySelector('.calendar-dialog')?.remove();
+  const writable = state.sources.filter((source) => source.writable);
+  const source = event ? state.sources.find((item) => item.id === event.calendarId) : writable[0];
+  if (!source) return;
+  const start = event?.startsAt ? new Date(event.startsAt) : localDateTime(occurrenceDate, '18:00');
+  const end = event?.endsAt ? new Date(event.endsAt) : localDateTime(occurrenceDate, '19:00');
+  const readOnly = mode === 'view' || !source.writable;
+  const recurrence = event?.recurrence;
+  const weeklyDays = recurrence?.frequency === 'weekly' ? (recurrence.daysOfWeek ?? [start.getDay()]) : [];
+  const dialog = document.createElement('dialog');
+  dialog.className = 'calendar-dialog calendar-event-dialog';
+  dialog.innerHTML = `<form class="calendar-dialog-form"><header class="calendar-dialog-header"><h2>${mode === 'create' ? 'Add event' : mode === 'edit' ? 'Edit event' : 'Event'}</h2><button type="button" class="calendar-dialog-close" data-dialog-close aria-label="Close">×</button></header><p class="calendar-dialog-error" data-dialog-error hidden></p><div class="calendar-dialog-fields">
+    <label>Title<input name="title" type="text" value="${escapeHtml(event?.title ?? '')}" ${readOnly ? 'disabled' : 'required'}></label>
+    <label class="calendar-dialog-check-row"><span>All day</span>${checkbox(event?.allDay ?? false, 'All day', 'name="allDay"')}</label>
+    <label>Date<input name="date" type="date" value="${occurrenceDate}" ${readOnly ? 'disabled' : ''}></label>
+    <div class="calendar-dialog-time-row"><label>Starts<input name="starts" type="time" value="${inputTime(start)}" ${readOnly ? 'disabled' : ''}></label><label>Ends<input name="ends" type="time" value="${inputTime(end)}" ${readOnly ? 'disabled' : ''}></label></div>
+    <label>Calendar<select name="calendar" ${readOnly ? 'disabled' : ''}>${writable.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === source.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}</select></label>
+    <label>Repeats<select name="repeat" ${readOnly ? 'disabled' : ''}><option value="none" ${!recurrence ? 'selected' : ''}>Does not repeat</option><option value="daily" ${recurrence?.frequency === 'daily' ? 'selected' : ''}>Daily</option><option value="weekdays" ${recurrence?.frequency === 'weekly' && [1, 2, 3, 4, 5].every((day) => weeklyDays.includes(day)) ? 'selected' : ''}>Weekdays</option><option value="weekly" ${recurrence?.frequency === 'weekly' && ![1, 2, 3, 4, 5].every((day) => weeklyDays.includes(day)) ? 'selected' : ''}>Weekly</option><option value="yearly" ${recurrence?.frequency === 'yearly' ? 'selected' : ''}>Yearly</option></select></label>
+    <div class="calendar-weekly-days" data-weekly-days>${weekdays.map((day, index) => `<label class="calendar-weekday-choice"><span>${day}</span>${checkbox(weeklyDays.includes(index), `Repeat on ${day}`, `data-weekday="${index}"`)}</label>`).join('')}</div>
+    <label>Event Horizon<select name="eventHorizon" ${readOnly ? 'disabled' : ''}><option value="automatic" ${!event || event.eventHorizon === 'automatic' ? 'selected' : ''}>Automatic</option><option value="show" ${event?.eventHorizon === 'show' ? 'selected' : ''}>Show in Event Horizon</option><option value="hide" ${event?.eventHorizon === 'hide' ? 'selected' : ''}>Hide from Event Horizon</option></select></label>
+    <label>Location<input name="location" type="text" value="${escapeHtml(event?.location ?? '')}" ${readOnly ? 'disabled' : ''}></label><label>Notes<textarea name="notes" rows="4" ${readOnly ? 'disabled' : ''}>${escapeHtml(event?.notes ?? '')}</textarea></label>
+  </div><footer class="calendar-dialog-actions">${!readOnly && mode === 'edit' ? '<button type="button" class="calendar-dialog-secondary calendar-dialog-delete" data-dialog-delete>Delete</button>' : ''}${readOnly ? '' : '<button type="button" class="calendar-dialog-secondary" data-dialog-close>Cancel</button><button type="submit" class="calendar-dialog-primary">Save</button>'}</footer></form>`;
+  target.append(dialog);
+  dialog.showModal();
+
+  const allDay = dialog.querySelector<HTMLInputElement>('[name="allDay"]');
+  const times = dialog.querySelectorAll<HTMLInputElement>('[name="starts"], [name="ends"]');
+  const repeat = dialog.querySelector<HTMLSelectElement>('[name="repeat"]');
+  const dayPanel = dialog.querySelector<HTMLElement>('[data-weekly-days]');
+  const errorBox = dialog.querySelector<HTMLElement>('[data-dialog-error]');
+  const sync = (): void => { times.forEach((input) => { input.disabled = readOnly || Boolean(allDay?.checked); }); if (dayPanel) dayPanel.hidden = repeat?.value !== 'weekly' && repeat?.value !== 'weekdays'; };
+  allDay?.addEventListener('change', sync); repeat?.addEventListener('change', sync);
+  sync();
+
+  dialog.querySelectorAll<HTMLElement>('[data-dialog-close]').forEach((button) => button.addEventListener('click', () => dialog.close()));
+  dialog.addEventListener('close', () => dialog.remove(), { once: true });
+  if (readOnly) return;
+
+  const showError = (message: string): void => {
+    if (!errorBox) return;
+    errorBox.textContent = message;
+    errorBox.hidden = false;
+  };
+
+  dialog.querySelector('[data-dialog-delete]')?.addEventListener('click', () => {
+    if (!event) return;
+    if (!window.confirm(`Delete "${event.title}"? This cannot be undone.`)) return;
+    void (async () => {
+      try {
+        await calendarEventsApi.remove(event.id);
+        dialog.close();
+        await refresh();
+        rerender();
+      } catch (error) {
+        showError(error instanceof Error ? error.message : 'Failed to delete this event. Please try again.');
+      }
+    })();
+  });
+
+  dialog.querySelector('form')?.addEventListener('submit', (submitEvent) => {
+    submitEvent.preventDefault();
+    const data = new FormData(submitEvent.currentTarget as HTMLFormElement);
+    const title = String(data.get('title') ?? '').trim();
+    if (!title) { showError('Title is required.'); return; }
+
+    const date = String(data.get('date') ?? occurrenceDate);
+    const allDayValue = data.get('allDay') === 'on';
+    const startsAt = localDateTime(date, allDayValue ? '00:00' : String(data.get('starts') ?? '18:00'));
+    const endsAt = allDayValue ? new Date(startsAt.getTime() + 86400000) : localDateTime(date, String(data.get('ends') ?? '19:00'));
+    const repeatValue = String(data.get('repeat') ?? 'none');
+    const selectedDays = Array.from(dialog.querySelectorAll<HTMLInputElement>('[data-weekday]:checked')).map((input) => Number(input.dataset.weekday));
+
+    let nextRecurrence: CalendarRecurrence | undefined;
+    if (repeatValue === 'daily') nextRecurrence = { frequency: 'daily' };
+    else if (repeatValue === 'yearly') nextRecurrence = { frequency: 'yearly' };
+    else if (repeatValue === 'weekdays') nextRecurrence = { frequency: 'weekly', daysOfWeek: [1, 2, 3, 4, 5] };
+    else if (repeatValue === 'weekly') nextRecurrence = { frequency: 'weekly', daysOfWeek: selectedDays.length ? selectedDays : [startsAt.getDay()] };
+
+    // Only send `recurrence` when there's something concrete to change or
+    // clear — if the dialog opened with no representable recurrence (either
+    // truly none, or a backend `monthly` rule this frontend can't display,
+    // see toCalendarRecurrence in calendar.ts) and the user leaves "Does not
+    // repeat" selected, omit the key entirely so a PATCH can't silently wipe
+    // an existing monthly recurrence it never showed the user in the first place.
+    const recurrenceForPayload: RecurrenceRuleDto | null | undefined = nextRecurrence
+      ? toRecurrenceRuleDto(nextRecurrence)
+      : recurrence ? null : undefined;
+
+    // Event Horizon has no persisted domain field — temporal-domain.types.ts
+    // explicitly excludes presentation/composition state from HouseholdEvent.
+    // The control above is kept for interaction continuity but intentionally
+    // isn't part of this payload (see toCalendarEvent() in calendar.ts).
+    const payload = {
+      title,
+      description: String(data.get('notes') ?? '').trim() || undefined,
+      location: String(data.get('location') ?? '').trim() || undefined,
+      source_id: String(data.get('calendar') ?? source.id),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      schedule: toScheduleDto(startsAt, endsAt, allDayValue),
+      recurrence: recurrenceForPayload,
+      relevance: event?.relevance ?? 'ordinary',
+      significance: event?.significance ?? 'normal',
+    } as CreateCalendarEventDtoInput;
+
+    const submitButton = dialog.querySelector<HTMLButtonElement>('.calendar-dialog-primary');
+    if (submitButton) submitButton.disabled = true;
+
+    void (async () => {
+      try {
+        if (event) await calendarEventsApi.update(event.id, payload);
+        else await calendarEventsApi.create(payload);
+        dialog.close();
+        await refresh();
+        rerender();
+      } catch (error) {
+        showError(error instanceof Error ? error.message : 'Failed to save this event. Please try again.');
+        if (submitButton) submitButton.disabled = false;
+      }
+    })();
+  });
+}
+
+function toScheduleDto(start: Date, end: Date, allDay: boolean): EventScheduleDto {
+  return allDay
+    ? { kind: 'all_day', local_start_date: dateKey(start), local_end_date: dateKey(end) }
+    : { kind: 'timed', local_start: naiveLocalIso(start), local_end: naiveLocalIso(end) };
+}
+
+function toRecurrenceRuleDto(recurrence: CalendarRecurrence): RecurrenceRuleDto {
+  return {
+    frequency: recurrence.frequency,
+    interval: recurrence.interval ?? 1,
+    // Inverse of calendar.ts's toCalendarRecurrence ISO->JS `day % 7` mapping.
+    by_weekday: recurrence.daysOfWeek?.map((day) => (day === 0 ? 7 : day)),
+  };
+}
+
+function naiveLocalIso(date: Date): string {
+  return `${dateKey(date)}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:00`;
+}
+
+function localDateTime(key: string, time: string): Date {
+  const [year, month, day] = key.split('-').map(Number);
+  const [hours, minutes] = time.split(':').map(Number);
+  return new Date(year, month - 1, day, hours, minutes);
+}
+
+function inputTime(value: Date): string {
+  return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
 }
 
 function dateKey(date: Date): string {

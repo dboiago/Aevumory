@@ -75,6 +75,8 @@ body:has(.calendar-page) { overflow-x: hidden; }
 .calendar-dialog-header h2 { margin: 0; font-family: var(--font-heading); font-size: 20px; font-weight: 500; }
 .calendar-dialog-header p { margin: 4px 0 0; color: var(--text-soft); font-size: 12px; }
 .calendar-dialog-close { padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 22px; line-height: 1; }
+.calendar-dialog-error { margin: 14px 22px 0; padding: 10px 14px; border: 1px solid var(--accent-alert); border-radius: 6px; background: var(--bg-surface); color: var(--accent-alert); font-size: 13px; }
+.calendar-dialog-error[hidden] { display: none; }
 .calendar-dialog-fields { display: grid; gap: 14px; padding: 22px; overflow-y: auto; }
 .calendar-dialog-fields label { display: grid; gap: 6px; color: var(--text-muted); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .calendar-dialog-fields input:not([type="checkbox"]), .calendar-dialog-fields select, .calendar-dialog-fields textarea { width: 100%; box-sizing: border-box; padding: 8px 9px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); font: inherit; font-size: 13px; letter-spacing: normal; text-transform: none; }
@@ -91,6 +93,8 @@ body:has(.calendar-page) { overflow-x: hidden; }
 .calendar-dialog-primary, .calendar-dialog-secondary { padding: 6px 11px; }
 .calendar-dialog-secondary { border-color: var(--action-resolved-border); background: var(--action-resolved-bg); color: var(--action-resolved-text); }
 .calendar-dialog-secondary:hover { border-color: var(--border-active); background: var(--action-primary-hover-bg); color: var(--text-primary); }
+.calendar-dialog-delete { margin-right: auto; border-color: var(--accent-alert); color: var(--accent-alert); }
+.calendar-dialog-delete:hover { border-color: var(--accent-alert); background: var(--overlay-black-shadow); color: var(--accent-alert); }
 
 .calendar-colour-picker { position: fixed; z-index: 20; width: min(300px, calc(100vw - 32px)); padding: 16px; border: 1px solid var(--border-active); border-radius: var(--radius-card); background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 12px 40px var(--overlay-black-shadow); }
 .calendar-colour-picker-title { display: grid; gap: 3px; margin-bottom: 14px; }
