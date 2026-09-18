@@ -21,11 +21,12 @@ import type { LedgerRepository } from '../repositories/ledger.repository.js';
 interface RewardTransactionRow {
   transaction_id: string;
   idempotency_key: string;
-  task_id: string;
-  cycle_id: string;
+  task_id: string | null;
+  cycle_id: string | null;
   reward_event_type: string;
   reward_owner_user_id: string | null;
-  primary_discipline: string;
+  redemption_id: string | null;
+  primary_discipline: string | null;
   primary_xp: number;
   secondary_yields: string;
   credits_earned: number;
@@ -45,8 +46,8 @@ interface RewardAdjustmentRow {
 
 const TRANSACTION_COLUMNS = `
   transaction_id, idempotency_key, task_id, cycle_id, reward_event_type,
-  reward_owner_user_id, primary_discipline, primary_xp, secondary_yields,
-  credits_earned, care_relief, processed_at
+  reward_owner_user_id, redemption_id, primary_discipline, primary_xp,
+  secondary_yields, credits_earned, care_relief, processed_at
 `;
 
 const ADJUSTMENT_COLUMNS = `
@@ -82,17 +83,18 @@ export class SqliteLedgerRepository implements LedgerRepository {
       .prepare(
         `
       INSERT INTO reward_transactions (${TRANSACTION_COLUMNS})
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       )
       .run(
         transaction.transaction_id,
         transaction.idempotency_key,
-        transaction.task_id,
-        transaction.cycle_id,
+        transaction.task_id ?? null,
+        transaction.cycle_id ?? null,
         transaction.reward_event_type,
         transaction.reward_owner_user_id ?? null,
-        transaction.yield.primary_discipline,
+        transaction.redemption_id ?? null,
+        transaction.yield.primary_discipline ?? null,
         transaction.yield.primary_xp,
         JSON.stringify(transaction.yield.secondary_yields),
         transaction.yield.credits_earned,
@@ -163,7 +165,7 @@ export class SqliteLedgerRepository implements LedgerRepository {
 
 function rowToTransaction(row: RewardTransactionRow): RewardTransaction {
   const yieldValue: RewardYield = {
-    primary_discipline: row.primary_discipline as RewardYield['primary_discipline'],
+    primary_discipline: row.primary_discipline ? (row.primary_discipline as RewardYield['primary_discipline']) : undefined,
     primary_xp: row.primary_xp,
     secondary_yields: JSON.parse(row.secondary_yields),
     credits_earned: row.credits_earned,
@@ -172,10 +174,11 @@ function rowToTransaction(row: RewardTransactionRow): RewardTransaction {
   return {
     transaction_id: row.transaction_id,
     idempotency_key: row.idempotency_key,
-    task_id: row.task_id,
-    cycle_id: row.cycle_id,
+    task_id: row.task_id ?? undefined,
+    cycle_id: row.cycle_id ?? undefined,
     reward_event_type: row.reward_event_type as RewardTransaction['reward_event_type'],
     reward_owner_user_id: row.reward_owner_user_id ?? undefined,
+    redemption_id: row.redemption_id ?? undefined,
     yield: yieldValue,
     care_relief: row.care_relief ? (JSON.parse(row.care_relief) as CareReliefAward) : undefined,
     processed_at: row.processed_at,

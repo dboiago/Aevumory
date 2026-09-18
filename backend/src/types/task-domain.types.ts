@@ -404,7 +404,11 @@ export interface CareReliefAward {
 // ----------------------------------------------------------------------------
 
 export interface RewardYield {
-  primary_discipline: DisciplineTag;
+  /**
+   * Absent only for a Phase 4 `reward_redemption` transaction, which is a
+   * pure Credit debit with no earned XP and no associated Discipline.
+   */
+  primary_discipline?: DisciplineTag;
   primary_xp: number;
 
   secondary_yields: Array<{
@@ -430,11 +434,16 @@ export interface RewardYield {
  * resolving a cycle without completing it earns no reward by itself (see
  * `TaskExecutionService.pruneCycle`). That future reward must never be
  * inferred merely because a cycle was resolved.
+ *
+ * `reward_redemption` (Phase 4, reward.service.ts) is a Credit debit against
+ * the same ledger for spending Credits on a catalogue Reward. It carries no
+ * task_id/cycle_id/Discipline — see RewardTransaction below.
  */
 export type RewardEventType =
   | 'foothold_initiation'
   | 'completion'
-  | 'deductive_pruning';
+  | 'deductive_pruning'
+  | 'reward_redemption';
 
 export interface RewardTransaction {
   transaction_id: string;
@@ -446,11 +455,17 @@ export interface RewardTransaction {
    * `reward_event_type` is the explicit discriminator distinguishing e.g. a
    * Foothold initiation reward from a later completion reward on the same
    * task/cycle/owner triple, which would otherwise collide.
+   *
+   * `reward_redemption` transactions instead use
+   * `${reward_id}:${reward_owner_id}:${client-supplied nonce}` (reward.service.ts)
+   * — there is no task/cycle to key off of, and the same reward may
+   * legitimately be redeemed by the same participant more than once.
    */
   idempotency_key: string;
 
-  task_id: string;
-  cycle_id: string;
+  /** Absent for `reward_redemption` — a redemption has no task or cycle. */
+  task_id?: string;
+  cycle_id?: string;
 
   reward_event_type: RewardEventType;
 
@@ -458,9 +473,13 @@ export interface RewardTransaction {
    * Participant whose assigned responsibility earns the ordinary reward.
    *
    * For household-pool tasks this may be undefined until the task is moved
-   * onto an individual's card.
+   * onto an individual's card. For `reward_redemption` this is the
+   * redeeming participant.
    */
   reward_owner_user_id?: string;
+
+  /** Present only for `reward_redemption` — links back to its RewardRedemption. */
+  redemption_id?: string;
 
   yield: RewardYield;
 

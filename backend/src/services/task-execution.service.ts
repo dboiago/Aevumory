@@ -70,6 +70,19 @@ export class RewardTransactionNotFoundError extends Error {
   }
 }
 
+/**
+ * `reward_redemption` transactions (Phase 4, reward.service.ts) have no
+ * task_id/cycle_id and represent a Credit spend, not an earned task reward —
+ * they are not reopenable via this task-oriented reversal flow. Reversing a
+ * redemption (e.g. refunding Credits) is a distinct, not-yet-implemented
+ * concept and must not be inferred here.
+ */
+export class RewardAdjustmentNotSupportedError extends Error {
+  constructor(transaction_id: string) {
+    super(`Reward transaction ${transaction_id} does not support adjustment via this flow (reward_redemption)`);
+  }
+}
+
 export interface CompleteCycleInput {
   completed_by_user_id?: string;
 }
@@ -347,6 +360,11 @@ export class TaskExecutionService {
   }> {
     const original = await this.ledgerRepository.getTransaction(input.original_transaction_id);
     if (!original) throw new RewardTransactionNotFoundError(input.original_transaction_id);
+    if (original.reward_event_type === 'reward_redemption' || !original.task_id || !original.cycle_id) {
+      throw new RewardAdjustmentNotSupportedError(input.original_transaction_id);
+    }
+    const task_id = original.task_id;
+    const cycle_id = original.cycle_id;
 
     const adjustment: RewardAdjustmentTransaction = {
       adjustment_id: randomUUID(),
@@ -359,7 +377,7 @@ export class TaskExecutionService {
     };
     await this.ledgerRepository.saveAdjustment(adjustment);
 
-    const cycle = await this.taskRepository.getCycle(original.cycle_id);
+    const cycle = await this.taskRepository.getCycle(cycle_id);
     if (!cycle) return { adjustment, cycle: null };
 
     // 'deductive_pruning' is not produced by pruneCycle today (ordinary
@@ -376,14 +394,14 @@ export class TaskExecutionService {
       await this.taskRepository.saveCycle(reopened);
 
       if (original.reward_owner_user_id) {
-        await this.resetUserTaskState(original.task_id, original.cycle_id, original.reward_owner_user_id);
+        await this.resetUserTaskState(task_id, cycle_id, original.reward_owner_user_id);
       }
 
       return { adjustment, cycle: reopened };
     }
 
     if (original.reward_event_type === 'foothold_initiation' && original.reward_owner_user_id) {
-      await this.resetUserTaskState(original.task_id, original.cycle_id, original.reward_owner_user_id);
+      await this.resetUserTaskState(task_id, cycle_id, original.reward_owner_user_id);
     }
 
     return { adjustment, cycle };

@@ -1,8 +1,8 @@
 import './rewards.css';
 import {
   adminApi,
+  participantLedgerApi,
   rewardsApi,
-  rewardsBalanceApi,
   type ParticipantDto,
   type RewardCategoryDto,
   type RewardDto,
@@ -57,8 +57,8 @@ async function refreshBalance(state: RewardsPageState): Promise<void> {
   }
 
   try {
-    const result = await rewardsBalanceApi.get(state.selectedParticipantId);
-    state.balance = result.balance;
+    const ledger = await participantLedgerApi.get(state.selectedParticipantId);
+    state.balance = ledger.balance;
   } catch {
     state.balance = null;
   }

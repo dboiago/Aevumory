@@ -1,4 +1,4 @@
-import { participantsApi, rewardsApi, rewardsBalanceApi, type ParticipantDto, type RewardDto } from './api-client';
+import { participantsApi, rewardsApi, type ParticipantDto, type RewardDto } from './api-client';
 
 export type RewardCategory = 'personal_leisure' | 'household' | 'experience';
 
@@ -25,9 +25,4 @@ export class ApiRewardsQuery implements RewardsQuery {
 
     return { participants, rewards };
   }
-}
-
-export async function getParticipantBalance(participantId: string): Promise<number> {
-  const result = await rewardsBalanceApi.get(participantId);
-  return result.balance;
 }

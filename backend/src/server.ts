@@ -36,6 +36,7 @@ import {
 import {
   FootholdNotSupportedError,
   InvalidCycleStateError,
+  RewardAdjustmentNotSupportedError,
   RewardTransactionNotFoundError,
   TaskExecutionService,
   type CreateRewardAdjustmentInput,
@@ -106,7 +107,7 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
     userTaskStateRepository,
   );
   const progressionService = new ProgressionService(ledgerRepository);
-  const rewardService = new RewardService(rewardRepository, ledgerRepository);
+  const rewardService = new RewardService(rewardRepository, ledgerRepository, taskExecutionService);
   const adminAuthService = new AdminAuthService(householdService);
   const requireAdmin = createRequireAdminHook(adminAuthService);
 
@@ -390,6 +391,10 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
         reply.code(404).send({ error: error.message });
         return;
       }
+      if (error instanceof RewardAdjustmentNotSupportedError) {
+        reply.code(409).send({ error: error.message });
+        return;
+      }
       reply.code(400).send({ error: (error as Error).message });
     }
   });
@@ -470,14 +475,6 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
       }
       reply.code(400).send({ error: (error as Error).message });
     }
-  });
-
-  // Supports the Rewards screen's affordability display (spendable balance
-  // net of redemptions) — see RewardService.getSpendableBalance.
-  fastify.get('/api/participants/:id/rewards-balance', async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const balance = await rewardService.getSpendableBalance(id);
-    return { user_id: id, balance };
   });
 
   // ============================================================================

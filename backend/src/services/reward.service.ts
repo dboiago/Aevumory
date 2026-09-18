@@ -8,20 +8,23 @@
  * Catalogue mutations (create/update) are admin-gated at the route level.
  * Redemption is an ordinary participant action.
  *
- * Redemption never decrements a stored balance. A redemption row IS the
- * Credit debit — its `final_cost_paid` is the only record of the debit, and
- * it is written exactly once (see `redeemReward`), so there is no
- * multi-step ledger write that could partially fail: the debit and the
- * redemption record are the same atomic insert. Spendable balance is always
- * derived at read time from the existing Phase 3 ledger (RewardTransaction
- * + RewardAdjustmentTransaction) net of redemptions — see
- * `getSpendableBalance`.
+ * Redemption produces two things, committed atomically
+ * (RewardRepository.saveRedemptionWithDebit): an immutable `RewardRedemption`
+ * (what was redeemed, at what price) and an immutable debiting
+ * `RewardTransaction` with `reward_event_type: 'reward_redemption'` against
+ * the SAME Phase 3 ledger used for task rewards. There is exactly one
+ * authoritative Credit ledger — spendable balance is always
+ * `TaskExecutionService.getParticipantLedger(user_id).balance`, unchanged by
+ * this phase, now simply inclusive of redemption debits too. Nothing here
+ * maintains a second, parallel balance.
  */
 
 import { randomUUID } from 'node:crypto';
 import type { Reward, RewardCategory, RewardRedemption } from '../types/reward.js';
+import type { RewardTransaction } from '../types/task-domain.types.js';
 import type { RewardRepository } from '../repositories/reward.repository.js';
 import type { LedgerRepository } from '../repositories/ledger.repository.js';
+import type { TaskExecutionService } from './task-execution.service.js';
 
 const REWARD_CATEGORIES: RewardCategory[] = ['personal_leisure', 'household', 'experience'];
 
@@ -48,7 +51,6 @@ export interface CreateRewardInput {
   description?: string;
   category: RewardCategory;
   base_cost: number;
-  is_discountable?: boolean;
   is_active?: boolean;
 }
 
@@ -57,12 +59,12 @@ export interface UpdateRewardInput {
   description?: string | null;
   category?: RewardCategory;
   base_cost?: number;
-  is_discountable?: boolean;
   is_active?: boolean;
 }
 
 export interface RedeemRewardInput {
   user_id: string;
+  /** Client-supplied nonce distinguishing this redemption attempt from a later, separate one for the same reward/participant. */
   idempotency_key: string;
 }
 
@@ -83,16 +85,11 @@ function validateRewardFields(input: { title?: string; category?: RewardCategory
   }
 }
 
-/** `is_discountable` is explicitly false for 'household' rewards (reward.ts). */
-function resolveIsDiscountable(category: RewardCategory, requested: boolean | undefined): boolean {
-  if (category === 'household') return false;
-  return requested ?? true;
-}
-
 export class RewardService {
   constructor(
     private readonly rewardRepository: RewardRepository,
     private readonly ledgerRepository: LedgerRepository,
+    private readonly taskExecutionService: TaskExecutionService,
   ) {}
 
   listRewards(): Promise<Reward[]> {
@@ -108,7 +105,13 @@ export class RewardService {
       description: input.description,
       category: input.category,
       base_cost: input.base_cost,
-      is_discountable: resolveIsDiscountable(input.category, input.is_discountable),
+      // No consumer exists for `is_discountable` yet (the Renewal discount
+      // engine is out of scope — FUNCTIONAL_FOUNDATION_PLAN.md Phase 4 scope
+      // boundary), and the domain only documents one rule for it ("false
+      // for 'household'"). Rather than inventing a default for the other
+      // categories, every reward is created non-discountable; this needs
+      // human/product review once that engine exists.
+      is_discountable: false,
       is_active: input.is_active ?? true,
     };
 
@@ -122,14 +125,12 @@ export class RewardService {
 
     validateRewardFields(input);
 
-    const category = input.category ?? existing.category;
     const updated: Reward = {
       ...existing,
       title: input.title ?? existing.title,
       description: input.description === null ? undefined : (input.description ?? existing.description),
-      category,
+      category: input.category ?? existing.category,
       base_cost: input.base_cost ?? existing.base_cost,
-      is_discountable: resolveIsDiscountable(category, input.is_discountable ?? existing.is_discountable),
       is_active: input.is_active ?? existing.is_active,
     };
 
@@ -137,23 +138,9 @@ export class RewardService {
     return updated;
   }
 
-  /**
-   * Spendable Credit balance: the existing Phase 3 ledger (earned yields +
-   * admin adjustments) net of everything already redeemed. Never a stored,
-   * mutable balance field.
-   */
+  /** The existing Phase 3 ledger balance — the single authoritative spendable Credit figure, now inclusive of redemption debits. */
   async getSpendableBalance(user_id: string): Promise<number> {
-    const [transactions, adjustments, redemptions] = await Promise.all([
-      this.ledgerRepository.listTransactionsForOwner(user_id),
-      this.ledgerRepository.listAdjustmentsForOwner(user_id),
-      this.rewardRepository.listRedemptionsForParticipant(user_id),
-    ]);
-
-    const earned = transactions.reduce((sum, transaction) => sum + transaction.yield.credits_earned, 0);
-    const adjusted = adjustments.reduce((sum, adjustment) => sum + adjustment.credits_delta, 0);
-    const redeemed = redemptions.reduce((sum, redemption) => sum + redemption.final_cost_paid, 0);
-
-    return earned + adjusted - redeemed;
+    return (await this.taskExecutionService.getParticipantLedger(user_id)).balance;
   }
 
   async redeemReward(reward_id: string, input: RedeemRewardInput): Promise<RedeemRewardResult> {
@@ -161,11 +148,14 @@ export class RewardService {
     if (!reward) throw new RewardNotFoundError(reward_id);
     if (!reward.is_active) throw new RewardInactiveError(reward_id);
 
+    // No task/cycle to key off of (unlike Phase 3 events) — reward_id +
+    // participant + a client-supplied nonce is the logical redemption
+    // identity, so the same reward can still be redeemed again later.
     const idempotency_key = `${reward_id}:${input.user_id}:${input.idempotency_key}`;
 
-    const existing = await this.rewardRepository.getRedemptionByIdempotencyKey(idempotency_key);
-    if (existing) {
-      return { redemption: existing, balance: await this.getSpendableBalance(input.user_id) };
+    const existingDebit = await this.ledgerRepository.getTransactionByIdempotencyKey(idempotency_key);
+    if (existingDebit) {
+      return this.replayResult(existingDebit, input.user_id);
     }
 
     const balance = await this.getSpendableBalance(input.user_id);
@@ -173,7 +163,6 @@ export class RewardService {
 
     const redemption: RewardRedemption = {
       id: randomUUID(),
-      idempotency_key,
       user_id: input.user_id,
       reward_id,
       base_cost: reward.base_cost,
@@ -181,19 +170,36 @@ export class RewardService {
       redeemed_at: new Date().toISOString(),
     };
 
+    const debit: RewardTransaction = {
+      transaction_id: randomUUID(),
+      idempotency_key,
+      reward_event_type: 'reward_redemption',
+      reward_owner_user_id: input.user_id,
+      redemption_id: redemption.id,
+      yield: { primary_xp: 0, secondary_yields: [], credits_earned: -redemption.final_cost_paid },
+      processed_at: redemption.redeemed_at,
+    };
+
     try {
-      await this.rewardRepository.saveRedemption(redemption);
+      await this.rewardRepository.saveRedemptionWithDebit(redemption, debit);
     } catch (error) {
-      // A concurrent request for the same logical redemption may have won
-      // the race and already inserted this idempotency_key (UNIQUE index,
-      // migration 0005) — treat that as the idempotent result rather than a
-      // failure, mirroring TaskExecutionService's tolerance for the
-      // equivalent race on reward_transactions.idempotency_key.
-      const raced = await this.rewardRepository.getRedemptionByIdempotencyKey(idempotency_key);
-      if (raced) return { redemption: raced, balance: await this.getSpendableBalance(input.user_id) };
+      // Raced with an identical concurrent request; the other request's
+      // atomic write already committed both rows under this idempotency_key
+      // (UNIQUE index on reward_transactions.idempotency_key, migration
+      // 0004) — treat that as the idempotent result rather than a failure,
+      // mirroring TaskExecutionService's tolerance for the equivalent race.
+      const raced = await this.ledgerRepository.getTransactionByIdempotencyKey(idempotency_key);
+      if (raced) return this.replayResult(raced, input.user_id);
       throw error;
     }
 
-    return { redemption, balance: balance - redemption.final_cost_paid };
+    return { redemption, balance: await this.getSpendableBalance(input.user_id) };
+  }
+
+  private async replayResult(debit: RewardTransaction, user_id: string): Promise<RedeemRewardResult> {
+    const redemption = debit.redemption_id ? await this.rewardRepository.getRedemption(debit.redemption_id) : null;
+    if (!redemption) throw new Error(`Redemption debit ${debit.transaction_id} has no corresponding RewardRedemption`);
+    return { redemption, balance: await this.getSpendableBalance(user_id) };
   }
 }
+

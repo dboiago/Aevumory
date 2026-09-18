@@ -237,7 +237,6 @@ export interface RewardDto {
 
 export interface RewardRedemptionDto {
   id: string;
-  idempotency_key: string;
   user_id: string;
   reward_id: string;
   base_cost: number;
@@ -255,7 +254,6 @@ export interface CreateRewardDtoInput {
   description?: string;
   category: RewardCategoryDto;
   base_cost: number;
-  is_discountable?: boolean;
   is_active?: boolean;
 }
 
@@ -272,7 +270,17 @@ export const rewardsApi = {
     apiRequest(`/api/rewards/${encodeURIComponent(rewardId)}/redeem`, { method: 'POST', body: input }),
 };
 
-export const rewardsBalanceApi = {
-  get: (participantId: string): Promise<{ user_id: string; balance: number }> =>
-    apiRequest(`/api/participants/${encodeURIComponent(participantId)}/rewards-balance`),
+// The existing Phase 3 ledger endpoint is the single authoritative spendable
+// Credit balance — redemption debits are ordinary reward_transactions rows,
+// so there is no separate rewards-balance endpoint (see reward.service.ts).
+export interface ParticipantLedgerDto {
+  reward_owner_user_id: string;
+  balance: number;
+  transactions: RewardTransactionDto[];
+  adjustments: Array<{ adjustment_id: string; credits_delta: number }>;
+}
+
+export const participantLedgerApi = {
+  get: (participantId: string): Promise<ParticipantLedgerDto> =>
+    apiRequest(`/api/participants/${encodeURIComponent(participantId)}/ledger`),
 };

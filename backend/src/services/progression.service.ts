@@ -36,7 +36,12 @@ export class ProgressionService {
     };
 
     for (const transaction of transactions) {
-      addXp(transaction.yield.primary_discipline, transaction.yield.primary_xp);
+      // 'reward_redemption' transactions (Phase 4) have no primary_discipline
+      // — they're a pure Credit debit, not an earned task reward — and must
+      // not be attributed to any Discipline's XP.
+      if (transaction.yield.primary_discipline) {
+        addXp(transaction.yield.primary_discipline, transaction.yield.primary_xp);
+      }
       for (const secondary of transaction.yield.secondary_yields) {
         addXp(secondary.discipline, secondary.xp);
       }

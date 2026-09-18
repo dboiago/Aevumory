@@ -180,11 +180,39 @@ describe('Rewards API (Phase 4)', () => {
     expect(body.balance).toBe(earned - 5);
   });
 
-  it('creates the correct Credit debit and reflects it in the participant balance', async () => {
+  it('creates the correct Credit debit as a RewardTransaction, reflected in the existing Phase 3 ledger', async () => {
     const cookie = await authorize();
     const userId = 'participant-2';
     const earned = await earnCredits(cookie, userId);
     const reward = await createReward(cookie, { base_cost: 5 });
+
+    const redeem = await app.inject({
+      method: 'POST',
+      url: `/api/rewards/${reward.id}/redeem`,
+      payload: { user_id: userId, idempotency_key: randomUUID() },
+    });
+    const redemptionId = redeem.json().redemption.id as string;
+
+    const ledgerResponse = await app.inject({ method: 'GET', url: `/api/participants/${userId}/ledger` });
+    expect(ledgerResponse.statusCode).toBe(200);
+    const ledger = ledgerResponse.json();
+    expect(ledger.balance).toBe(earned - 5);
+
+    const debit = ledger.transactions.find((transaction: { reward_event_type: string }) => transaction.reward_event_type === 'reward_redemption');
+    expect(debit).toBeDefined();
+    expect(debit.yield.credits_earned).toBe(-5);
+    expect(debit.redemption_id).toBe(redemptionId);
+    expect(debit.task_id).toBeUndefined();
+    expect(debit.cycle_id).toBeUndefined();
+  });
+
+  it('does not attribute redemption Credits to any Discipline XP (progression unaffected)', async () => {
+    const cookie = await authorize();
+    const userId = 'participant-2b';
+    await earnCredits(cookie, userId);
+    const reward = await createReward(cookie, { base_cost: 5 });
+
+    const before = await app.inject({ method: 'GET', url: `/api/participants/${userId}/progression` });
 
     await app.inject({
       method: 'POST',
@@ -192,9 +220,8 @@ describe('Rewards API (Phase 4)', () => {
       payload: { user_id: userId, idempotency_key: randomUUID() },
     });
 
-    const balanceResponse = await app.inject({ method: 'GET', url: `/api/participants/${userId}/rewards-balance` });
-    expect(balanceResponse.statusCode).toBe(200);
-    expect(balanceResponse.json().balance).toBe(earned - 5);
+    const after = await app.inject({ method: 'GET', url: `/api/participants/${userId}/progression` });
+    expect(after.json()).toEqual(before.json());
   });
 
   it('rejects redemption when the balance is insufficient, creating no redemption or debit', async () => {
@@ -211,8 +238,10 @@ describe('Rewards API (Phase 4)', () => {
 
     expect(response.statusCode).toBe(409);
 
-    const balanceResponse = await app.inject({ method: 'GET', url: `/api/participants/${userId}/rewards-balance` });
-    expect(balanceResponse.json().balance).toBe(earned);
+    const ledgerResponse = await app.inject({ method: 'GET', url: `/api/participants/${userId}/ledger` });
+    const ledger = ledgerResponse.json();
+    expect(ledger.balance).toBe(earned);
+    expect(ledger.transactions.some((transaction: { reward_event_type: string }) => transaction.reward_event_type === 'reward_redemption')).toBe(false);
   });
 
   it('leaves the stored reward catalogue unchanged by redemption', async () => {
@@ -255,8 +284,34 @@ describe('Rewards API (Phase 4)', () => {
     expect(second.statusCode).toBe(200);
     expect(second.json().redemption.id).toBe(first.json().redemption.id);
 
-    const balanceResponse = await app.inject({ method: 'GET', url: `/api/participants/${userId}/rewards-balance` });
-    expect(balanceResponse.json().balance).toBe(earned - 5);
+    const ledgerResponse = await app.inject({ method: 'GET', url: `/api/participants/${userId}/ledger` });
+    const ledger = ledgerResponse.json();
+    expect(ledger.balance).toBe(earned - 5);
+    const debits = ledger.transactions.filter((transaction: { reward_event_type: string }) => transaction.reward_event_type === 'reward_redemption');
+    expect(debits).toHaveLength(1);
+  });
+
+  it('allows a later, separate redemption of the same reward with a new idempotency key', async () => {
+    const cookie = await authorize();
+    const userId = 'participant-6';
+    const earned = await earnCredits(cookie, userId); // 6.0 credits
+    const reward = await createReward(cookie, { base_cost: 3 });
+
+    const first = await app.inject({
+      method: 'POST',
+      url: `/api/rewards/${reward.id}/redeem`,
+      payload: { user_id: userId, idempotency_key: randomUUID() },
+    });
+    const second = await app.inject({
+      method: 'POST',
+      url: `/api/rewards/${reward.id}/redeem`,
+      payload: { user_id: userId, idempotency_key: randomUUID() },
+    });
+
+    expect(first.statusCode).toBe(200);
+    expect(second.statusCode).toBe(200);
+    expect(second.json().redemption.id).not.toBe(first.json().redemption.id);
+    expect(second.json().balance).toBe(earned - 6);
   });
 
   it('rejects redeeming a reward that does not exist', async () => {
