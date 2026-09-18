@@ -183,3 +183,25 @@ describe('DefaultTemporalService.listOccurrencesInWindow', () => {
     expect(occurrences[0].occurrence_id).toBe('provider-occurrence');
   });
 });
+
+describe('DefaultTemporalService.ensureLocalSourceBootstrapped', () => {
+  it('creates a single local calendar source on first call', async () => {
+    const repository = new InMemoryTemporalRepository();
+    const service = new DefaultTemporalService(repository);
+
+    const source = await service.ensureLocalSourceBootstrapped();
+    expect(source.kind).toBe('local');
+    expect(await repository.listSources()).toEqual([source]);
+  });
+
+  it('is idempotent: calling bootstrap again returns the existing local source', async () => {
+    const repository = new InMemoryTemporalRepository();
+    const service = new DefaultTemporalService(repository);
+
+    const first = await service.ensureLocalSourceBootstrapped();
+    const second = await service.ensureLocalSourceBootstrapped();
+
+    expect(second).toEqual(first);
+    expect(await repository.listSources()).toHaveLength(1);
+  });
+});

@@ -88,6 +88,55 @@ export class SqliteTemporalRepository implements TemporalRepository {
     return Promise.resolve();
   }
 
+  listSources(): Promise<TemporalSource[]> {
+    const rows = this.db
+      .prepare(
+        `
+      SELECT
+        source_id,
+        kind,
+        name,
+        enabled,
+        sync_status,
+        last_synced_at,
+        created_at,
+        updated_at
+      FROM temporal_sources
+      ORDER BY created_at ASC
+    `,
+      )
+      .all() as any[];
+
+    return Promise.resolve(
+      rows.map((row) => ({
+        source_id: row.source_id,
+        kind: row.kind,
+        name: row.name,
+        enabled: row.enabled === 1,
+        sync_status: row.sync_status,
+        last_synced_at: row.last_synced_at,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      })),
+    );
+  }
+
+  // Cascades events/occurrences under this source first: household_events.source_id
+  // has a FK to temporal_sources, and it is actually enforced at runtime here.
+  deleteSource(source_id: string): Promise<void> {
+    const eventRows = this.db
+      .prepare('SELECT event_id FROM household_events WHERE source_id = ?')
+      .all(source_id) as any[];
+
+    for (const row of eventRows) {
+      this.db.prepare('DELETE FROM event_occurrences WHERE event_id = ?').run(row.event_id);
+    }
+    this.db.prepare('DELETE FROM household_events WHERE source_id = ?').run(source_id);
+    this.db.prepare('DELETE FROM temporal_sources WHERE source_id = ?').run(source_id);
+
+    return Promise.resolve();
+  }
+
   // ============================================================================
   // Events
   // ============================================================================

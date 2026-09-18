@@ -1,3 +1,11 @@
+import {
+  calendarEventsApi,
+  calendarSourcesApi,
+  type HouseholdEventDto,
+  type RecurrenceRuleDto,
+  type TemporalSourceDto,
+} from './api-client';
+
 export type CalendarSourceProvider = 'aevumory' | 'google' | 'icloud';
 
 export type CalendarColourSelection = {
@@ -47,29 +55,87 @@ export interface CalendarQuery {
   getState(): Promise<CalendarState>;
 }
 
-const fixtureState: CalendarState = {
-  sources: [
-    { id: 'calendar:aevumory', provider: 'aevumory', name: 'Aevumory', writable: true },
-    { id: 'calendar:google-alex', provider: 'google', name: 'Alex', accountName: 'Google Calendar', writable: false, colour: { hueOffset: 100, chromaBias: 0.1, lightnessBias: 0 } },
-    { id: 'calendar:google-jordan', provider: 'google', name: 'Jordan', accountName: 'Google Calendar', writable: false, colour: { hueOffset: 200, chromaBias: -0.1, lightnessBias: 0.15 } },
-    { id: 'calendar:icloud-family', provider: 'icloud', name: 'Family', accountName: 'iCloud', writable: false, colour: { hueOffset: 300, chromaBias: 0, lightnessBias: -0.1 } },
-  ],
-  events: [
-    { id: 'event:brush-teeth', calendarId: 'calendar:aevumory', title: 'Brush teeth', allDay: false, startsAt: '2026-09-02T07:30:00-04:00', endsAt: '2026-09-02T07:35:00-04:00', recurrence: { frequency: 'daily' }, taskLinked: true, eventHorizon: 'automatic', relevance: 'ordinary', significance: 'low' },
-    { id: 'event:school', calendarId: 'calendar:google-jordan', title: 'School', allDay: false, startsAt: '2026-09-02T08:30:00-04:00', endsAt: '2026-09-02T15:00:00-04:00', recurrence: { frequency: 'weekly', daysOfWeek: [1, 2, 3, 4, 5] }, participantIds: ['participant:jordan'], eventHorizon: 'automatic', relevance: 'ordinary', significance: 'normal' },
-    { id: 'event:school-pickup', calendarId: 'calendar:google-alex', title: 'School pickup', allDay: false, startsAt: '2026-09-02T15:15:00-04:00', endsAt: '2026-09-02T15:45:00-04:00', recurrence: { frequency: 'weekly', daysOfWeek: [1, 2, 3, 4, 5] }, taskLinked: true, participantIds: ['participant:alex'], eventHorizon: 'automatic', relevance: 'ordinary', significance: 'normal' },
-    { id: 'event:instrument-practice', calendarId: 'calendar:aevumory', title: 'Instrument practice', allDay: false, startsAt: '2026-09-02T18:30:00-04:00', endsAt: '2026-09-02T19:00:00-04:00', recurrence: { frequency: 'daily' }, taskLinked: true, participantIds: ['participant:jordan'], eventHorizon: 'automatic', relevance: 'ordinary', significance: 'normal' },
-    { id: 'event:garbage', calendarId: 'calendar:aevumory', title: 'Garbage collection', allDay: false, startsAt: '2026-09-03T07:00:00-04:00', endsAt: '2026-09-03T07:05:00-04:00', recurrence: { frequency: 'weekly', daysOfWeek: [4] }, taskLinked: true, eventHorizon: 'automatic', relevance: 'ordinary', significance: 'low' },
-    { id: 'event:dinner', calendarId: 'calendar:aevumory', title: 'Dinner with friends', allDay: false, startsAt: '2026-09-03T19:00:00-04:00', endsAt: '2026-09-03T21:00:00-04:00', eventHorizon: 'automatic', relevance: 'meaningful', significance: 'normal' },
-    { id: 'event:bjj', calendarId: 'calendar:google-alex', title: 'BJJ tournament', allDay: false, startsAt: '2026-09-05T09:00:00-04:00', endsAt: '2026-09-05T17:00:00-04:00', location: 'Toronto', participantIds: ['participant:alex'], eventHorizon: 'automatic', relevance: 'meaningful', significance: 'high' },
-    { id: 'event:family-birthday', calendarId: 'calendar:icloud-family', title: 'Family birthday', allDay: true, startsAt: '2026-09-06T00:00:00-04:00', endsAt: '2026-09-07T00:00:00-04:00', recurrence: { frequency: 'yearly' }, eventHorizon: 'automatic', relevance: 'meaningful', significance: 'normal' },
-    { id: 'event:dentist', calendarId: 'calendar:icloud-family', title: 'Dentist appointment', allDay: false, startsAt: '2026-09-08T14:00:00-04:00', endsAt: '2026-09-08T15:00:00-04:00', participantIds: ['participant:maya'], eventHorizon: 'automatic', relevance: 'ordinary', significance: 'normal' },
-    { id: 'event:weekend-trip', calendarId: 'calendar:aevumory', title: 'Weekend trip', allDay: true, startsAt: '2026-09-11T00:00:00-04:00', endsAt: '2026-09-14T00:00:00-04:00', eventHorizon: 'automatic', relevance: 'meaningful', significance: 'high' },
-  ],
-};
-
-export class FixtureCalendarQuery implements CalendarQuery {
+/**
+ * Real, backend-backed Calendar query (FUNCTIONAL_FOUNDATION_PLAN.md Phase
+ * 5) — replaces FixtureCalendarQuery. Only the local Aevumory calendar
+ * source is wired end-to-end; external provider adapters remain
+ * unimplemented, so any non-local source is rendered read-only rather than
+ * assumed to exist. There is no fixture/demo event data; a fresh household
+ * legitimately has none yet.
+ */
+export class ApiCalendarQuery implements CalendarQuery {
   async getState(): Promise<CalendarState> {
-    return structuredClone(fixtureState);
+    const [sources, events] = await Promise.all([
+      calendarSourcesApi.list().catch(() => []),
+      calendarEventsApi.list().catch(() => []),
+    ]);
+
+    return {
+      sources: sources.map(toCalendarSource),
+      events: events.filter((event) => event.status === 'active').map(toCalendarEvent),
+    };
   }
+}
+
+function toCalendarSource(source: TemporalSourceDto): CalendarSource {
+  if (source.kind === 'local') {
+    return { id: source.source_id, provider: 'aevumory', name: source.name, writable: true };
+  }
+
+  // External provider adapters are not implemented in this phase (Phase 5
+  // scope boundary) — rendered read-only defensively rather than assumed away.
+  return { id: source.source_id, provider: 'google', name: source.name, writable: false };
+}
+
+function toCalendarEvent(event: HouseholdEventDto): CalendarEvent {
+  const allDay = event.schedule.kind === 'all_day';
+
+  // event.schedule carries naive local wall-clock strings (no UTC offset) by
+  // design (see temporal-domain.types.ts); passed through as-is so the
+  // browser's own Date parsing treats them as local time, matching this
+  // screen's existing client-side recurrence expansion. This assumes the
+  // viewing device's timezone matches the household's — a reasonable
+  // simplification for a self-hosted single-household app, not a general
+  // multi-timezone guarantee.
+  const startsAt = event.schedule.kind === 'timed'
+    ? event.schedule.local_start
+    : `${event.schedule.local_start_date}T00:00:00`;
+  const endsAt = event.schedule.kind === 'timed'
+    ? event.schedule.local_end
+    : `${event.schedule.local_end_date}T00:00:00`;
+
+  return {
+    id: event.event_id,
+    calendarId: event.source_id,
+    title: event.title,
+    startsAt,
+    endsAt,
+    allDay,
+    location: event.location,
+    notes: event.description,
+    recurrence: toCalendarRecurrence(event.recurrence),
+    // Task/Calendar cross-linking is out of scope for Phase 5.
+    taskLinked: false,
+    eventHorizon: 'automatic',
+    relevance: event.relevance,
+    significance: event.significance,
+  };
+}
+
+function toCalendarRecurrence(recurrence?: RecurrenceRuleDto): CalendarRecurrence | undefined {
+  if (!recurrence) return undefined;
+
+  // calendar-view.ts's existing client-side expand() only understands
+  // daily/weekly/yearly recurrence; monthly recurrence is still resolved
+  // correctly for Event Horizon via /api/calendar/occurrences, but isn't
+  // representable in this screen's untouched expansion logic.
+  if (recurrence.frequency === 'monthly') return undefined;
+
+  return {
+    frequency: recurrence.frequency,
+    interval: recurrence.interval,
+    // Backend weekdays are ISO (1=Monday..7=Sunday); the frontend's existing
+    // expand() uses JS Date#getDay() (0=Sunday..6=Saturday).
+    daysOfWeek: recurrence.by_weekday?.map((day) => day % 7),
+  };
 }

@@ -284,3 +284,110 @@ export const participantLedgerApi = {
   get: (participantId: string): Promise<ParticipantLedgerDto> =>
     apiRequest(`/api/participants/${encodeURIComponent(participantId)}/ledger`),
 };
+
+// ============================================================================
+// Calendar (Phase 5)
+// ============================================================================
+
+export type TemporalSourceKindDto = 'local' | 'external';
+export type TemporalSyncStatusDto = 'never_synced' | 'syncing' | 'synced' | 'degraded' | 'error';
+
+export interface TemporalSourceDto {
+  source_id: string;
+  kind: TemporalSourceKindDto;
+  name: string;
+  enabled: boolean;
+  sync_status: TemporalSyncStatusDto;
+  last_synced_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type EventScheduleDto =
+  | { kind: 'timed'; local_start: string; local_end: string }
+  | { kind: 'all_day'; local_start_date: string; local_end_date: string };
+
+export interface RecurrenceRuleDto {
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  interval: number;
+  by_weekday?: number[];
+  by_month_day?: number;
+  until?: string;
+}
+
+export interface HouseholdEventDto {
+  event_id: string;
+  source_id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  status: 'active' | 'cancelled';
+  timezone: string;
+  relevance: 'ordinary' | 'meaningful';
+  significance: 'low' | 'normal' | 'high';
+  schedule: EventScheduleDto;
+  recurrence?: RecurrenceRuleDto;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCalendarEventDtoInput {
+  title: string;
+  description?: string;
+  location?: string;
+  source_id: string;
+  timezone: string;
+  schedule: EventScheduleDto;
+  recurrence?: RecurrenceRuleDto;
+  relevance?: 'ordinary' | 'meaningful';
+  significance?: 'low' | 'normal' | 'high';
+}
+
+export interface CalendarOccurrenceDto {
+  occurrence_id: string;
+  event_id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  starts_at?: string;
+  ends_at?: string;
+  local_start_date: string;
+  local_end_date: string;
+  timezone: string;
+  relevance: 'ordinary' | 'meaningful';
+  significance: 'low' | 'normal' | 'high';
+  status: 'scheduled' | 'cancelled';
+}
+
+export const calendarSourcesApi = {
+  list: (): Promise<TemporalSourceDto[]> => apiRequest('/api/calendar/sources'),
+
+  create: (input: { name: string }): Promise<TemporalSourceDto> =>
+    apiRequest('/api/calendar/sources', { method: 'POST', body: input }),
+
+  update: (sourceId: string, input: { name?: string; enabled?: boolean }): Promise<TemporalSourceDto> =>
+    apiRequest(`/api/calendar/sources/${encodeURIComponent(sourceId)}`, { method: 'PATCH', body: input }),
+
+  remove: (sourceId: string): Promise<void> =>
+    apiRequest(`/api/calendar/sources/${encodeURIComponent(sourceId)}`, { method: 'DELETE' }),
+};
+
+export const calendarEventsApi = {
+  list: (): Promise<HouseholdEventDto[]> => apiRequest('/api/calendar/events'),
+
+  create: (input: CreateCalendarEventDtoInput): Promise<HouseholdEventDto> =>
+    apiRequest('/api/calendar/events', { method: 'POST', body: input }),
+
+  update: (eventId: string, input: Partial<CreateCalendarEventDtoInput>): Promise<HouseholdEventDto> =>
+    apiRequest(`/api/calendar/events/${encodeURIComponent(eventId)}`, { method: 'PATCH', body: input }),
+
+  remove: (eventId: string): Promise<void> =>
+    apiRequest(`/api/calendar/events/${encodeURIComponent(eventId)}`, { method: 'DELETE' }),
+};
+
+export const calendarOccurrencesApi = {
+  listInWindow: (window: { starts_at: string; ends_at: string }): Promise<CalendarOccurrenceDto[]> => {
+    const params = new URLSearchParams({ window: `${window.starts_at},${window.ends_at}` });
+    return apiRequest(`/api/calendar/occurrences?${params.toString()}`);
+  },
+};

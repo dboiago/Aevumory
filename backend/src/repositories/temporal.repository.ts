@@ -21,7 +21,9 @@ export interface OccurrenceQuery {
 
 export interface TemporalRepository {
   getSource(source_id: string): Promise<TemporalSource | null>;
+  listSources(): Promise<TemporalSource[]>;
   saveSource(source: TemporalSource): Promise<void>;
+  deleteSource(source_id: string): Promise<void>;
 
   getEvent(event_id: string): Promise<HouseholdEvent | null>;
   listEvents(query?: TemporalEventQuery): Promise<HouseholdEvent[]>;

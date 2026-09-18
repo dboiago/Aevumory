@@ -3,8 +3,8 @@ import { renderAmbientDisplay } from './ambient-display';
 import { horizonPosition, horizonVisual, type HorizonEvent } from './horizon';
 import { ApiTaskBoardQuery, type HouseholdParticipant } from './tasks';
 import { FixtureTaskBoardStore } from './task-board';
-import { FixtureTemporalQuery, type TemporalOccurrence } from './temporal';
-import { FixtureCalendarQuery } from './calendar';
+import { ApiTemporalQuery, type TemporalOccurrence } from './temporal';
+import { ApiCalendarQuery } from './calendar';
 import { renderCalendar } from './calendar-view';
 import { renderHouseholdSetup } from './household-setup';
 import { ApiRewardsQuery } from './rewards';
@@ -33,9 +33,9 @@ let context: AmbientContext = {
 };
 
 const now = '2026-09-02T18:00:00-04:00';
-const temporalQuery = new FixtureTemporalQuery();
+const temporalQuery = new ApiTemporalQuery();
 const taskBoardQuery = new ApiTaskBoardQuery();
-const calendarQuery = new FixtureCalendarQuery();
+const calendarQuery = new ApiCalendarQuery();
 const rewardsQuery = new ApiRewardsQuery();
 
 void render(root);

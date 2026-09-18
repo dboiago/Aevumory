@@ -1,4 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
+import { randomUUID } from 'node:crypto';
 import type {
   EventOccurrence,
   HouseholdEvent,
@@ -18,7 +19,16 @@ export interface OccurrenceWindow {
 
 export interface TemporalService {
   getSource(source_id: string): Promise<TemporalSource | null>;
+  listSources(): Promise<TemporalSource[]>;
   saveSource(source: TemporalSource): Promise<void>;
+  deleteSource(source_id: string): Promise<void>;
+
+  /**
+   * Creates the single local Aevumory calendar source if none exists yet
+   * (structural bootstrap, mirroring HouseholdService.ensureBootstrapped —
+   * never seed/demo event data); otherwise returns the existing one.
+   */
+  ensureLocalSourceBootstrapped(): Promise<TemporalSource>;
 
   getEvent(event_id: string): Promise<HouseholdEvent | null>;
   listEvents(query?: TemporalEventQuery): Promise<HouseholdEvent[]>;
@@ -39,8 +49,36 @@ export class DefaultTemporalService implements TemporalService {
     return this.repository.getSource(source_id);
   }
 
+  listSources() {
+    return this.repository.listSources();
+  }
+
   saveSource(source: TemporalSource) {
     return this.repository.saveSource(source);
+  }
+
+  deleteSource(source_id: string) {
+    return this.repository.deleteSource(source_id);
+  }
+
+  async ensureLocalSourceBootstrapped(): Promise<TemporalSource> {
+    const sources = await this.repository.listSources();
+    const existing = sources.find((source) => source.kind === 'local');
+    if (existing) return existing;
+
+    const now = new Date().toISOString();
+    const source: TemporalSource = {
+      source_id: randomUUID(),
+      kind: 'local',
+      name: 'Aevumory',
+      enabled: true,
+      sync_status: 'never_synced',
+      created_at: now,
+      updated_at: now,
+    };
+
+    await this.repository.saveSource(source);
+    return source;
   }
 
   getEvent(event_id: string) {

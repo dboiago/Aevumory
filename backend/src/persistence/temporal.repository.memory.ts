@@ -18,8 +18,25 @@ export class InMemoryTemporalRepository implements TemporalRepository {
     return Promise.resolve(this.sources.get(source_id) ?? null);
   }
 
+  listSources(): Promise<TemporalSource[]> {
+    return Promise.resolve([...this.sources.values()]);
+  }
+
   saveSource(source: TemporalSource): Promise<void> {
     this.sources.set(source.source_id, source);
+    return Promise.resolve();
+  }
+
+  deleteSource(source_id: string): Promise<void> {
+    this.sources.delete(source_id);
+    for (const event of [...this.events.values()]) {
+      if (event.source_id === source_id) {
+        this.events.delete(event.event_id);
+        for (const occurrence of [...this.occurrences.values()]) {
+          if (occurrence.event_id === event.event_id) this.occurrences.delete(occurrence.occurrence_id);
+        }
+      }
+    }
     return Promise.resolve();
   }
 

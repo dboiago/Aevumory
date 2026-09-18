@@ -106,4 +106,50 @@ describe('InMemoryTemporalRepository', () => {
     expect(await repository.getEvent('event-1')).toBeNull();
     expect(await repository.getOccurrence('occurrence-1')).toBeNull();
   });
+
+  it('deleting a source cascades to its events and occurrences', async () => {
+    const repository = new InMemoryTemporalRepository();
+
+    await repository.saveSource({
+      source_id: 'local',
+      kind: 'local',
+      name: 'Aevumory',
+      enabled: true,
+      sync_status: 'never_synced',
+      created_at: '2026-09-02T00:00:00Z',
+      updated_at: '2026-09-02T00:00:00Z',
+    });
+
+    await repository.saveEvent({
+      event_id: 'event-1',
+      source_id: 'local',
+      title: 'Test',
+      status: 'active',
+      timezone: 'America/Toronto',
+      relevance: 'ordinary',
+      significance: 'low',
+      schedule: { kind: 'all_day', local_start_date: '2026-09-03', local_end_date: '2026-09-04' },
+      created_at: '2026-09-02T00:00:00Z',
+      updated_at: '2026-09-02T00:00:00Z',
+    });
+
+    await repository.saveOccurrence({
+      occurrence_id: 'occurrence-1',
+      event_id: 'event-1',
+      local_start_date: '2026-09-03',
+      local_end_date: '2026-09-04',
+      timezone: 'America/Toronto',
+      status: 'scheduled',
+      created_at: '2026-09-02T00:00:00Z',
+      updated_at: '2026-09-02T00:00:00Z',
+    });
+
+    expect(await repository.listSources()).toHaveLength(1);
+
+    await repository.deleteSource('local');
+
+    expect(await repository.listSources()).toHaveLength(0);
+    expect(await repository.getEvent('event-1')).toBeNull();
+    expect(await repository.getOccurrence('occurrence-1')).toBeNull();
+  });
 });

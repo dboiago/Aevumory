@@ -163,9 +163,11 @@ describe('Household/Participant/Admin API', () => {
     expect(create.statusCode).toBe(201);
   });
 
-  it('keeps working for existing Phase 0 temporal endpoints', async () => {
-    const response = await app.inject({ method: 'GET', url: '/api/temporal/sources' });
+  it('bootstraps a local calendar source, exposed via /api/calendar/sources (Phase 5)', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/calendar/sources' });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual([]);
+    const sources = response.json();
+    expect(sources).toHaveLength(1);
+    expect(sources[0].kind).toBe('local');
   });
 });

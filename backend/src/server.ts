@@ -8,6 +8,7 @@
 
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { randomUUID } from 'node:crypto';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import Database from 'better-sqlite3';
@@ -59,6 +60,9 @@ import {
 } from './services/admin-auth.service.js';
 import { createRequireAdminHook, setAdminSessionCookie } from './http/require-admin.js';
 import type { Participant } from './types/household.types.js';
+import { DefaultTemporalService } from './services/temporal.service.js';
+import type { EventSchedule } from './types/event-schedule.types.js';
+import type { HouseholdEvent, TemporalSource } from './types/temporal-domain.types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -110,9 +114,11 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
   const rewardService = new RewardService(rewardRepository, ledgerRepository, taskExecutionService);
   const adminAuthService = new AdminAuthService(householdService);
   const requireAdmin = createRequireAdminHook(adminAuthService);
+  const temporalService = new DefaultTemporalService(temporalRepository);
 
   // Structural bootstrap only — never seed/demo data. Safe to run every start.
   await householdService.ensureBootstrapped();
+  await temporalService.ensureLocalSourceBootstrapped();
 
   // ============================================================================
   // Health Check Endpoint
@@ -526,80 +532,232 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
   });
 
   // ============================================================================
-  // Temporal Endpoints (for testing/verification)
+  // Calendar Endpoints (Phase 5)
+  //
+  // The temporal domain (SqliteTemporalRepository / DefaultTemporalService /
+  // resolveEventOccurrences) already existed from Phase 0; this section is
+  // wiring only, no new recurrence logic. Only the local Aevumory calendar
+  // source is in scope — external providers stay behind the existing
+  // CalendarSourceAdapter boundary, unimplemented.
+  //
+  // Source mutations are admin-gated (structural configuration, matching the
+  // participants pattern). Event mutations and occurrence reads are ordinary
+  // household actions — adding/editing/removing a calendar entry is everyday
+  // household coordination, matching the /task-cycles assign/complete
+  // pattern, not a corrective admin authority.
   // ============================================================================
 
-  // List all temporal sources
-  fastify.get('/api/temporal/sources', async (request, reply) => {
-    const rows = db
-      .prepare(
-        `
-      SELECT
-        source_id,
-        kind,
-        name,
-        enabled,
-        sync_status,
-        last_synced_at,
-        created_at,
-        updated_at
-      FROM temporal_sources
-      ORDER BY created_at DESC
-    `,
-      )
-      .all() as any[];
-
-    return rows.map((row) => ({
-      source_id: row.source_id,
-      kind: row.kind,
-      name: row.name,
-      enabled: row.enabled === 1,
-      sync_status: row.sync_status,
-      last_synced_at: row.last_synced_at,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-    }));
+  fastify.get('/api/calendar/sources', async (request, reply) => {
+    return temporalService.listSources();
   });
 
-  // List all events
-  fastify.get('/api/temporal/events', async (request, reply) => {
-    const rows = db
-      .prepare(
-        `
-      SELECT
-        event_id,
-        source_id,
-        title,
-        status,
-        created_at,
-        updated_at
-      FROM household_events
-      ORDER BY created_at DESC
-    `,
-      )
-      .all() as any[];
+  fastify.post('/api/calendar/sources', { onRequest: requireAdmin }, async (request, reply) => {
+    const body = request.body as { name?: string } | undefined;
+    if (!body?.name || !body.name.trim()) {
+      reply.code(400).send({ error: 'name is required' });
+      return;
+    }
 
-    return rows;
+    const now = new Date().toISOString();
+    const source: TemporalSource = {
+      source_id: randomUUID(),
+      kind: 'local',
+      name: body.name.trim(),
+      enabled: true,
+      sync_status: 'never_synced',
+      created_at: now,
+      updated_at: now,
+    };
+
+    await temporalService.saveSource(source);
+    reply.code(201);
+    return source;
   });
 
-  // List all occurrences
-  fastify.get('/api/temporal/occurrences', async (request, reply) => {
-    const rows = db
-      .prepare(
-        `
-      SELECT
-        occurrence_id,
-        event_id,
-        status,
-        created_at,
-        updated_at
-      FROM event_occurrences
-      ORDER BY created_at DESC
-    `,
-      )
-      .all() as any[];
+  fastify.patch('/api/calendar/sources/:id', { onRequest: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { name?: string; enabled?: boolean } | undefined;
 
-    return rows;
+    const existing = await temporalService.getSource(id);
+    if (!existing) {
+      reply.code(404).send({ error: `Calendar source not found: ${id}` });
+      return;
+    }
+
+    const updated: TemporalSource = {
+      ...existing,
+      name: body?.name?.trim() || existing.name,
+      enabled: body?.enabled ?? existing.enabled,
+      updated_at: new Date().toISOString(),
+    };
+
+    await temporalService.saveSource(updated);
+    return updated;
+  });
+
+  fastify.delete('/api/calendar/sources/:id', { onRequest: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await temporalService.deleteSource(id);
+    reply.code(204).send();
+  });
+
+  fastify.get('/api/calendar/events', async (request, reply) => {
+    const { source_id, status } = request.query as { source_id?: string; status?: HouseholdEvent['status'] };
+    return temporalService.listEvents({ source_id, status });
+  });
+
+  fastify.post('/api/calendar/events', async (request, reply) => {
+    const body = request.body as Partial<CreateCalendarEventInput> | undefined;
+    if (!body?.title || !body.title.trim()) {
+      reply.code(400).send({ error: 'title is required' });
+      return;
+    }
+    if (!body.source_id) {
+      reply.code(400).send({ error: 'source_id is required' });
+      return;
+    }
+    if (!body.timezone) {
+      reply.code(400).send({ error: 'timezone is required' });
+      return;
+    }
+    if (!body.schedule) {
+      reply.code(400).send({ error: 'schedule is required' });
+      return;
+    }
+
+    const source = await temporalService.getSource(body.source_id);
+    if (!source) {
+      reply.code(400).send({ error: `source_id does not reference an existing calendar source: ${body.source_id}` });
+      return;
+    }
+
+    try {
+      validateEventSchedule(body.schedule);
+    } catch (error) {
+      reply.code(400).send({ error: (error as Error).message });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const event: HouseholdEvent = {
+      event_id: randomUUID(),
+      source_id: body.source_id,
+      title: body.title.trim(),
+      description: body.description,
+      location: body.location,
+      status: 'active',
+      timezone: body.timezone,
+      relevance: body.relevance ?? 'ordinary',
+      significance: body.significance ?? 'normal',
+      schedule: body.schedule,
+      recurrence: body.recurrence,
+      created_at: now,
+      updated_at: now,
+    };
+
+    await temporalService.saveEvent(event);
+    reply.code(201);
+    return event;
+  });
+
+  fastify.patch('/api/calendar/events/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as
+      | (Partial<CreateCalendarEventInput> & { status?: HouseholdEvent['status'] })
+      | undefined;
+
+    const existing = await temporalService.getEvent(id);
+    if (!existing) {
+      reply.code(404).send({ error: `Calendar event not found: ${id}` });
+      return;
+    }
+
+    if (body?.source_id && body.source_id !== existing.source_id) {
+      const source = await temporalService.getSource(body.source_id);
+      if (!source) {
+        reply.code(400).send({ error: `source_id does not reference an existing calendar source: ${body.source_id}` });
+        return;
+      }
+    }
+
+    if (body?.schedule) {
+      try {
+        validateEventSchedule(body.schedule);
+      } catch (error) {
+        reply.code(400).send({ error: (error as Error).message });
+        return;
+      }
+    }
+
+    const updated: HouseholdEvent = {
+      ...existing,
+      ...body,
+      title: body?.title?.trim() || existing.title,
+      updated_at: new Date().toISOString(),
+    };
+
+    await temporalService.saveEvent(updated);
+    return updated;
+  });
+
+  fastify.delete('/api/calendar/events/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await temporalService.deleteEvent(id);
+    reply.code(204).send();
+  });
+
+  // window format: "<starts_at>,<ends_at>" (ISO instant strings), matching
+  // /api/task-cycles. Represents the already-resolved temporal domain
+  // (DefaultTemporalService.listOccurrencesInWindow / resolveEventOccurrences)
+  // joined with the event fields needed for presentation, not raw
+  // persistence rows — no second recurrence resolver lives here.
+  fastify.get('/api/calendar/occurrences', async (request, reply) => {
+    const { window } = request.query as { window?: string };
+    if (!window) {
+      reply.code(400).send({ error: 'window query parameter is required, formatted as "<starts_at>,<ends_at>"' });
+      return;
+    }
+
+    const [starts_at, ends_at] = window.split(',');
+    if (!starts_at || !ends_at) {
+      reply.code(400).send({ error: 'window query parameter must be formatted as "<starts_at>,<ends_at>"' });
+      return;
+    }
+
+    try {
+      const occurrences = await temporalService.listOccurrencesInWindow({ starts_at, ends_at });
+      const events = new Map<string, HouseholdEvent>();
+      for (const occurrence of occurrences) {
+        if (!events.has(occurrence.event_id)) {
+          const event = await temporalService.getEvent(occurrence.event_id);
+          if (event) events.set(occurrence.event_id, event);
+        }
+      }
+
+      return occurrences
+        .map((occurrence) => {
+          const event = events.get(occurrence.event_id);
+          if (!event) return null;
+          return {
+            occurrence_id: occurrence.occurrence_id,
+            event_id: occurrence.event_id,
+            title: event.title,
+            description: event.description,
+            location: event.location,
+            starts_at: occurrence.starts_at,
+            ends_at: occurrence.ends_at,
+            local_start_date: occurrence.local_start_date,
+            local_end_date: occurrence.local_end_date,
+            timezone: occurrence.timezone,
+            relevance: event.relevance,
+            significance: event.significance,
+            status: occurrence.status,
+          };
+        })
+        .filter((occurrence): occurrence is NonNullable<typeof occurrence> => occurrence !== null);
+    } catch (error) {
+      reply.code(400).send({ error: (error as Error).message });
+    }
   });
 
   // ============================================================================
@@ -639,6 +797,36 @@ function toParticipantDto(participant: Participant) {
     created_at: participant.created_at,
     updated_at: participant.updated_at,
   };
+}
+
+interface CreateCalendarEventInput {
+  title: string;
+  description?: string;
+  location?: string;
+  source_id: string;
+  timezone: string;
+  schedule: EventSchedule;
+  recurrence?: HouseholdEvent['recurrence'];
+  relevance?: HouseholdEvent['relevance'];
+  significance?: HouseholdEvent['significance'];
+}
+
+function validateEventSchedule(schedule: EventSchedule): void {
+  if (schedule.kind === 'timed') {
+    if (!schedule.local_start || !schedule.local_end) {
+      throw new Error('timed schedules require local_start and local_end');
+    }
+    return;
+  }
+
+  if (schedule.kind === 'all_day') {
+    if (!schedule.local_start_date || !schedule.local_end_date) {
+      throw new Error('all_day schedules require local_start_date and local_end_date');
+    }
+    return;
+  }
+
+  throw new Error('schedule.kind must be "timed" or "all_day"');
 }
 
 /**
