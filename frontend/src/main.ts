@@ -1,6 +1,7 @@
 import './styles.css';
 import { renderAmbientDisplay } from './ambient-display';
-import { horizonPosition, horizonVisual, type HorizonEvent } from './horizon';
+import { HORIZON_HOURS, DEPARTURE_GRACE_MINUTES, horizonPosition, horizonVisual, selectHorizonCandidates, type HorizonEvent } from './horizon';
+import { isHorizonEligible } from './horizon-eligibility';
 import { ApiTaskBoardQuery, type HouseholdParticipant } from './tasks';
 import { FixtureTaskBoardStore } from './task-board';
 import { ApiTemporalQuery, type TemporalOccurrence } from './temporal';
@@ -90,15 +91,21 @@ async function render(target: HTMLDivElement): Promise<void> {
     }
   }
 
+  // Event Horizon uses the real current time (Phase 6), unlike the fixture
+  // `now` used for the ambient signature/task-board formatting elsewhere on
+  // this page — real persisted occurrences need a real temporal reference.
+  const horizonNow = new Date().toISOString();
+  const windowStart = new Date(Date.now() - DEPARTURE_GRACE_MINUTES * 60_000).toISOString();
+  const windowEnd = new Date(Date.now() + HORIZON_HOURS * 3_600_000).toISOString();
   const occurrences = await temporalQuery.listOccurrencesInWindow({
-    starts_at: now,
-    ends_at: '2026-09-09T18:00:00-04:00',
+    starts_at: windowStart,
+    ends_at: windowEnd,
   });
 
   target.innerHTML = `
     <main class="horizon" aria-label="Aevumory Event Horizon">
       <div class="horizon-field" aria-label="Upcoming household events">
-        ${renderOccurrences(occurrences)}
+        ${renderOccurrences(occurrences, horizonNow)}
       </div>
       ${renderAmbientContext(context)}
     </main>
@@ -480,8 +487,13 @@ function renderAmbientContext(value: AmbientContext): string {
   return `<aside class="ambient-context" aria-label="Current household context"><span class="ambient-message">${escapeHtml(value.date)} · ${escapeHtml(value.time)} · ${escapeHtml(value.weather)}</span></aside>`;
 }
 
-function renderOccurrences(occurrences: TemporalOccurrence[]): string {
-  return occurrences.map(toHorizonEvent).map(renderOccurrence).join('');
+function renderOccurrences(occurrences: TemporalOccurrence[], horizonNow: string): string {
+  // Eligibility (relevance/significance) decides the input set; horizon.ts's
+  // own candidate selection then applies the temporal-window/departure-grace
+  // admission gate and composition occupancy cap (EVENT_HORIZON.md §10/§16).
+  const eligibleEvents = occurrences.filter(isHorizonEligible).map(toHorizonEvent);
+  const candidates = selectHorizonCandidates(eligibleEvents, horizonNow);
+  return candidates.map((event) => renderOccurrence(event, horizonNow)).join('');
 }
 
 function toHorizonEvent(occurrence: TemporalOccurrence): HorizonEvent {
@@ -493,9 +505,9 @@ function toHorizonEvent(occurrence: TemporalOccurrence): HorizonEvent {
   };
 }
 
-function renderOccurrence(event: HorizonEvent): string {
-  const position = horizonPosition(event, now);
-  const visual = horizonVisual(event, now);
+function renderOccurrence(event: HorizonEvent, horizonNow: string): string {
+  const position = horizonPosition(event, horizonNow);
+  const visual = horizonVisual(event, horizonNow);
   const style = [
     `left:${(position.x * 100).toFixed(3)}%`, `top:${(position.y * 100).toFixed(3)}%`,
     `--opacity:${visual.opacity.toFixed(3)}`, `--font-size:${Math.max(10, Math.min(25, 10 + visual.size * 10)).toFixed(2)}px`,
