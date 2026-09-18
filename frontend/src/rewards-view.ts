@@ -1,8 +1,10 @@
 import './rewards.css';
 import {
   adminApi,
+  attachPolling,
   participantLedgerApi,
   rewardsApi,
+  startPolling,
   type ParticipantDto,
   type RewardCategoryDto,
   type RewardDto,
@@ -46,6 +48,23 @@ export async function renderRewards(target: HTMLDivElement, query: RewardsQuery)
     wire(target, state, rerender);
   };
 
+  await refreshBalance(state);
+  rerender();
+
+  attachPolling(target, startPolling(() => pollRefresh(query, state, rerender)));
+}
+
+// Skips merging fresh data while the admin is mid-edit/mid-redemption, so a
+// periodic refetch never clobbers in-progress form input (Phase 7 polling).
+async function pollRefresh(query: RewardsQuery, state: RewardsPageState, rerender: () => void): Promise<void> {
+  if (state.showCreateForm || state.editingRewardId || state.pendingRewardId) return;
+
+  const fresh = await query.getState();
+  state.participants = fresh.participants;
+  state.rewards = fresh.rewards;
+  if (state.selectedParticipantId && !fresh.participants.some((participant) => participant.participant_id === state.selectedParticipantId)) {
+    state.selectedParticipantId = fresh.participants[0]?.participant_id ?? null;
+  }
   await refreshBalance(state);
   rerender();
 }

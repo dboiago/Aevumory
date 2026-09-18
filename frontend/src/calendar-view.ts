@@ -1,4 +1,5 @@
 import './calendar.css';
+import { attachPolling, startPolling } from './api-client';
 import type { CalendarEvent, CalendarQuery, CalendarRecurrence, CalendarSource } from './calendar';
 import { generateCalendarColourOptions, renderCalendarColour, type CalendarColourSelection } from './calendar-colour';
 
@@ -25,6 +26,18 @@ export async function renderCalendar(target: HTMLDivElement, query: CalendarQuer
   render();
   const observer = new MutationObserver(() => { if (target.isConnected) applySourceColours(target, state.sources); else observer.disconnect(); });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  attachPolling(target, startPolling(async () => {
+    // Skip mid-edit — a wholesale re-render would close an open day/colour dialog.
+    if (target.querySelector('.calendar-day-dialog, .calendar-colour-picker')) return;
+
+    const fresh = await query.getState();
+    state.sources.splice(0, state.sources.length, ...fresh.sources);
+    state.events.splice(0, state.events.length, ...fresh.events);
+    for (const source of fresh.sources) if (!sources.has(source.id)) sources.add(source.id);
+    for (const id of [...sources]) if (!fresh.sources.some((source) => source.id === id)) sources.delete(id);
+    render();
+  }));
 }
 
 function renderPage(month: Date, sources: CalendarSource[], visible: Set<string>, events: Occurrence[], showTasks: boolean): string {

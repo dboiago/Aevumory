@@ -415,6 +415,11 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
     return progressionService.getParticipantProgression(id);
   });
 
+  fastify.get('/api/participants/:id/redemptions', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    return rewardService.listRedemptionsForParticipant(id);
+  });
+
   // ============================================================================
   // Rewards Catalogue & Redemption (Phase 4)
   //

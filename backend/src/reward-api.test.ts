@@ -180,6 +180,26 @@ describe('Rewards API (Phase 4)', () => {
     expect(body.balance).toBe(earned - 5);
   });
 
+  it('lists redemption history for a participant (Phase 7)', async () => {
+    const cookie = await authorize();
+    const userId = 'participant-7';
+    await earnCredits(cookie, userId);
+    const reward = await createReward(cookie, { base_cost: 5 });
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/rewards/${reward.id}/redeem`,
+      payload: { user_id: userId, idempotency_key: randomUUID() },
+    });
+
+    const response = await app.inject({ method: 'GET', url: `/api/participants/${userId}/redemptions` });
+    expect(response.statusCode).toBe(200);
+    const redemptions = response.json();
+    expect(redemptions).toHaveLength(1);
+    expect(redemptions[0].reward_id).toBe(reward.id);
+    expect(redemptions[0].user_id).toBe(userId);
+  });
+
   it('creates the correct Credit debit as a RewardTransaction, reflected in the existing Phase 3 ledger', async () => {
     const cookie = await authorize();
     const userId = 'participant-2';

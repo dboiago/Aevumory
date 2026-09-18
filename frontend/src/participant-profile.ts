@@ -1,37 +1,140 @@
 import './participant-profile.css';
 import type { HouseholdParticipant } from './tasks';
+import {
+  attachPolling,
+  participantLedgerApi,
+  participantProgressionApi,
+  participantRedemptionsApi,
+  rewardsApi,
+  startPolling,
+  type DisciplineProgressDto,
+  type RewardDto,
+  type RewardRedemptionDto,
+  type RewardTransactionDto,
+} from './api-client';
 
-type DomainFixture = {
+type TaskDomain = 'kinetic' | 'erudite' | 'form' | 'keeping';
+
+const DOMAIN_ORDER: TaskDomain[] = ['kinetic', 'erudite', 'form', 'keeping'];
+const DOMAIN_LABELS: Record<TaskDomain, string> = {
+  kinetic: 'Kinetic',
+  erudite: 'Erudite',
+  form: 'Form',
+  keeping: 'Keeping',
+};
+
+// Mirrors DISCIPLINE_DOMAIN_MAP in backend/src/types/task-domain.types.ts.
+const DISCIPLINE_DOMAIN_MAP: Record<string, TaskDomain> = {
+  motion: 'kinetic',
+  force: 'kinetic',
+  precision: 'kinetic',
+  inquiry: 'erudite',
+  reason: 'erudite',
+  synthesis: 'erudite',
+  making: 'form',
+  composition: 'form',
+  craft: 'form',
+  care: 'keeping',
+  order: 'keeping',
+  renewal: 'keeping',
+};
+
+type DomainView = {
   name: string;
   rank: number;
   disciplines: { name: string; rank: number }[];
 };
 
-const domainFixtures: Record<string, DomainFixture[]> = {
-  'participant:alex': [
-    { name: 'Kinetic', rank: 3, disciplines: [{ name: 'Force', rank: 2 }, { name: 'Motion', rank: 4 }, { name: 'Precision', rank: 2 }] },
-    { name: 'Erudite', rank: 2, disciplines: [{ name: 'Inquiry', rank: 3 }, { name: 'Reason', rank: 2 }, { name: 'Synthesis', rank: 1 }] },
-    { name: 'Form', rank: 1, disciplines: [{ name: 'Making', rank: 2 }, { name: 'Composition', rank: 1 }, { name: 'Craft', rank: 1 }] },
-    { name: 'Keeping', rank: 4, disciplines: [{ name: 'Care', rank: 4 }, { name: 'Order', rank: 5 }, { name: 'Renewal', rank: 3 }] },
-  ],
+type CreditActivityItem = { label: string; amountLabel: string };
+type RedemptionHistoryItem = { title: string; costLabel: string };
+
+type ProfileData = {
+  domains: DomainView[];
+  balance: number | null;
+  creditActivity: CreditActivityItem[];
+  redemptionHistory: RedemptionHistoryItem[];
 };
 
-const fallbackDomains: DomainFixture[] = [
-  { name: 'Kinetic', rank: 1, disciplines: [{ name: 'Force', rank: 1 }, { name: 'Motion', rank: 1 }, { name: 'Precision', rank: 1 }] },
-  { name: 'Erudite', rank: 1, disciplines: [{ name: 'Inquiry', rank: 1 }, { name: 'Reason', rank: 1 }, { name: 'Synthesis', rank: 1 }] },
-  { name: 'Form', rank: 1, disciplines: [{ name: 'Making', rank: 1 }, { name: 'Composition', rank: 1 }, { name: 'Craft', rank: 1 }] },
-  { name: 'Keeping', rank: 1, disciplines: [{ name: 'Care', rank: 1 }, { name: 'Order', rank: 1 }, { name: 'Renewal', rank: 1 }] },
-];
-
-const profileFixtures: Record<string, { perks: string[] }> = {
-  'participant:alex': { perks: ['Early riser', 'Kitchen regular', 'Reliable hands'] },
-};
+const RECENT_ITEM_LIMIT = 4;
 
 export async function renderParticipantProfile(target: HTMLDivElement, participant: HouseholdParticipant): Promise<void> {
-  const fixture = profileFixtures[participant.id] ?? { perks: [] };
-  const domains = domainFixtures[participant.id] ?? fallbackDomains;
+  const draw = async (): Promise<void> => {
+    const data = await loadProfileData(participant.id);
+    target.innerHTML = renderMarkup(participant, data);
+    wire(target);
+  };
 
-  target.innerHTML = `
+  await draw();
+  attachPolling(target, startPolling(draw));
+}
+
+async function loadProfileData(participantId: string): Promise<ProfileData> {
+  const [progression, ledger, redemptions, rewards] = await Promise.all([
+    participantProgressionApi.get(participantId).catch(() => [] as DisciplineProgressDto[]),
+    participantLedgerApi.get(participantId).catch(() => null),
+    participantRedemptionsApi.list(participantId).catch(() => [] as RewardRedemptionDto[]),
+    rewardsApi.list().catch(() => [] as RewardDto[]),
+  ]);
+
+  const rewardsById = new Map(rewards.map((reward) => [reward.id, reward]));
+
+  return {
+    domains: toDomainViews(progression),
+    balance: ledger?.balance ?? null,
+    creditActivity: buildCreditActivity(ledger?.transactions ?? []),
+    redemptionHistory: buildRedemptionHistory(redemptions, rewardsById),
+  };
+}
+
+function toDomainViews(progression: DisciplineProgressDto[]): DomainView[] {
+  const byDomain = new Map<TaskDomain, DisciplineProgressDto[]>();
+  for (const entry of progression) {
+    const domain = DISCIPLINE_DOMAIN_MAP[entry.discipline];
+    if (!domain) continue;
+    const list = byDomain.get(domain) ?? [];
+    list.push(entry);
+    byDomain.set(domain, list);
+  }
+
+  return DOMAIN_ORDER.map((domain) => {
+    const disciplines = byDomain.get(domain) ?? [];
+    return {
+      name: DOMAIN_LABELS[domain],
+      // Domain rank is not a documented concept (PARTICIPANT_PROFILE_SPEC.md
+      // only defines per-Discipline levels) — judgment call: the highest
+      // level among the Domain's constituent Disciplines.
+      rank: disciplines.reduce((max, item) => Math.max(max, item.current_level), 1),
+      disciplines: disciplines.map((item) => ({ name: capitalize(item.discipline), rank: item.current_level })),
+    };
+  });
+}
+
+function buildCreditActivity(transactions: RewardTransactionDto[]): CreditActivityItem[] {
+  return [...transactions]
+    .filter((transaction) => transaction.reward_event_type !== 'reward_redemption')
+    .sort((a, b) => b.processed_at.localeCompare(a.processed_at))
+    .slice(0, RECENT_ITEM_LIMIT)
+    .map((transaction) => {
+      const label = transaction.yield.primary_discipline ? capitalize(transaction.yield.primary_discipline) : 'Task';
+      return { label, amountLabel: `${formatSigned(transaction.yield.credits_earned)} credits` };
+    });
+}
+
+function buildRedemptionHistory(
+  redemptions: RewardRedemptionDto[],
+  rewardsById: Map<string, RewardDto>,
+): RedemptionHistoryItem[] {
+  return [...redemptions]
+    .sort((a, b) => b.redeemed_at.localeCompare(a.redeemed_at))
+    .slice(0, RECENT_ITEM_LIMIT)
+    .map((redemption) => ({
+      title: rewardsById.get(redemption.reward_id)?.title ?? 'Reward',
+      costLabel: `${redemption.final_cost_paid} credits`,
+    }));
+}
+
+function renderMarkup(participant: HouseholdParticipant, data: ProfileData): string {
+  return `
     <main class="participant-profile" aria-label="${escapeHtml(participant.name)} profile">
       <header class="participant-profile-toolbar">
         <button type="button" class="participant-profile-back" data-profile-back>Back</button>
@@ -47,18 +150,33 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
           </div>
 
           <aside class="domain-arc-group" aria-label="Domain progression">
-            ${domains.map((domain, index) => renderDomain(domain, index)).join('')}
+            ${data.domains.map((domain, index) => renderDomain(domain, index)).join('')}
           </aside>
         </section>
 
         <section class="participant-profile-foundation" aria-label="Participant profile details">
           <section class="participant-profile-section participant-perks" aria-labelledby="participant-perks-heading">
             <h2 id="participant-perks-heading">Perks</h2>
-            ${fixture.perks.length ? `<ul>${fixture.perks.map((perk) => `<li>${escapeHtml(perk)}</li>`).join('')}</ul>` : '<p>None earned yet</p>'}
+            <p>None earned yet</p>
           </section>
 
-          <section class="participant-profile-section participant-tbd" aria-label="Reserved profile space">
-            <span>TBD</span>
+          <section class="participant-profile-section participant-credits" aria-labelledby="participant-credits-heading">
+            <h2 id="participant-credits-heading">Credits</h2>
+            <p class="participant-credits-balance">${data.balance === null ? '—' : formatCredits(data.balance)} <span>credits</span></p>
+            <div class="participant-credits-groups">
+              <div class="participant-credits-group" aria-label="Recent credits">
+                <h3>Recent</h3>
+                ${data.creditActivity.length
+                  ? `<ul>${data.creditActivity.map((item) => `<li><span>${escapeHtml(item.label)}</span><span>${escapeHtml(item.amountLabel)}</span></li>`).join('')}</ul>`
+                  : '<p class="participant-credits-empty">No activity yet</p>'}
+              </div>
+              <div class="participant-credits-group" aria-label="Redemption history">
+                <h3>Redeemed</h3>
+                ${data.redemptionHistory.length
+                  ? `<ul>${data.redemptionHistory.map((item) => `<li><span>${escapeHtml(item.title)}</span><span>${escapeHtml(item.costLabel)}</span></li>`).join('')}</ul>`
+                  : '<p class="participant-credits-empty">No redemptions yet</p>'}
+              </div>
+            </div>
           </section>
 
           <section class="participant-profile-section participant-connections" aria-labelledby="participant-connections-heading">
@@ -69,7 +187,9 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
       </div>
     </main>
   `;
+}
 
+function wire(target: HTMLDivElement): void {
   target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => window.history.back());
   target.querySelector<HTMLButtonElement>('[data-profile-rewards]')?.addEventListener('click', () => {
     window.location.hash = '#rewards';
@@ -82,7 +202,7 @@ function renderParticipantInitial(participant: HouseholdParticipant): string {
   return escapeHtml(first.toUpperCase());
 }
 
-function renderDomain(domain: DomainFixture, index: number): string {
+function renderDomain(domain: DomainView, index: number): string {
   return `
     <div class="domain-node domain-node-${index + 1}">
       <div class="domain-vessel">
@@ -114,6 +234,19 @@ function toRoman(value: number): string {
   return result;
 }
 
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatCredits(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function formatSigned(value: number): string {
+  return value >= 0 ? `+${formatCredits(value)}` : formatCredits(value);
+}
+
 function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
+

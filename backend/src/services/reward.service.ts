@@ -96,6 +96,11 @@ export class RewardService {
     return this.rewardRepository.listRewards();
   }
 
+  /** Redemption history for the Participant Profile (FUNCTIONAL_FOUNDATION_PLAN.md Phase 7). */
+  listRedemptionsForParticipant(user_id: string): Promise<RewardRedemption[]> {
+    return this.rewardRepository.listRedemptionsForParticipant(user_id);
+  }
+
   async createReward(input: CreateRewardInput): Promise<Reward> {
     validateRewardFields(input);
 

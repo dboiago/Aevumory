@@ -15,6 +15,12 @@ export class FixtureTaskBoardStore {
     return structuredClone(this.state);
   }
 
+  /** Refetches board data in place (Phase 7 polling) without discarding local-only fallback state. */
+  async refresh(): Promise<TaskBoardState> {
+    if (this.refetch) this.state = await this.refetch();
+    return this.getState();
+  }
+
   async apply(action: TaskBoardAction): Promise<TaskBoardState> {
     const task = this.state.tasks.find((item) => item.id === action.taskId);
     if (!task) throw new Error(`Task not found: ${action.taskId}`);

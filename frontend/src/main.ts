@@ -10,7 +10,8 @@ import { renderCalendar } from './calendar-view';
 import { renderHouseholdSetup } from './household-setup';
 import { ApiRewardsQuery } from './rewards';
 import { renderRewards } from './rewards-view';
-import { participantsApi } from './api-client';
+import { renderParticipantProfile } from './participant-profile';
+import { attachPolling, participantsApi, startPolling, stopPolling } from './api-client';
 
 type AmbientContext =
   | { kind: 'ordinary'; date: string; time: string; weather: string }
@@ -45,6 +46,11 @@ window.addEventListener('hashchange', () => void render(root));
 async function render(target: HTMLDivElement): Promise<void> {
   const hash = window.location.hash;
 
+  // Every route starts from a clean slate; only the routes that opt back in
+  // below (Task Board, Calendar, Rewards, Participant Profile, Event
+  // Horizon) re-attach a poller (FUNCTIONAL_FOUNDATION_PLAN.md Phase 7).
+  stopPolling(target);
+
   if (hash === '#household-setup') {
     await renderHouseholdSetup(target);
     return;
@@ -62,7 +68,13 @@ async function render(target: HTMLDivElement): Promise<void> {
 
   if (hash === '#tasks') {
     const state = await taskBoardQuery.getBoard();
-    renderTaskBoard(target, new FixtureTaskBoardStore(state, () => taskBoardQuery.getBoard()));
+    const store = new FixtureTaskBoardStore(state, () => taskBoardQuery.getBoard());
+    renderTaskBoard(target, store);
+    attachPolling(target, startPolling(async () => {
+      const scrollState = captureTaskBoardScrollState(target);
+      await store.refresh();
+      renderTaskBoard(target, store, scrollState);
+    }));
     return;
   }
 
@@ -76,7 +88,7 @@ async function render(target: HTMLDivElement): Promise<void> {
     const state = await taskBoardQuery.getBoard();
     const participant = state.participants.find((item) => item.id === decodeURIComponent(participantMatch[1]));
     if (participant) {
-      renderParticipantProfileScaffold(target, participant);
+      await renderParticipantProfile(target, participant);
       return;
     }
   }
@@ -94,6 +106,11 @@ async function render(target: HTMLDivElement): Promise<void> {
   // Event Horizon uses the real current time (Phase 6), unlike the fixture
   // `now` used for the ambient signature/task-board formatting elsewhere on
   // this page — real persisted occurrences need a real temporal reference.
+  await renderHorizon(target);
+  attachPolling(target, startPolling(() => renderHorizon(target)));
+}
+
+async function renderHorizon(target: HTMLDivElement): Promise<void> {
   const horizonNow = new Date().toISOString();
   const windowStart = new Date(Date.now() - DEPARTURE_GRACE_MINUTES * 60_000).toISOString();
   const windowEnd = new Date(Date.now() + HORIZON_HOURS * 3_600_000).toISOString();
@@ -402,24 +419,6 @@ function renderParticipantAvatar(participant: HouseholdParticipant): string {
   }
 
   return escapeHtml(participant.name.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase());
-}
-
-function renderParticipantProfileScaffold(target: HTMLDivElement, participant: HouseholdParticipant): void {
-  target.innerHTML = `
-    <main class="task-board participant-profile-scaffold" aria-label="${escapeHtml(participant.name)} profile">
-      <header class="task-board-header">
-        <button type="button" class="participant-profile-back" data-profile-back>Tasks</button>
-        <div class="participant-profile-heading">
-          <span class="task-participant-avatar participant-profile-avatar" aria-hidden="true">${renderParticipantAvatar(participant)}</span>
-          <h1>${escapeHtml(participant.name)}</h1>
-        </div>
-      </header>
-    </main>
-  `;
-
-  target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => {
-    window.location.hash = '#tasks';
-  });
 }
 
 function renderTaskCard(

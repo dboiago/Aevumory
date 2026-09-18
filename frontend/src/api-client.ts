@@ -165,7 +165,7 @@ export interface CreateTaskDtoInput {
 // ============================================================================
 
 export interface RewardYieldDto {
-  primary_discipline: string;
+  primary_discipline?: string;
   primary_xp: number;
   secondary_yields: Array<{ discipline: string; xp: number }>;
   credits_earned: number;
@@ -174,10 +174,12 @@ export interface RewardYieldDto {
 export interface RewardTransactionDto {
   transaction_id: string;
   idempotency_key: string;
-  task_id: string;
-  cycle_id: string;
-  reward_event_type: 'foothold_initiation' | 'completion' | 'deductive_pruning';
+  task_id?: string;
+  cycle_id?: string;
+  reward_event_type: 'foothold_initiation' | 'completion' | 'deductive_pruning' | 'reward_redemption';
   reward_owner_user_id?: string;
+  /** Present only for `reward_redemption` — links back to its RewardRedemption (Phase 4). */
+  redemption_id?: string;
   yield: RewardYieldDto;
   processed_at: string;
 }
@@ -283,6 +285,26 @@ export interface ParticipantLedgerDto {
 export const participantLedgerApi = {
   get: (participantId: string): Promise<ParticipantLedgerDto> =>
     apiRequest(`/api/participants/${encodeURIComponent(participantId)}/ledger`),
+};
+
+// The existing Phase 3 progression endpoint is the single authoritative
+// source of cumulative XP/level per Discipline — never stored, always
+// derived from the ledger (see ProgressionService).
+export interface DisciplineProgressDto {
+  discipline: string;
+  cumulative_xp: number;
+  current_level: number;
+  state: 'developing' | 'mastered';
+}
+
+export const participantProgressionApi = {
+  get: (participantId: string): Promise<DisciplineProgressDto[]> =>
+    apiRequest(`/api/participants/${encodeURIComponent(participantId)}/progression`),
+};
+
+export const participantRedemptionsApi = {
+  list: (participantId: string): Promise<RewardRedemptionDto[]> =>
+    apiRequest(`/api/participants/${encodeURIComponent(participantId)}/redemptions`),
 };
 
 // ============================================================================
@@ -391,3 +413,67 @@ export const calendarOccurrencesApi = {
     return apiRequest(`/api/calendar/occurrences?${params.toString()}`);
   },
 };
+
+// ============================================================================
+// Shared polling (Phase 7)
+//
+// Multiple devices stay eventually consistent via periodic refetch, not
+// push (FUNCTIONAL_FOUNDATION_PLAN.md "Real-time sync: polling, not push").
+// No specific interval is doc-mandated; 20s is a judgment call balancing
+// "materially the same state within one poll interval" against not hammering
+// a household-scale SQLite-backed server.
+// ============================================================================
+
+export const POLLING_INTERVAL_MS = 20_000;
+
+export interface PollingHandle {
+  stop(): void;
+}
+
+/**
+ * Runs `refresh` on a fixed interval and whenever the document becomes
+ * visible again, until `stop()` is called. `refresh` failures are swallowed
+ * (a transient fetch error should not stop future polling ticks).
+ */
+export function startPolling(refresh: () => void | Promise<void>, intervalMs: number = POLLING_INTERVAL_MS): PollingHandle {
+  let stopped = false;
+  const tick = (): void => {
+    if (stopped) return;
+    void Promise.resolve(refresh()).catch(() => undefined);
+  };
+
+  const timer = window.setInterval(tick, intervalMs);
+  const onVisibilityChange = (): void => {
+    if (document.visibilityState === 'visible') tick();
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
+
+  return {
+    stop(): void {
+      if (stopped) return;
+      stopped = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    },
+  };
+}
+
+const activePollers = new WeakMap<Element, PollingHandle>();
+
+/**
+ * Registers `handle` as the active poller for `target`, stopping whatever
+ * poller was previously registered for that same element first — the clean
+ * teardown mechanism screens use when a hash-route re-render replaces their
+ * content in place, so timers/listeners never accumulate.
+ */
+export function attachPolling(target: Element, handle: PollingHandle): void {
+  activePollers.get(target)?.stop();
+  activePollers.set(target, handle);
+}
+
+/** Stops and unregisters whatever poller (if any) is active for `target`. */
+export function stopPolling(target: Element): void {
+  activePollers.get(target)?.stop();
+  activePollers.delete(target);
+}
+
