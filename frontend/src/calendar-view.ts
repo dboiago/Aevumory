@@ -248,6 +248,9 @@ function openEditor(
   if (!source) return;
   const start = event?.startsAt ? new Date(event.startsAt) : localDateTime(occurrenceDate, '18:00');
   const end = event?.endsAt ? new Date(event.endsAt) : localDateTime(occurrenceDate, '19:00');
+  // `end` mirrors the backend's exclusive all-day end date (see toScheduleDto);
+  // shown to the user as the inclusive last day the event actually occupies.
+  const endDateDisplay = event?.allDay ? addDays(end, -1) : end;
   const readOnly = mode === 'view' || !source.writable;
   const recurrence = event?.recurrence;
   const weeklyDays = recurrence?.frequency === 'weekly' ? (recurrence.daysOfWeek ?? [start.getDay()]) : [];
@@ -256,8 +259,8 @@ function openEditor(
   dialog.innerHTML = `<form class="calendar-dialog-form"><header class="calendar-dialog-header"><h2>${mode === 'create' ? 'Add event' : mode === 'edit' ? 'Edit event' : 'Event'}</h2><button type="button" class="calendar-dialog-close" data-dialog-close aria-label="Close">×</button></header><p class="calendar-dialog-error" data-dialog-error hidden></p><div class="calendar-dialog-fields">
     <label>Title<input name="title" type="text" value="${escapeHtml(event?.title ?? '')}" ${readOnly ? 'disabled' : 'required'}></label>
     <label class="calendar-dialog-check-row"><span>All day</span>${checkbox(event?.allDay ?? false, 'All day', 'name="allDay"')}</label>
-    <label>Date<input name="date" type="date" value="${occurrenceDate}" ${readOnly ? 'disabled' : ''}></label>
-    <div class="calendar-dialog-time-row"><label>Starts<input name="starts" type="time" value="${inputTime(start)}" ${readOnly ? 'disabled' : ''}></label><label>Ends<input name="ends" type="time" value="${inputTime(end)}" ${readOnly ? 'disabled' : ''}></label></div>
+    <div class="calendar-dialog-time-row"><label>Start date<input name="startDate" type="date" value="${dateKey(start)}" ${readOnly ? 'disabled' : ''}></label><label>Start time<input name="startTime" type="time" value="${inputTime(start)}" ${readOnly ? 'disabled' : ''}></label></div>
+    <div class="calendar-dialog-time-row"><label>End date<input name="endDate" type="date" value="${dateKey(endDateDisplay)}" ${readOnly ? 'disabled' : ''}></label><label>End time<input name="endTime" type="time" value="${inputTime(end)}" ${readOnly ? 'disabled' : ''}></label></div>
     <label>Calendar<select name="calendar" ${readOnly ? 'disabled' : ''}>${writable.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === source.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}</select></label>
     <label>Repeats<select name="repeat" ${readOnly ? 'disabled' : ''}><option value="none" ${!recurrence ? 'selected' : ''}>Does not repeat</option><option value="daily" ${recurrence?.frequency === 'daily' ? 'selected' : ''}>Daily</option><option value="weekdays" ${recurrence?.frequency === 'weekly' && [1, 2, 3, 4, 5].every((day) => weeklyDays.includes(day)) ? 'selected' : ''}>Weekdays</option><option value="weekly" ${recurrence?.frequency === 'weekly' && ![1, 2, 3, 4, 5].every((day) => weeklyDays.includes(day)) ? 'selected' : ''}>Weekly</option><option value="yearly" ${recurrence?.frequency === 'yearly' ? 'selected' : ''}>Yearly</option></select></label>
     <div class="calendar-weekly-days" data-weekly-days>${weekdays.map((day, index) => `<label class="calendar-weekday-choice"><span>${day}</span>${checkbox(weeklyDays.includes(index), `Repeat on ${day}`, `data-weekday="${index}"`)}</label>`).join('')}</div>
@@ -268,7 +271,7 @@ function openEditor(
   dialog.showModal();
 
   const allDay = dialog.querySelector<HTMLInputElement>('[name="allDay"]');
-  const times = dialog.querySelectorAll<HTMLInputElement>('[name="starts"], [name="ends"]');
+  const times = dialog.querySelectorAll<HTMLInputElement>('[name="startTime"], [name="endTime"]');
   const repeat = dialog.querySelector<HTMLSelectElement>('[name="repeat"]');
   const dayPanel = dialog.querySelector<HTMLElement>('[data-weekly-days]');
   const errorBox = dialog.querySelector<HTMLElement>('[data-dialog-error]');
@@ -307,10 +310,13 @@ function openEditor(
     const title = String(data.get('title') ?? '').trim();
     if (!title) { showError('Title is required.'); return; }
 
-    const date = String(data.get('date') ?? occurrenceDate);
     const allDayValue = data.get('allDay') === 'on';
-    const startsAt = localDateTime(date, allDayValue ? '00:00' : String(data.get('starts') ?? '18:00'));
-    const endsAt = allDayValue ? new Date(startsAt.getTime() + 86400000) : localDateTime(date, String(data.get('ends') ?? '19:00'));
+    const startDateStr = String(data.get('startDate') ?? occurrenceDate);
+    const endDateStr = String(data.get('endDate') ?? startDateStr);
+    const startsAt = localDateTime(startDateStr, allDayValue ? '00:00' : String(data.get('startTime') ?? '18:00'));
+    // Kept as the inclusive last day the user picked — toScheduleDto converts
+    // it to the backend's exclusive local_end_date for all-day events.
+    const endsAt = allDayValue ? localDateTime(endDateStr, '00:00') : localDateTime(endDateStr, String(data.get('endTime') ?? '19:00'));
     const repeatValue = String(data.get('repeat') ?? 'none');
     const selectedDays = Array.from(dialog.querySelectorAll<HTMLInputElement>('[data-weekday]:checked')).map((input) => Number(input.dataset.weekday));
 
@@ -365,9 +371,16 @@ function openEditor(
 }
 
 function toScheduleDto(start: Date, end: Date, allDay: boolean): EventScheduleDto {
+  // Backend all-day schedules use an EXCLUSIVE end date (see
+  // recurrence.resolver.ts's buildOccurrence: durationDays = end.since(start)),
+  // while `end` here is the inclusive last day the editor collected.
   return allDay
-    ? { kind: 'all_day', local_start_date: dateKey(start), local_end_date: dateKey(end) }
+    ? { kind: 'all_day', local_start_date: dateKey(start), local_end_date: dateKey(addDays(end, 1)) }
     : { kind: 'timed', local_start: naiveLocalIso(start), local_end: naiveLocalIso(end) };
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 86400000);
 }
 
 function toRecurrenceRuleDto(recurrence: CalendarRecurrence): RecurrenceRuleDto {
