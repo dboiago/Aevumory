@@ -35,6 +35,7 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
     <main class="participant-profile" aria-label="${escapeHtml(participant.name)} profile">
       <header class="participant-profile-toolbar">
         <button type="button" class="participant-profile-back" data-profile-back>Back</button>
+        <button type="button" class="participant-profile-rewards-link" data-profile-rewards>Rewards</button>
       </header>
 
       <div class="participant-profile-composition">
@@ -70,6 +71,9 @@ export async function renderParticipantProfile(target: HTMLDivElement, participa
   `;
 
   target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => window.history.back());
+  target.querySelector<HTMLButtonElement>('[data-profile-rewards]')?.addEventListener('click', () => {
+    window.location.hash = '#rewards';
+  });
 }
 
 function renderParticipantInitial(participant: HouseholdParticipant): string {

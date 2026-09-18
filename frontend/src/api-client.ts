@@ -218,3 +218,61 @@ export const taskCyclesApi = {
   complete: (cycleId: string, input: { completed_by_user_id?: string } = {}): Promise<CompleteCycleResultDto> =>
     apiRequest(`/api/task-cycles/${encodeURIComponent(cycleId)}/complete`, { method: 'POST', body: input }),
 };
+
+// ============================================================================
+// Rewards (Phase 4)
+// ============================================================================
+
+export type RewardCategoryDto = 'personal_leisure' | 'household' | 'experience';
+
+export interface RewardDto {
+  id: string;
+  title: string;
+  description?: string;
+  category: RewardCategoryDto;
+  base_cost: number;
+  is_discountable: boolean;
+  is_active: boolean;
+}
+
+export interface RewardRedemptionDto {
+  id: string;
+  idempotency_key: string;
+  user_id: string;
+  reward_id: string;
+  base_cost: number;
+  final_cost_paid: number;
+  redeemed_at: string;
+}
+
+export interface RedeemRewardResultDto {
+  redemption: RewardRedemptionDto;
+  balance: number;
+}
+
+export interface CreateRewardDtoInput {
+  title: string;
+  description?: string;
+  category: RewardCategoryDto;
+  base_cost: number;
+  is_discountable?: boolean;
+  is_active?: boolean;
+}
+
+export const rewardsApi = {
+  list: (): Promise<RewardDto[]> => apiRequest('/api/rewards'),
+
+  create: (input: CreateRewardDtoInput): Promise<RewardDto> =>
+    apiRequest('/api/rewards', { method: 'POST', body: input }),
+
+  update: (rewardId: string, input: Partial<CreateRewardDtoInput>): Promise<RewardDto> =>
+    apiRequest(`/api/rewards/${encodeURIComponent(rewardId)}`, { method: 'PATCH', body: input }),
+
+  redeem: (rewardId: string, input: { user_id: string; idempotency_key: string }): Promise<RedeemRewardResultDto> =>
+    apiRequest(`/api/rewards/${encodeURIComponent(rewardId)}/redeem`, { method: 'POST', body: input }),
+};
+
+export const rewardsBalanceApi = {
+  get: (participantId: string): Promise<{ user_id: string; balance: number }> =>
+    apiRequest(`/api/participants/${encodeURIComponent(participantId)}/rewards-balance`),
+};

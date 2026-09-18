@@ -24,4 +24,13 @@ export interface RewardRedemption {
   base_cost: number;
   final_cost_paid: number; // Integer floor result
   redeemed_at: string; // ISO Timestamp
+
+  /**
+   * `${reward_id}:${user_id}:${client-supplied nonce}` — the redemption
+   * ledger's equivalent of RewardTransaction.idempotency_key (Phase 3). A
+   * retried request for the same logical redemption (same nonce) must reuse
+   * this row rather than creating a second debit; UNIQUE at the persistence
+   * layer (see migration 0005).
+   */
+  idempotency_key: string;
 }

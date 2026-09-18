@@ -7,6 +7,8 @@ import { FixtureTemporalQuery, type TemporalOccurrence } from './temporal';
 import { FixtureCalendarQuery } from './calendar';
 import { renderCalendar } from './calendar-view';
 import { renderHouseholdSetup } from './household-setup';
+import { ApiRewardsQuery } from './rewards';
+import { renderRewards } from './rewards-view';
 import { participantsApi } from './api-client';
 
 type AmbientContext =
@@ -34,6 +36,7 @@ const now = '2026-09-02T18:00:00-04:00';
 const temporalQuery = new FixtureTemporalQuery();
 const taskBoardQuery = new ApiTaskBoardQuery();
 const calendarQuery = new FixtureCalendarQuery();
+const rewardsQuery = new ApiRewardsQuery();
 
 void render(root);
 window.addEventListener('hashchange', () => void render(root));
@@ -48,6 +51,11 @@ async function render(target: HTMLDivElement): Promise<void> {
 
   if (hash === '#calendar') {
     await renderCalendar(target, calendarQuery);
+    return;
+  }
+
+  if (hash === '#rewards') {
+    await renderRewards(target, rewardsQuery);
     return;
   }
 

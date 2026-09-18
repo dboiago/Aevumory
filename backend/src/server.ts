@@ -20,6 +20,7 @@ import { SqliteTaskRepository } from './persistence/task.repository.sqlite.js';
 import { SqliteExecutionRepository } from './persistence/execution.repository.sqlite.js';
 import { SqliteLedgerRepository } from './persistence/ledger.repository.sqlite.js';
 import { SqliteUserTaskStateRepository } from './persistence/user-task-state.repository.sqlite.js';
+import { SqliteRewardRepository } from './persistence/reward.repository.sqlite.js';
 import { HouseholdService } from './services/household.service.js';
 import {
   ParticipantNotFoundError,
@@ -40,6 +41,14 @@ import {
   type CreateRewardAdjustmentInput,
 } from './services/task-execution.service.js';
 import { ProgressionService } from './services/progression.service.js';
+import {
+  InsufficientCreditsError,
+  RewardInactiveError,
+  RewardNotFoundError,
+  RewardService,
+  type CreateRewardInput as CreateRewardServiceInput,
+  type UpdateRewardInput as UpdateRewardServiceInput,
+} from './services/reward.service.js';
 import {
   AdminAuthService,
   AdminPinAlreadyConfiguredError,
@@ -83,6 +92,7 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
   const executionRepository = new SqliteExecutionRepository(db);
   const ledgerRepository = new SqliteLedgerRepository(db);
   const userTaskStateRepository = new SqliteUserTaskStateRepository(db);
+  const rewardRepository = new SqliteRewardRepository(db);
 
   // Create application services
   const householdService = new HouseholdService(householdRepository);
@@ -96,6 +106,7 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
     userTaskStateRepository,
   );
   const progressionService = new ProgressionService(ledgerRepository);
+  const rewardService = new RewardService(rewardRepository, ledgerRepository);
   const adminAuthService = new AdminAuthService(householdService);
   const requireAdmin = createRequireAdminHook(adminAuthService);
 
@@ -391,6 +402,82 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
   fastify.get('/api/participants/:id/progression', async (request, reply) => {
     const { id } = request.params as { id: string };
     return progressionService.getParticipantProgression(id);
+  });
+
+  // ============================================================================
+  // Rewards Catalogue & Redemption (Phase 4)
+  //
+  // Catalogue mutations are admin-gated; redemption is an ordinary household
+  // action, matching the /task-cycles pattern above.
+  // ============================================================================
+
+  fastify.get('/api/rewards', async (request, reply) => {
+    return rewardService.listRewards();
+  });
+
+  fastify.post('/api/rewards', { onRequest: requireAdmin }, async (request, reply) => {
+    const body = request.body as Partial<CreateRewardServiceInput> | undefined;
+    if (!body?.title || !body.category || body.base_cost === undefined) {
+      reply.code(400).send({ error: 'title, category, and base_cost are required' });
+      return;
+    }
+
+    try {
+      const reward = await rewardService.createReward(body as CreateRewardServiceInput);
+      reply.code(201);
+      return reward;
+    } catch (error) {
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.patch('/api/rewards/:id', { onRequest: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as UpdateRewardServiceInput | undefined;
+
+    try {
+      return await rewardService.updateReward(id, body ?? {});
+    } catch (error) {
+      if (error instanceof RewardNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.post('/api/rewards/:id/redeem', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { user_id?: string; idempotency_key?: string } | undefined;
+    if (!body?.user_id || !body.idempotency_key) {
+      reply.code(400).send({ error: 'user_id and idempotency_key are required' });
+      return;
+    }
+
+    try {
+      return await rewardService.redeemReward(id, {
+        user_id: body.user_id,
+        idempotency_key: body.idempotency_key,
+      });
+    } catch (error) {
+      if (error instanceof RewardNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      if (error instanceof RewardInactiveError || error instanceof InsufficientCreditsError) {
+        reply.code(409).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  // Supports the Rewards screen's affordability display (spendable balance
+  // net of redemptions) — see RewardService.getSpendableBalance.
+  fastify.get('/api/participants/:id/rewards-balance', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const balance = await rewardService.getSpendableBalance(id);
+    return { user_id: id, balance };
   });
 
   // ============================================================================
