@@ -94,11 +94,12 @@ function renderDay(date: Date, month: number, events: Occurrence[]): string {
 function eventButton(event: Occurrence, showTime: boolean): string {
   const time = showTime && event.startsAt ? formatTime(event.startsAt) : '';
   const quiet = event.taskLinked || Boolean(event.recurrence);
+  const dot = event.significance === 'high' ? 'calendar-event-dot-strong' : quiet ? 'calendar-event-dot-quiet' : 'calendar-event-dot-normal';
   const multiDay =
     event.allDay &&
     Boolean(event.endsAt) &&
     dateKey(new Date(event.endsAt as string)) !== event.occurrenceDate;
-  return `<button type="button" class="calendar-event calendar-event-${event.significance}${quiet ? ' calendar-event-quiet' : ''}${event.recurrence ? ' calendar-event-recurring' : ''}${multiDay ? ' calendar-event-multi-day' : ''}" data-calendar-event="${escapeHtml(event.id)}" data-calendar-source-id="${escapeHtml(event.calendarId)}" title="${escapeHtml(event.title)}"><span class="calendar-event-time">${escapeHtml(time)}</span><span class="calendar-event-title">${escapeHtml(event.title)}</span></button>`;
+  return `<button type="button" class="calendar-event calendar-event-${event.significance}${quiet ? ' calendar-event-quiet' : ''}${event.recurrence ? ' calendar-event-recurring' : ''}${multiDay ? ' calendar-event-multi-day' : ''}" data-calendar-event="${escapeHtml(event.id)}" data-calendar-source-id="${escapeHtml(event.calendarId)}" title="${escapeHtml(event.title)}"><span class="calendar-event-dot ${dot}" aria-hidden="true"></span><span class="calendar-event-time">${escapeHtml(time)}</span><span class="calendar-event-title">${escapeHtml(event.title)}</span></button>`;
 }
 
 function expand(events: CalendarEvent[], month: Date): Occurrence[] {
@@ -110,7 +111,13 @@ function expand(events: CalendarEvent[], month: Date): Occurrence[] {
     const base = new Date(event.startsAt);
     const recurrence = event.recurrence;
     if (!recurrence) {
-      if (event.allDay && event.endsAt) addSpan(result, event, base, new Date(event.endsAt), start, end); else add(result, event, base, start, end);
+      if (event.endsAt) {
+        const spanEnd = new Date(event.endsAt);
+        if (event.allDay) addSpan(result, event, base, spanEnd, start, end);
+        else addTimedSpan(result, event, base, spanEnd, start, end);
+      } else {
+        add(result, event, base, start, end);
+      }
     } else if (recurrence.frequency === 'daily') {
       const interval = Math.max(1, recurrence.interval ?? 1);
       for (let date = new Date(base); date <= end; date.setDate(date.getDate() + interval)) if (date >= start) add(result, event, date, start, end);
@@ -126,6 +133,13 @@ function expand(events: CalendarEvent[], month: Date): Occurrence[] {
 
 function add(result: Occurrence[], event: CalendarEvent, date: Date, start: Date, end: Date): void { if (date >= start && date <= end) result.push({ ...event, occurrenceDate: dateKey(date) }); }
 function addSpan(result: Occurrence[], event: CalendarEvent, startDate: Date, endDate: Date, start: Date, end: Date): void { for (let date = new Date(startDate); date < endDate; date.setDate(date.getDate() + 1)) add(result, event, date, start, end); }
+// Timed spans use the actual instants, so — unlike all-day's exclusive
+// end-of-day boundary — the end calendar date is itself covered.
+function addTimedSpan(result: Occurrence[], event: CalendarEvent, startDate: Date, endDate: Date, start: Date, end: Date): void {
+  const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+  for (let date = new Date(startDay); date <= endDay; date.setDate(date.getDate() + 1)) add(result, event, date, start, end);
+}
 
 function wire(target: HTMLDivElement, state: { sources: CalendarSource[]; events: CalendarEvent[] }, visible: Set<string>, rerender: () => void, changeMonth: (offset: number) => void, today: () => void, addEvent: (date: string) => void, openEvent: (event: Occurrence) => void, tasks: (show: boolean) => void): void {
   target.querySelector('[data-calendar-back]')?.addEventListener('click', () => { window.location.hash = ''; });
