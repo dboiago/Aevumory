@@ -1,4 +1,4 @@
-import { DisciplineTag } from './task-domain.types.js';
+import type { DisciplineTag } from './task-domain.types.js';
 
 export type DisciplineState = 'developing' | 'mastered';
 
