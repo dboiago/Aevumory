@@ -1,0 +1,153 @@
+From eeeb3f0db871a14174ba6ccc8a6df4177e945b3c Mon Sep 17 00:00:00 2001
+From: Muse <muse@localhost>
+Date: Tue, 20 Oct 2026 12:01:38 -0400
+Subject: [PATCH] Phase 8: fix production frontend path, add build/start
+ scripts and run docs
+
+- server.ts: serve frontend from ../../frontend/dist (was ../frontend/dist,
+  which resolved to the nonexistent backend/frontend/dist and silently
+  fell back to API-only mode)
+- Add backend start script and root package.json (build/start/dev)
+- Add .env.example (PORT, DATA_DIR) noting env vars are read directly
+- HANDOFF.md: add section 11 run story (obtain, configure, run,
+  first-run PIN setup, restart safety)
+---
+ .env.example          | 17 ++++++++++++
+ backend/package.json  |  3 ++-
+ backend/src/server.ts |  2 +-
+ docs/HANDOFF.md       | 62 +++++++++++++++++++++++++++++++++++++++++++
+ package.json          |  1 +
+ 5 files changed, 83 insertions(+), 2 deletions(-)
+ create mode 100644 .env.example
+ create mode 100644 package.json
+
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..4c0a9df
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,17 @@
++# Aevumory server configuration — copy these values into your environment.
++# The server reads environment variables directly; it does not load a
++# .env file automatically. Export them in your shell (or set them in your
++# service / container configuration) before running `npm start`.
++#
++#   export PORT=3000
++#   export DATA_DIR=./data
++
++# Port the single server process listens on (serves /api/* and the
++# built frontend on the same port). Default: 3000
++PORT=3000
++
++# Directory holding the SQLite database (aevumory.db). Created on start
++# if it does not exist. May be absolute, or relative to the project root.
++# Point this at persistent storage (e.g. a mounted volume) so household
++# state survives restarts. Default: ./data
++DATA_DIR=./data
+diff --git a/backend/package.json b/backend/package.json
+index b6f7055..80b5970 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -5,7 +5,8 @@
+   "scripts": {
+     "test": "vitest run",
+     "typecheck": "tsc --noEmit",
+-    "dev": "node --experimental-transform-types --import ./ts-esm-hooks.mjs src/server.ts"
++    "dev": "node --experimental-transform-types --import ./ts-esm-hooks.mjs src/server.ts",
++    "start": "node --experimental-transform-types --import ./ts-esm-hooks.mjs src/server.ts"
+   },
+   "dependencies": {
+     "@fastify/static": "^7.0.0",
+diff --git a/backend/src/server.ts b/backend/src/server.ts
+index 66934cb..645b8f7 100644
+--- a/backend/src/server.ts
++++ b/backend/src/server.ts
+@@ -770,7 +770,7 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
+   // ============================================================================
+ 
+   // In production, serve built frontend from dist/ folder
+-  const frontendPath = path.join(__dirname, '../frontend/dist');
++  const frontendPath = path.join(__dirname, '../../frontend/dist');
+   try {
+     await fastify.register(fastifyStatic, {
+       root: frontendPath,
+diff --git a/docs/HANDOFF.md b/docs/HANDOFF.md
+index 8472f63..aae8968 100644
+--- a/docs/HANDOFF.md
++++ b/docs/HANDOFF.md
+@@ -536,3 +536,65 @@ Meaningful progression
+ ```
+ 
+ The next phase should make those ideas real.
++
++---
++
++## 11. Running Aevumory (Phase 8)
++
++Aevumory runs as a single self-hosted server process: the backend serves
++`/api/*` and the built frontend on the same port, and every device on the
++household network uses that server as its source of truth.
++
++### Obtain
++
++```bash
++git clone https://github.com/dboiago/Aevumory.git
++cd Aevumory
++```
++
++Requires Node.js 20+ (the backend runs TypeScript directly via
++`--experimental-transform-types`; there is no backend compile step).
++
++### Install and build
++
++```bash
++npm --prefix backend install
++npm --prefix frontend install
++npm run build        # builds the frontend into frontend/dist
++```
++
++### Configure
++
++Configuration is via environment variables — see `.env.example`. The
++server does **not** load a `.env` file automatically; export the values
++(or set them in your service/container configuration):
++
++```bash
++export PORT=3000     # default: 3000
++export DATA_DIR=./data   # default: ./data (project root)
++```
++
++`DATA_DIR` holds the SQLite database (`aevumory.db`) and is created on
++start if missing. Point it at persistent storage so household state
++survives restarts and upgrades.
++
++### Run
++
++```bash
++npm start            # from the project root
++```
++
++Then open `http://<server-host>:3000` from any device on the network.
++
++### First run
++
++On a fresh `DATA_DIR` the household is created empty — no demo or seed
++data. The first visit walks through first-run admin PIN setup; use that
++PIN to unlock admin actions (managing participants, tasks, and rewards).
++
++### Restart safety
++
++All state — household, participants, tasks, executions, rewards, and
++calendar — lives in the SQLite file under `DATA_DIR`. Stopping and
++restarting the process against the same `DATA_DIR` restores everything;
++no state is kept only in memory.
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..aad3d3f
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1 @@
++{"name":"aevumory","private":true,"scripts":{"build":"npm --prefix frontend run build","dev":"npm --prefix backend run dev","start":"npm --prefix backend run start"}}
+\ No newline at end of file
+-- 
+2.43.0
