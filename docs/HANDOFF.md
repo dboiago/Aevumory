@@ -536,3 +536,65 @@ Meaningful progression
 ```
 
 The next phase should make those ideas real.
+
+---
+
+## 11. Running Aevumory (Phase 8)
+
+Aevumory runs as a single self-hosted server process: the backend serves
+`/api/*` and the built frontend on the same port, and every device on the
+household network uses that server as its source of truth.
+
+### Obtain
+
+```bash
+git clone https://github.com/dboiago/Aevumory.git
+cd Aevumory
+```
+
+Requires Node.js 20+ (the backend runs TypeScript directly via
+`--experimental-transform-types`; there is no backend compile step).
+
+### Install and build
+
+```bash
+npm --prefix backend install
+npm --prefix frontend install
+npm run build        # builds the frontend into frontend/dist
+```
+
+### Configure
+
+Configuration is via environment variables — see `.env.example`. The
+server does **not** load a `.env` file automatically; export the values
+(or set them in your service/container configuration):
+
+```bash
+export PORT=3000     # default: 3000
+export DATA_DIR=./data   # default: ./data (project root)
+```
+
+`DATA_DIR` holds the SQLite database (`aevumory.db`) and is created on
+start if missing. Point it at persistent storage so household state
+survives restarts and upgrades.
+
+### Run
+
+```bash
+npm start            # from the project root
+```
+
+Then open `http://<server-host>:3000` from any device on the network.
+
+### First run
+
+On a fresh `DATA_DIR` the household is created empty — no demo or seed
+data. The first visit walks through first-run admin PIN setup; use that
+PIN to unlock admin actions (managing participants, tasks, and rewards).
+
+### Restart safety
+
+All state — household, participants, tasks, executions, rewards, and
+calendar — lives in the SQLite file under `DATA_DIR`. Stopping and
+restarting the process against the same `DATA_DIR` restores everything;
+no state is kept only in memory.

@@ -770,7 +770,7 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
   // ============================================================================
 
   // In production, serve built frontend from dist/ folder
-  const frontendPath = path.join(__dirname, '../frontend/dist');
+  const frontendPath = path.join(__dirname, '../../frontend/dist');
   try {
     await fastify.register(fastifyStatic, {
       root: frontendPath,

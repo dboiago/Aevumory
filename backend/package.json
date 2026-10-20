@@ -5,7 +5,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "dev": "node --experimental-transform-types --import ./ts-esm-hooks.mjs src/server.ts"
+    "dev": "node --experimental-transform-types --import ./ts-esm-hooks.mjs src/server.ts",
+    "start": "node --experimental-transform-types --import ./ts-esm-hooks.mjs src/server.ts"
   },
   "dependencies": {
     "@fastify/static": "^7.0.0",
