@@ -210,16 +210,7 @@ function renderRewardForm(reward: RewardDto | null): string {
       <label>Description
         <textarea name="description" maxlength="240" rows="2">${isEdit ? escapeHtml(reward.description ?? '') : ''}</textarea>
       </label>
-      <label>Category
-        <select name="category">
-          ${(Object.keys(CATEGORY_LABELS) as RewardCategoryDto[])
-            .map(
-              (category) =>
-                `<option value="${category}" ${isEdit && reward.category === category ? 'selected' : ''}>${CATEGORY_LABELS[category]}</option>`,
-            )
-            .join('')}
-        </select>
-      </label>
+      <input type="hidden" name="category" value="${isEdit ? reward.category : 'personal_leisure'}">
       <label>Credit cost
         <input type="number" name="base_cost" min="1" step="1" value="${isEdit ? reward.base_cost : ''}" required>
       </label>
