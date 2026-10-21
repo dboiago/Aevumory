@@ -552,7 +552,7 @@ function renderTaskCard(
           ${task.footholdEstablished ? `<span class="task-reward" aria-label="Foothold established">Foothold${task.footholdReward ? ` · +${task.footholdReward.experience} XP` : ''}</span>` : ''}
           <button type="button" class="task-edit" data-action="edit" data-task-def="${task.taskId}">Edit</button>
           ${!completed && task.task.supports_foothold && !task.footholdEstablished ? `<button type="button" class="task-edit" data-action="foothold" data-task-id="${task.id}">Start</button>` : ''}
-          ${!completed ? `<button type="button" class="task-edit" data-action="prune" data-task-id="${task.id}">Not needed</button>` : ''}
+          ${!completed ? `<button type="button" class="task-edit" data-action="prune" data-task-id="${task.id}">Resolve</button>` : ''}
           <button type="button" class="task-complete" data-action="complete" data-task-id="${task.id}" aria-label="${completed ? 'Undo completion (removes the reward it granted)' : 'Mark task as done'}">
             ${completed ? 'Undo' : 'Complete'}
           </button>
