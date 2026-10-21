@@ -27,12 +27,12 @@ export function openPruneDialog(input: {
     dialog.innerHTML = `
       <form class="prune-dialog-form">
         <header class="prune-dialog-header">
-          <h2>Didn’t need doing</h2>
+          <h2>Resolve task</h2>
           <button type="button" class="prune-dialog-close" data-prune-close aria-label="Close">×</button>
         </header>
-        <p class="prune-dialog-sub">“${escapeHtml(input.taskTitle)}” won’t be done — tell Aevumory why, so the record stays honest.</p>
+        <p class="prune-dialog-sub">“${escapeHtml(input.taskTitle)}” won’t be done. Record why it no longer needs doing.</p>
         <div class="prune-dialog-fields">
-          <label>Why wasn’t it needed?
+          <label>Why is this task being resolved?
             <select name="reason_code" data-prune-reason>
               ${REASON_OPTIONS.map((option) => `<option value="${option.code}">${option.label}</option>`).join('')}
             </select>
@@ -43,7 +43,7 @@ export function openPruneDialog(input: {
             </select>
           </label>
           <label class="prune-dialog-recognition">
-            <span><input type="checkbox" name="recognize" data-prune-recognize> Recognize the person who spotted it</span>
+            <span><input type="checkbox" name="recognize" data-prune-recognize> Recognize this discovery (adds Reason progress)</span>
           </label>
           <label data-prune-actor-wrap hidden>Who spotted it?
             <select name="completed_by_user_id" data-prune-actor>
@@ -58,7 +58,7 @@ export function openPruneDialog(input: {
           <button type="button" class="prune-dialog-secondary" data-prune-close>Cancel</button>
           <button type="submit" class="prune-dialog-primary">Mark not needed</button>
         </footer>
-        <p class="prune-dialog-hint">This records why the task wasn’t needed. Recognition is optional; no Credits are awarded because the task wasn’t completed.</p>
+        <p class="prune-dialog-hint">This records why the task was resolved. Recognition adds Reason progress; no Credits are awarded because the task wasn’t completed.</p>
       </form>
     `;
     document.body.append(dialog);
