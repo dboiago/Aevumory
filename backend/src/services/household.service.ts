@@ -38,7 +38,7 @@ export class HouseholdService {
     return this.ensureBootstrapped();
   }
 
-  async setAdminPinHash(household_id: string, admin_pin_hash: string): Promise<Household> {
+  async setAdminPinHash(household_id: string, admin_pin_hash: string | null): Promise<Household> {
     const household = await this.householdRepository.get(household_id);
     if (!household) throw new Error('Household not found');
 

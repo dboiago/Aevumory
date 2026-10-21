@@ -1,4 +1,5 @@
 import './calendar.css';
+import { goBack } from './navigation';
 import {
   attachPolling,
   calendarEventsApi,
@@ -8,9 +9,20 @@ import {
   type RecurrenceRuleDto,
 } from './api-client';
 import type { CalendarEvent, CalendarQuery, CalendarRecurrence, CalendarSource } from './calendar';
+import { participantsApi, tasksApi } from './api-client';
+import { emptyTaskFormState, renderTaskForm, taskFormStateFromTask } from './task-form';
+import { getCachedAdminStatus, openAdminUnlockDialog, refreshAdminStatus } from './admin';
+import { calendarSourcesApi } from './api-client';
 import { generateCalendarColourOptions, renderCalendarColour, type CalendarColourSelection } from './calendar-colour';
 
-const fixtureToday = '2026-09-02';
+function todayKey(): string {
+  return dateKey(new Date());
+}
+
+function currentMonthStart(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
 const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const maxVisibleEventsPerDay = 5;
 type Occurrence = CalendarEvent & { occurrenceDate: string };
@@ -18,9 +30,9 @@ type EditorMode = 'create' | 'edit' | 'view';
 
 export async function renderCalendar(target: HTMLDivElement, query: CalendarQuery): Promise<void> {
   const state = await query.getState();
-  let month = new Date(2026, 8, 1);
+  let month = currentMonthStart();
   const sources = new Set(state.sources.map((item) => item.id));
-  let showTasks = false;
+  let showTasks = true;
 
   // Refetches the real persisted state in place (same array identities the
   // poll tick below already relies on) so a successful editor save/delete and
@@ -35,13 +47,19 @@ export async function renderCalendar(target: HTMLDivElement, query: CalendarQuer
   };
 
   const render = (): void => {
-    const events = state.events.filter((event) => (!event.taskLinked || showTasks) && sources.has(event.calendarId));
+    const events = state.events.filter((event) => (!event.taskLinked || showTasks) && (event.taskLinked || sources.has(event.calendarId)));
     target.innerHTML = renderPage(month, state.sources, sources, expand(events, month), showTasks);
     applySourceColours(target, state.sources);
-    wire(target, state, sources, () => render(), (offset) => { month = new Date(month.getFullYear(), month.getMonth() + offset, 1); render(); }, () => { month = new Date(2026, 8, 1); render(); }, (date) => openEditor(target, state, 'create', undefined, date, refresh, render), (event) => {
+    wire(target, state, sources, () => render(), (offset) => { month = new Date(month.getFullYear(), month.getMonth() + offset, 1); render(); }, () => { month = currentMonthStart(); render(); }, (date) => openEditor(target, state, 'create', undefined, date, refresh, render), (event) => {
+      if (event.taskLinked && event.taskId) {
+        // Tasks stay on the Calendar (product decision, 2026-10-20):
+        // clicking one opens the same editor as the Tasks screen.
+        void openTaskFormDialog(target, event.taskId, refresh, render);
+        return;
+      }
       const source = state.sources.find((item) => item.id === event.calendarId);
       openEditor(target, state, source?.writable ? 'edit' : 'view', event, event.occurrenceDate, refresh, render);
-    }, (value) => { showTasks = value; render(); });
+    }, (value) => { showTasks = value; render(); }, refresh);
   };
   render();
   const observer = new MutationObserver(() => { if (target.isConnected) applySourceColours(target, state.sources); else observer.disconnect(); });
@@ -69,7 +87,7 @@ function renderPage(month: Date, sources: CalendarSource[], visible: Set<string>
       <div class="calendar-sources" aria-label="Calendar visibility">${sources.map((source) => sourceControl(source, visible.has(source.id))).join('')}<label class="calendar-source">${checkbox(showTasks, 'Show task-linked events', 'data-calendar-tasks')}<span>Tasks</span></label></div>
     </section>
     <section class="calendar-grid" aria-label="${formatMonth(month)}">${weekdays.map((day) => `<div class="calendar-weekday" aria-hidden="true">${day}</div>`).join('')}${cells}</section>
-    <div class="calendar-actions"><button type="button" class="calendar-primary-action" data-calendar-add>Add event</button></div>
+    <div class="calendar-actions"><button type="button" class="calendar-primary-action" data-calendar-add>Add event</button><button type="button" class="calendar-primary-action" data-calendar-add-task>Add task</button><button type="button" class="calendar-secondary-action" data-calendar-add-source>Add calendar</button></div>
   </main>`;
 }
 
@@ -88,7 +106,7 @@ function renderDay(date: Date, month: number, events: Occurrence[]): string {
   const dayEvents = events.filter((event) => event.occurrenceDate === key);
   const visibleEvents = dayEvents.slice(0, maxVisibleEventsPerDay);
   const remaining = dayEvents.length - visibleEvents.length;
-  return `<div class="calendar-day ${date.getMonth() !== month ? 'calendar-day-outside' : ''} ${key === fixtureToday ? 'calendar-day-today' : ''}" data-date="${key}"><div class="calendar-day-number">${date.getDate()}</div><div class="calendar-day-events">${visibleEvents.filter((event) => event.allDay).map((event) => eventButton(event, false)).join('')}${visibleEvents.filter((event) => !event.allDay).map((event) => eventButton(event, true)).join('')}${remaining > 0 ? `<button type="button" class="calendar-more" data-calendar-more="${key}">+ ${remaining} more</button>` : ''}</div></div>`;
+  return `<div class="calendar-day ${date.getMonth() !== month ? 'calendar-day-outside' : ''} ${key === todayKey() ? 'calendar-day-today' : ''}" data-date="${key}"><div class="calendar-day-number">${date.getDate()}</div><div class="calendar-day-events">${visibleEvents.filter((event) => event.allDay).map((event) => eventButton(event, false)).join('')}${visibleEvents.filter((event) => !event.allDay).map((event) => eventButton(event, true)).join('')}${remaining > 0 ? `<button type="button" class="calendar-more" data-calendar-more="${key}">+ ${remaining} more</button>` : ''}</div></div>`;
 }
 
 function eventButton(event: Occurrence, showTime: boolean): string {
@@ -139,17 +157,19 @@ function addTimedSpan(result: Occurrence[], event: CalendarEvent, startDate: Dat
   for (let date = new Date(startDay); date <= endDay; date.setDate(date.getDate() + 1)) add(result, event, date, start, end);
 }
 
-function wire(target: HTMLDivElement, state: { sources: CalendarSource[]; events: CalendarEvent[] }, visible: Set<string>, rerender: () => void, changeMonth: (offset: number) => void, today: () => void, addEvent: (date: string) => void, openEvent: (event: Occurrence) => void, tasks: (show: boolean) => void): void {
-  target.querySelector('[data-calendar-back]')?.addEventListener('click', () => { window.location.hash = ''; });
+function wire(target: HTMLDivElement, state: { sources: CalendarSource[]; events: CalendarEvent[] }, visible: Set<string>, rerender: () => void, changeMonth: (offset: number) => void, today: () => void, addEvent: (date: string) => void, openEvent: (event: Occurrence) => void, tasks: (show: boolean) => void, refreshData?: () => Promise<void>): void {
+  target.querySelector('[data-calendar-back]')?.addEventListener('click', () => goBack(''));
   target.querySelector('[data-calendar-prev]')?.addEventListener('click', () => changeMonth(-1));
   target.querySelector('[data-calendar-next]')?.addEventListener('click', () => changeMonth(1));
   target.querySelector('[data-calendar-today]')?.addEventListener('click', today);
-  target.querySelector('[data-calendar-add]')?.addEventListener('click', () => addEvent(fixtureToday));
+  target.querySelector('[data-calendar-add]')?.addEventListener('click', () => addEvent(todayKey()));
+  target.querySelector('[data-calendar-add-task]')?.addEventListener('click', () => { void openTaskFormDialog(target, undefined, refreshData, rerender); });
+  target.querySelector('[data-calendar-add-source]')?.addEventListener('click', () => { void openAddSourceDialog(target, refreshData, rerender); });
   target.querySelectorAll<HTMLInputElement>('[data-calendar-source]').forEach((input) => input.addEventListener('change', () => { const id = input.dataset.calendarSource; if (id) { input.checked ? visible.add(id) : visible.delete(id); rerender(); } }));
   target.querySelector<HTMLInputElement>('[data-calendar-tasks]')?.addEventListener('change', (event) => tasks((event.currentTarget as HTMLInputElement).checked));
   target.querySelectorAll<HTMLButtonElement>('[data-calendar-colour-source]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); openColourPicker(target, state, button.dataset.calendarColourSource ?? '', rerender); }));
-  target.querySelectorAll<HTMLButtonElement>('[data-calendar-event]').forEach((button) => button.addEventListener('click', () => { const event = state.events.find((item) => item.id === button.dataset.calendarEvent); if (event) openEvent({ ...event, occurrenceDate: button.closest<HTMLElement>('[data-date]')?.dataset.date ?? fixtureToday }); }));
-  target.querySelectorAll<HTMLButtonElement>('[data-calendar-more]').forEach((button) => button.addEventListener('click', () => openDay(target, state, button.dataset.calendarMore ?? fixtureToday)));
+  target.querySelectorAll<HTMLButtonElement>('[data-calendar-event]').forEach((button) => button.addEventListener('click', () => { const event = state.events.find((item) => item.id === button.dataset.calendarEvent); if (event) openEvent({ ...event, occurrenceDate: button.closest<HTMLElement>('[data-date]')?.dataset.date ?? todayKey() }); }));
+  target.querySelectorAll<HTMLButtonElement>('[data-calendar-more]').forEach((button) => button.addEventListener('click', () => openDay(target, state, button.dataset.calendarMore ?? todayKey())));
   target.querySelectorAll<HTMLElement>('[data-date]').forEach((day) => day.addEventListener('dblclick', (event) => { if ((event.target as HTMLElement).closest('[data-calendar-event], [data-calendar-more]')) return; const date = day.dataset.date; if (date) addEvent(date); }));
 }
 
@@ -437,4 +457,86 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/**
+ * Task create/edit without leaving the Calendar: the same form component
+ * as the Tasks screen, hosted in an overlay panel. Saving refreshes the
+ * calendar state, so the task appears here and on the Task Board.
+ */
+async function openTaskFormDialog(
+  target: HTMLDivElement,
+  taskId: string | undefined,
+  refresh: (() => Promise<void>) | undefined,
+  rerender: () => void,
+): Promise<void> {
+  target.querySelector('.calendar-task-dialog')?.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'calendar-task-dialog';
+  wrap.innerHTML = '<div class="calendar-task-dialog-panel" data-task-slot><p class="calendar-task-dialog-loading">Loading…</p></div>';
+  target.append(wrap);
+  const slot = wrap.querySelector<HTMLElement>('[data-task-slot]');
+  if (!slot) return;
+  const close = (): void => { wrap.remove(); };
+  wrap.addEventListener('click', (event) => { if (event.target === wrap) close(); });
+  try {
+    const [tasks, participants] = await Promise.all([
+      taskId ? tasksApi.list() : Promise.resolve([]),
+      participantsApi.list().catch(() => []),
+    ]);
+    const existing = taskId ? tasks.find((task) => task.task_id === taskId) : undefined;
+    if (taskId && !existing) { close(); return; }
+    const household = participants.map((p) => ({
+      id: p.participant_id,
+      name: p.display_name,
+      avatarUrl: p.representation_ref,
+    }));
+    renderTaskForm(slot, existing ? taskFormStateFromTask(existing) : emptyTaskFormState(), household, existing, {
+      onSaved: () => { close(); void (async () => { await refresh?.(); rerender(); })(); },
+      onCancel: close,
+    });
+  } catch {
+    close();
+  }
+}
+
+/** Add a local calendar (source). Admin-gated server-side; prompts for
+ * the PIN via the shared admin dialog when locked. Colour/visibility
+ * behaviour for the new source is the existing source machinery —
+ * untouched. */
+async function openAddSourceDialog(
+  target: HTMLDivElement,
+  refresh: (() => Promise<void>) | undefined,
+  rerender: () => void,
+): Promise<void> {
+  const status = getCachedAdminStatus() ?? await refreshAdminStatus();
+  if (!status?.pin_configured) return;
+  if (!status.authenticated) {
+    const unlocked = await openAdminUnlockDialog();
+    if (!unlocked) return;
+  }
+  target.querySelector('.calendar-dialog')?.remove();
+  const dialog = document.createElement('dialog');
+  dialog.className = 'calendar-dialog';
+  dialog.innerHTML = `<form class="calendar-dialog-form"><header class="calendar-dialog-header"><h2>Add calendar</h2><button type="button" class="calendar-dialog-close" data-dialog-close aria-label="Close">×</button></header><p class="calendar-dialog-error" data-dialog-error hidden></p><div class="calendar-dialog-fields"><label>Name<input name="name" type="text" maxlength="60" required placeholder="e.g. School, Family, Work"></label></div><footer class="calendar-dialog-actions"><button type="button" class="calendar-dialog-secondary" data-dialog-close>Cancel</button><button type="submit" class="calendar-dialog-primary">Add calendar</button></footer></form>`;
+  target.append(dialog);
+  dialog.showModal();
+  dialog.querySelectorAll<HTMLElement>('[data-dialog-close]').forEach((b) => b.addEventListener('click', () => dialog.close()));
+  dialog.addEventListener('close', () => dialog.remove(), { once: true });
+  dialog.querySelector('form')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const name = String(new FormData(event.currentTarget as HTMLFormElement).get('name') ?? '').trim();
+    if (!name) return;
+    void (async () => {
+      try {
+        await calendarSourcesApi.create({ name });
+        dialog.close();
+        await refresh?.();
+        rerender();
+      } catch (error) {
+        const box = dialog.querySelector<HTMLElement>('[data-dialog-error]');
+        if (box) { box.textContent = (error as Error).message; box.hidden = false; }
+      }
+    })();
+  });
 }

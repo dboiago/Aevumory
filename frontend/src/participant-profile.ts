@@ -1,4 +1,5 @@
 import './participant-profile.css';
+import { goBack } from './navigation';
 import type { HouseholdParticipant } from './tasks';
 import {
   attachPolling,
@@ -190,7 +191,7 @@ function renderMarkup(participant: HouseholdParticipant, data: ProfileData): str
 }
 
 function wire(target: HTMLDivElement): void {
-  target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => window.history.back());
+  target.querySelector<HTMLButtonElement>('[data-profile-back]')?.addEventListener('click', () => goBack('#tasks'));
   target.querySelector<HTMLButtonElement>('[data-profile-rewards]')?.addEventListener('click', () => {
     window.location.hash = '#rewards';
   });

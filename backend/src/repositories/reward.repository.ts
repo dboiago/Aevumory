@@ -19,6 +19,7 @@ export interface RewardRepository {
   listRewards(): Promise<Reward[]>;
   getReward(reward_id: string): Promise<Reward | null>;
   saveReward(reward: Reward): Promise<void>;
+  deleteReward(reward_id: string): Promise<void>;
 
   getRedemption(redemption_id: string): Promise<RewardRedemption | null>;
   listRedemptionsForParticipant(user_id: string): Promise<RewardRedemption[]>;

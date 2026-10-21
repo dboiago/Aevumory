@@ -22,6 +22,13 @@ export const createRequireAdminHook = (adminAuthService: AdminAuthService) => {
   };
 };
 
+export const getAdminSessionToken = (request: FastifyRequest): string | undefined =>
+  parseCookies(request.headers.cookie)[ADMIN_SESSION_COOKIE];
+
+export const clearAdminSessionCookie = (reply: FastifyReply): void => {
+  reply.header('set-cookie', `${ADMIN_SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict`);
+};
+
 export const setAdminSessionCookie = (reply: FastifyReply, token: string, secure: boolean): void => {
   const attributes = [
     `${ADMIN_SESSION_COOKIE}=${token}`,

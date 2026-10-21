@@ -1,10 +1,15 @@
 import {
   calendarEventsApi,
   calendarSourcesApi,
+  taskCyclesApi,
+  tasksApi,
   type HouseholdEventDto,
   type RecurrenceRuleDto,
   type TemporalSourceDto,
 } from './api-client';
+
+/** Synthetic calendar id for task cycles shown on the Calendar. */
+export const TASKS_CALENDAR_ID = 'tasks';
 
 export type CalendarSourceProvider = 'aevumory' | 'google' | 'icloud';
 
@@ -41,6 +46,8 @@ export type CalendarEvent = {
   participantIds?: string[];
   recurrence?: CalendarRecurrence;
   taskLinked?: boolean;
+  /** Present on task-linked entries: the task definition id. */
+  taskId?: string;
   eventHorizon: 'automatic' | 'show' | 'hide';
   relevance: 'ordinary' | 'meaningful';
   significance: 'low' | 'normal' | 'high';
@@ -65,26 +72,100 @@ export interface CalendarQuery {
  */
 export class ApiCalendarQuery implements CalendarQuery {
   async getState(): Promise<CalendarState> {
-    const [sources, events] = await Promise.all([
+    const [sources, events, taskEvents] = await Promise.all([
       calendarSourcesApi.list().catch(() => []),
       calendarEventsApi.list().catch(() => []),
+      loadTaskEvents().catch(() => [] as CalendarEvent[]),
     ]);
 
     return {
       sources: sources.map(toCalendarSource),
-      events: events.filter((event) => event.status === 'active').map(toCalendarEvent),
+      events: [
+        ...events.filter((event) => event.status === 'active').map(toCalendarEvent),
+        ...taskEvents,
+      ],
     };
   }
 }
 
+/**
+ * Task cycles as calendar entries. This wires the Calendar's "Tasks"
+ * toggle to real data — previously taskLinked was hardcoded false
+ * ("cross-linking out of scope" in Phase 5), so the toggle filtered an
+ * always-empty set and tasks never appeared. The window covers the
+ * months a user can plausibly browse to from today; month navigation
+ * re-renders from this state and polling refetches it.
+ */
+async function loadTaskEvents(): Promise<CalendarEvent[]> {
+  const start = new Date();
+  start.setDate(start.getDate() - 62);
+  const end = new Date();
+  end.setDate(end.getDate() + 122);
+  const [tasks, cycles] = await Promise.all([
+    tasksApi.list(),
+    taskCyclesApi.listInWindow({ starts_at: start.toISOString(), ends_at: end.toISOString() }),
+  ]);
+  const titles = new Map(tasks.map((task) => [task.task_id, task.title]));
+  const dueTimes = new Map(tasks.map((task) => [
+    task.task_id,
+    task.schedule.has_strict_window ? task.schedule.window_end_time : undefined,
+  ]));
+
+  return cycles
+    .filter((cycle) => cycle.status === 'pending' || cycle.status === 'satisfied')
+    .map((cycle) => {
+      const dueTime = dueTimes.get(cycle.task_id);
+      if (dueTime) {
+        // Timed entry at the due time — expand() handles same-day timed
+        // spans correctly.
+        return {
+          id: `task:${cycle.cycle_id}`,
+          calendarId: TASKS_CALENDAR_ID,
+          title: titles.get(cycle.task_id) ?? 'Task',
+          startsAt: `${cycle.target_date}T${dueTime}`,
+          endsAt: `${cycle.target_date}T${dueTime}`,
+          allDay: false,
+          taskLinked: true,
+          taskId: cycle.task_id,
+          eventHorizon: 'automatic' as const,
+          relevance: 'ordinary' as const,
+          significance: 'low' as const,
+        };
+      }
+      // All-day entry. NOTE: the calendar's all-day span logic treats
+      // endsAt as EXCLUSIVE (the day after the last occupied day) —
+      // setting endsAt == startsAt renders nothing at all (the original
+      // "tasks never show on the calendar" bug).
+      const next = new Date(`${cycle.target_date}T12:00:00`);
+      next.setDate(next.getDate() + 1);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const nextDate = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+      return {
+        id: `task:${cycle.cycle_id}`,
+        calendarId: TASKS_CALENDAR_ID,
+        title: titles.get(cycle.task_id) ?? 'Task',
+        startsAt: `${cycle.target_date}T00:00:00`,
+        endsAt: `${nextDate}T00:00:00`,
+        allDay: true,
+        taskLinked: true,
+        taskId: cycle.task_id,
+        eventHorizon: 'automatic' as const,
+        relevance: 'ordinary' as const,
+        significance: 'low' as const,
+      };
+    });
+}
+
 function toCalendarSource(source: TemporalSourceDto): CalendarSource {
+  // All sources are writable LOCALLY: events are stored in Aevumory's own
+  // database under the chosen source. Provider sync adapters don't exist
+  // yet, so a Google/iCloud-labelled source is a local calendar with that
+  // label — it is NOT synced, but it must stay selectable in the editor
+  // (regression report 2026-10-20: only 'Aevumory' could be added to).
   if (source.kind === 'local') {
     return { id: source.source_id, provider: 'aevumory', name: source.name, writable: true };
   }
-
-  // External provider adapters are not implemented in this phase (Phase 5
-  // scope boundary) — rendered read-only defensively rather than assumed away.
-  return { id: source.source_id, provider: 'google', name: source.name, writable: false };
+  return { id: source.source_id, provider: 'google', name: source.name, writable: true };
 }
 
 function toCalendarEvent(event: HouseholdEventDto): CalendarEvent {

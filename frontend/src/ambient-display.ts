@@ -41,7 +41,7 @@ function renderSourceOverview(target: HTMLDivElement): void {
     <main class="ambient-settings" aria-label="Ambient Display">
       <header class="ambient-settings-header">
         <div>
-          <p class="eyebrow">Ambient Display</p>
+          <p class="eyebrow">Sources</p>
           <h1>Image Sources</h1>
         </div>
       </header>
@@ -139,8 +139,7 @@ function renderSourceChoice(source: { kind: AmbientSourceKind; name: string }): 
 }
 
 function renderSelectionStep(target: HTMLDivElement, kind: AmbientSourceKind, name: string): void {
-  const source = fixtureAmbientSources.find((item) => item.kind === kind);
-  const owner = source?.owner;
+  const owner = undefined;
   const canSelectIndividuals = kind !== 'aevumory';
 
   target.innerHTML = `
@@ -160,10 +159,7 @@ function renderSelectionStep(target: HTMLDivElement, kind: AmbientSourceKind, na
           </span>
           ${renderCheckbox(true, 'Include all photos')}
         </label>
-        <div class="ambient-selection-section-label">${kind === 'device' ? 'Folders' : 'Albums'}</div>
-        ${renderSelectionRow('Family', true)}
-        ${renderSelectionRow('Travel', true)}
-        ${renderSelectionRow('Cottage', false)}
+        <p class="ambient-selection-description">Albums and folders will appear here once this source is connected. Nothing is connected yet, so there is nothing to choose from.</p>
         ${canSelectIndividuals ? '<button type="button" class="ambient-individual-selection">Individual images <span aria-hidden="true">›</span></button>' : ''}
         <div class="ambient-selection-action">
           <button type="button" class="ambient-primary-action" data-done>Done</button>
@@ -179,15 +175,6 @@ function renderSelectionStep(target: HTMLDivElement, kind: AmbientSourceKind, na
   target.querySelector<HTMLButtonElement>('[data-done]')?.addEventListener('click', () => {
     renderCompletionStep(target, name, owner, kind);
   });
-}
-
-function renderSelectionRow(label: string, checked: boolean): string {
-  return `
-    <label class="ambient-selection-row">
-      <span class="ambient-selection-title">${escapeHtml(label)}</span>
-      ${renderCheckbox(checked, `Include ${label}`)}
-    </label>
-  `;
 }
 
 function renderCheckbox(checked: boolean, label: string): string {
@@ -210,7 +197,7 @@ function renderCompletionStep(target: HTMLDivElement, name: string, owner: strin
       </header>
       <section class="ambient-completion-panel">
         ${owner ? `<p>${escapeHtml(owner)}</p>` : ''}
-        <p>3 albums · 1,284 images</p>
+        <p>Photos from this source will appear on the Ambient screen once it is connected.</p>
         <div class="ambient-selection-action">
           <button type="button" class="ambient-primary-action" data-done>Done</button>
         </div>

@@ -11,7 +11,16 @@ import { renderHouseholdSetup } from './household-setup';
 import { ApiRewardsQuery } from './rewards';
 import { renderRewards } from './rewards-view';
 import { renderParticipantProfile } from './participant-profile';
+import { renderProfiles } from './profiles';
 import { attachPolling, participantsApi, startPolling, stopPolling } from './api-client';
+import { installIdleReturn, installSwipeNavigation, noteRoute, syncAppNavigation } from './navigation';
+import { renderSettings } from './settings';
+import { renderActivity } from './activity';
+import { renderCountdown } from './countdown';
+import { applyStoredTheme } from './themes';
+import { emptyTaskFormState, renderTaskForm, taskFormStateFromTask, type TaskFormState } from './task-form';
+import { openPruneDialog } from './prune-dialog';
+import type { TaskDto } from './api-client';
 
 type AmbientContext =
   | { kind: 'ordinary'; date: string; time: string; weather: string }
@@ -34,16 +43,28 @@ let context: AmbientContext = {
   weather: 'Clear · 18°',
 };
 
-const now = '2026-09-02T18:00:00-04:00';
 const temporalQuery = new ApiTemporalQuery();
 const taskBoardQuery = new ApiTaskBoardQuery();
 const calendarQuery = new ApiCalendarQuery();
 const rewardsQuery = new ApiRewardsQuery();
 
+applyStoredTheme();
+installSwipeNavigation();
+installIdleReturn();
+
 void render(root);
 window.addEventListener('hashchange', () => void render(root));
 
 async function render(target: HTMLDivElement): Promise<void> {
+  noteRoute(window.location.hash);
+  await renderRoute(target);
+  // The flyout shell lives on <body> (see navigation.ts), so route
+  // renders and polling re-renders inside #app cannot remove it; it
+  // only needs its visibility/active item synced to the new route.
+  syncAppNavigation();
+}
+
+async function renderRoute(target: HTMLDivElement): Promise<void> {
   const hash = window.location.hash;
 
   // Every route starts from a clean slate; only the routes that opt back in
@@ -56,8 +77,28 @@ async function render(target: HTMLDivElement): Promise<void> {
     return;
   }
 
+  if (hash === '#settings') {
+    renderSettings(target);
+    return;
+  }
+
+  if (hash === '#activity') {
+    await renderActivity(target);
+    return;
+  }
+
+  if (hash === '#countdown') {
+    renderCountdown(target);
+    return;
+  }
+
   if (hash === '#calendar') {
     await renderCalendar(target, calendarQuery);
+    return;
+  }
+
+  if (hash === '#profiles') {
+    await renderProfiles(target);
     return;
   }
 
@@ -71,6 +112,7 @@ async function render(target: HTMLDivElement): Promise<void> {
     const store = new FixtureTaskBoardStore(state, () => taskBoardQuery.getBoard());
     renderTaskBoard(target, store);
     attachPolling(target, startPolling(async () => {
+      if (taskFormSession) return; // never wipe an open create/edit form
       const scrollState = captureTaskBoardScrollState(target);
       await store.refresh();
       renderTaskBoard(target, store, scrollState);
@@ -104,8 +146,8 @@ async function render(target: HTMLDivElement): Promise<void> {
   }
 
   // Event Horizon uses the real current time (Phase 6), unlike the fixture
-  // `now` used for the ambient signature/task-board formatting elsewhere on
-  // this page — real persisted occurrences need a real temporal reference.
+  // date/time still used for the ambient signature elsewhere on this page —
+  // real persisted occurrences need a real temporal reference.
   await renderHorizon(target);
   attachPolling(target, startPolling(() => renderHorizon(target)));
 }
@@ -129,6 +171,10 @@ async function renderHorizon(target: HTMLDivElement): Promise<void> {
   `;
 }
 
+/** Open create/edit form session for the Task Board (module-level so the
+ *  polling re-render can preserve/skip it — see the #tasks route). */
+let taskFormSession: { state: TaskFormState; editing?: TaskDto } | null = null;
+
 function renderTaskBoard(
   target: HTMLDivElement,
   store: FixtureTaskBoardStore,
@@ -148,7 +194,9 @@ function renderTaskBoard(
           <p class="eyebrow">Household</p>
           <h1>Tasks</h1>
         </div>
+        <button type="button" class="task-board-add" data-task-add>Add task</button>
       </header>
+      <div data-task-form-slot></div>
       <section class="task-columns" aria-label="Household responsibilities">
         ${participantSections}
         ${renderTaskColumn('Household', undefined, householdTasks)}
@@ -159,6 +207,31 @@ function renderTaskBoard(
   const board = target.querySelector<HTMLElement>('.task-board');
   if (board) board.scrollTop = scrollState.board;
   restoreTaskListScrollPositions(target, scrollState.lists);
+
+  const closeTaskForm = async (): Promise<void> => {
+    taskFormSession = null;
+    await store.refresh();
+    renderTaskBoard(target, store, captureTaskBoardScrollState(target));
+  };
+  const formSlot = target.querySelector<HTMLElement>('[data-task-form-slot]');
+  if (formSlot && taskFormSession) {
+    renderTaskForm(formSlot, taskFormSession.state, state.participants, taskFormSession.editing, {
+      onSaved: () => void closeTaskForm(),
+      onCancel: () => { taskFormSession = null; renderTaskBoard(target, store, captureTaskBoardScrollState(target)); },
+    });
+  }
+  target.querySelector('[data-task-add]')?.addEventListener('click', () => {
+    taskFormSession = { state: emptyTaskFormState() };
+    renderTaskBoard(target, store, captureTaskBoardScrollState(target));
+  });
+  target.querySelectorAll<HTMLButtonElement>('[data-action="edit"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const item = state.tasks.find((entry) => entry.taskId === button.dataset.taskDef);
+      if (!item) return;
+      taskFormSession = { state: taskFormStateFromTask(item.task), editing: item.task };
+      renderTaskBoard(target, store, captureTaskBoardScrollState(target));
+    });
+  });
 
   target.querySelectorAll<HTMLElement>('[data-task-id]').forEach((card) => {
     card.addEventListener('dragstart', (event) => {
@@ -214,6 +287,35 @@ function renderTaskBoard(
     button.addEventListener('click', async () => {
       const scrollState = captureTaskBoardScrollState(target);
       await store.apply({ kind: 'complete', taskId: button.dataset.taskId ?? '' });
+      renderTaskBoard(target, store, scrollState);
+    });
+  });
+
+  target.querySelectorAll<HTMLButtonElement>('[data-action="foothold"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const scrollState = captureTaskBoardScrollState(target);
+      await store.apply({ kind: 'foothold', taskId: button.dataset.taskId ?? '' });
+      renderTaskBoard(target, store, scrollState);
+    });
+  });
+
+  target.querySelectorAll<HTMLButtonElement>('[data-action="prune"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const cycleId = button.dataset.taskId ?? '';
+      const state = store.getState();
+      const item = state.tasks.find((entry) => entry.id === cycleId);
+      if (!item) return;
+      const otherTasks = [...new Map(state.tasks.filter((entry) => entry.taskId !== item.taskId).map((entry) => [entry.taskId, entry.title])).entries()]
+        .map(([taskId, title]) => ({ taskId, title }));
+      const input = await openPruneDialog({
+        taskTitle: item.title,
+        participants: state.participants,
+        defaultActorId: item.responsibleUserId ?? state.participants[0]?.id,
+        otherTasks,
+      });
+      if (!input) return;
+      const scrollState = captureTaskBoardScrollState(target);
+      await store.apply({ kind: 'prune', taskId: cycleId, input });
       renderTaskBoard(target, store, scrollState);
     });
   });
@@ -368,8 +470,8 @@ function restoreTaskListScrollPositions(target: HTMLDivElement, positions: TaskL
 function isTaskForToday(task: ReturnType<FixtureTaskBoardStore['getState']>['tasks'][number]): boolean {
   // Task Board data is real (FUNCTIONAL_FOUNDATION_PLAN.md Phase 2) and
   // already scoped to today's real window by ApiTaskBoardQuery; this only
-  // needs to compare against the real current date, not the fixture `now`
-  // used elsewhere on this page for the ambient/calendar/horizon screens.
+  // needs to compare against the real current date, not the fixture date
+  // still used for the ambient signature on this page.
   const today = new Date().toISOString().slice(0, 10);
   return !task.dueAt || task.dueAt.startsWith(today);
 }
@@ -447,8 +549,12 @@ function renderTaskCard(
         <span class="task-domain" aria-label="Domain">${escapeHtml(task.domain)}</span>
         <div class="task-card-actions">
           ${reward ? `<span class="task-reward ${reward.exceptional ? 'task-reward-exceptional' : ''}" aria-label="Reward earned">${escapeHtml(rewardLabel)}</span>` : ''}
-          <button type="button" class="task-complete" data-action="complete" data-task-id="${task.id}" aria-label="${completed ? 'Mark task as not done' : 'Mark task as done'}">
-            ${completed ? 'Done' : 'Complete'}
+          ${task.footholdEstablished ? `<span class="task-reward" aria-label="Foothold established">Foothold${task.footholdReward ? ` · +${task.footholdReward.experience} XP` : ''}</span>` : ''}
+          <button type="button" class="task-edit" data-action="edit" data-task-def="${task.taskId}">Edit</button>
+          ${!completed && task.task.supports_foothold && !task.footholdEstablished ? `<button type="button" class="task-edit" data-action="foothold" data-task-id="${task.id}">Start</button>` : ''}
+          ${!completed ? `<button type="button" class="task-edit" data-action="prune" data-task-id="${task.id}">Not needed</button>` : ''}
+          <button type="button" class="task-complete" data-action="complete" data-task-id="${task.id}" aria-label="${completed ? 'Undo completion (removes the reward it granted)' : 'Mark task as done'}">
+            ${completed ? 'Undo' : 'Complete'}
           </button>
         </div>
       </div>
@@ -458,7 +564,7 @@ function renderTaskCard(
 
 function formatTaskDue(value: string): string {
   const date = new Date(value);
-  const sameDay = value.startsWith(now.slice(0, 10));
+  const sameDay = value.startsWith(new Date().toISOString().slice(0, 10));
   const time = new Intl.DateTimeFormat('en-CA', {
     hour: '2-digit',
     minute: '2-digit',

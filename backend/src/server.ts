@@ -58,7 +58,7 @@ import {
   InvalidAdminPinError,
   isValidAdminPin,
 } from './services/admin-auth.service.js';
-import { createRequireAdminHook, setAdminSessionCookie } from './http/require-admin.js';
+import { clearAdminSessionCookie, createRequireAdminHook, getAdminSessionToken, setAdminSessionCookie } from './http/require-admin.js';
 import type { Participant } from './types/household.types.js';
 import { DefaultTemporalService } from './services/temporal.service.js';
 import type { EventSchedule } from './types/event-schedule.types.js';
@@ -193,7 +193,7 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
   // ============================================================================
   // Task & Task Cycle Endpoints (Phase 2)
   //
-  // Task definition mutations are admin-gated. Task/cycle reads and cycle
+  // Task creation is an ordinary household action (anyone may create a task on the shared display); task definition edits and deletion are admin-gated. Task/cycle reads and cycle
   // reassignment are ordinary household actions and require no admin session
   // (CORE_BASELINE.md §2: "Task Reassignment ... is an ordinary household
   // action, not a separate game mode").
@@ -203,7 +203,7 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
     return taskService.listTasks();
   });
 
-  fastify.post('/api/tasks', { onRequest: requireAdmin }, async (request, reply) => {
+  fastify.post('/api/tasks', async (request, reply) => {
     const body = request.body as Partial<CreateTaskInput> | undefined;
     if (!body?.title || !body.primary_discipline || !body.source_type ||
         !body.created_by_user_id || !body.assignment || !body.schedule ||
@@ -321,6 +321,27 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
     }
   });
 
+  // Household "oops" undo — deliberately NOT admin-gated, mirroring
+  // complete: POST /api/task-cycles/:id/uncomplete
+  fastify.post('/api/task-cycles/:id/uncomplete', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { created_by_user_id?: string } | undefined;
+
+    try {
+      return await taskExecutionService.uncompleteCycle(id, { created_by_user_id: body?.created_by_user_id });
+    } catch (error) {
+      if (error instanceof TaskCycleNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      if (error instanceof InvalidCycleStateError) {
+        reply.code(409).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
   fastify.post('/api/task-cycles/:id/foothold', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as { completed_by_user_id?: string } | undefined;
@@ -340,14 +361,16 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
     }
   });
 
-  // Ordinary (non-completion) cycle resolution — records why the cycle was
-  // resolved without being completed; earns no reward by itself (see
-  // TaskExecutionService.pruneCycle). Endpoint name kept as `/prune` to match
-  // the already-documented `deductively_pruned` ExecutionOutcomeType.
+  // Cycle resolution without completion — records why (see
+  // TaskExecutionService.pruneCycle). Ordinary resolution earns nothing;
+  // with award_reason_yield the same call is the Deductive Pruning
+  // (Reason) mechanic and requires causal evidence + an actor.
+  // Endpoint name kept as `/prune` to match the documented
+  // `deductively_pruned` ExecutionOutcomeType.
   fastify.post('/api/task-cycles/:id/prune', async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as
-      | { reason_code?: string; note?: string; linked_task_id?: string; completed_by_user_id?: string }
+      | { reason_code?: string; note?: string; linked_task_id?: string; completed_by_user_id?: string; award_reason_yield?: boolean }
       | undefined;
 
     if (!body?.reason_code) {
@@ -361,6 +384,7 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
         note: body.note,
         linked_task_id: body.linked_task_id,
         completed_by_user_id: body.completed_by_user_id,
+        award_reason_yield: body.award_reason_yield,
       });
     } catch (error) {
       if (error instanceof TaskNotFoundError || error instanceof TaskCycleNotFoundError) {
@@ -431,6 +455,32 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
     return rewardService.listRewards();
   });
 
+  // Reward image upload (admin): stores the file under DATA_DIR/uploads
+  // and returns its /uploads/... path for use as a reward's image_ref.
+  // Images are deliberately kept OUT of the database (only the path is).
+  fastify.post('/api/rewards/images', { onRequest: requireAdmin, bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
+    const body = request.body as { filename?: string; data_base64?: string } | undefined;
+    const ext = (body?.filename?.split('.').pop() ?? '').toLowerCase();
+    const allowed: Record<string, string> = { png: 'png', jpg: 'jpg', jpeg: 'jpg', gif: 'gif', webp: 'webp' };
+    if (!body?.data_base64 || !allowed[ext]) {
+      reply.code(400).send({ error: 'a png, jpg, gif, or webp image is required' });
+      return;
+    }
+    const buffer = Buffer.from(body.data_base64, 'base64');
+    if (buffer.length === 0 || buffer.length > 5 * 1024 * 1024) {
+      reply.code(400).send({ error: 'image must be between 1 byte and 5 MB' });
+      return;
+    }
+    const { dataDir } = getAppConfig();
+    const dir = path.join(dataDir, 'uploads', 'rewards');
+    const fsSync = await import('node:fs');
+    fsSync.mkdirSync(dir, { recursive: true });
+    const name = `${randomUUID()}.${allowed[ext]}`;
+    fsSync.writeFileSync(path.join(dir, name), buffer);
+    reply.code(201);
+    return { url: `/uploads/rewards/${name}` };
+  });
+
   fastify.post('/api/rewards', { onRequest: requireAdmin }, async (request, reply) => {
     const body = request.body as Partial<CreateRewardServiceInput> | undefined;
     if (!body?.title || !body.category || body.base_cost === undefined) {
@@ -453,6 +503,20 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
 
     try {
       return await rewardService.updateReward(id, body ?? {});
+    } catch (error) {
+      if (error instanceof RewardNotFoundError) {
+        reply.code(404).send({ error: error.message });
+        return;
+      }
+      reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  fastify.delete('/api/rewards/:id', { onRequest: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    try {
+      await rewardService.deleteReward(id);
+      reply.code(204).send();
     } catch (error) {
       if (error instanceof RewardNotFoundError) {
         reply.code(404).send({ error: error.message });
@@ -510,6 +574,21 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
       }
       throw error;
     }
+  });
+
+  // Admin-mode status for the UI's padlock control (PIN configured? session live?).
+  fastify.get('/api/admin/session', async (request) => {
+    return {
+      pin_configured: await adminAuthService.isPinConfigured(),
+      authenticated: adminAuthService.validateSession(getAdminSessionToken(request)),
+    };
+  });
+
+  // Admin-mode lock: ends the session server-side and clears the cookie.
+  fastify.delete('/api/admin/session', async (request, reply) => {
+    adminAuthService.invalidateSession(getAdminSessionToken(request));
+    clearAdminSessionCookie(reply);
+    return { ok: true };
   });
 
   fastify.post('/api/admin/session', async (request, reply) => {
@@ -777,6 +856,17 @@ export const createServer = async (db: Database.Database, options: { logger?: bo
       prefix: '/',
     });
 
+    // Uploaded reward images (DATA_DIR/uploads) — created on demand.
+    const { dataDir } = getAppConfig();
+    const uploadsPath = path.join(dataDir, 'uploads');
+    const fsSync = await import('node:fs');
+    fsSync.mkdirSync(uploadsPath, { recursive: true });
+    await fastify.register(fastifyStatic, {
+      root: uploadsPath,
+      prefix: '/uploads/',
+      decorateReply: false,
+    });
+
     // Fallback to index.html for SPA routing
     fastify.setNotFoundHandler((request, reply) => {
       if (request.url.startsWith('/api/')) {
@@ -864,6 +954,15 @@ const main = async () => {
     // Run migrations
     const migrationsDir = path.join(__dirname, '../migrations');
     runMigrations(db, migrationsDir);
+
+    // Forgot-PIN recovery (HANDOFF.md): starting the server once with
+    // AEVUMORY_RESET_ADMIN_PIN=1 clears the admin PIN so a new one can be
+    // set from Household Setup. Server access is the credential — there
+    // is deliberately no HTTP route for this.
+    if (process.env.AEVUMORY_RESET_ADMIN_PIN === '1') {
+      db.prepare('UPDATE households SET admin_pin_hash = NULL').run();
+      console.warn('⚠ AEVUMORY_RESET_ADMIN_PIN=1: admin PIN cleared. Unset the variable and restart.');
+    }
 
     // Create server
     const fastify = await createServer(db);

@@ -1,0 +1,124 @@
+/* Admin unlock dialog + flyout padlock — same modal language as the
+   calendar dialogs: dim backdrop, surface panel, token colours. */
+
+.admin-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--overlay-backdrop);
+}
+
+.admin-dialog {
+  width: min(360px, 100%);
+  padding: 22px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, 10px);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 18px 48px var(--overlay-black-shadow);
+}
+
+.admin-dialog h2 {
+  margin: 0 0 8px;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-dialog p {
+  margin: 0 0 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-dialog label span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.admin-dialog input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--action-primary-border);
+  border-radius: 7px;
+  background: var(--action-primary-bg);
+  color: var(--text-primary);
+  font: inherit;
+  letter-spacing: .3em;
+}
+
+.admin-dialog-error {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.admin-dialog-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.admin-dialog-primary,
+.admin-dialog-secondary {
+  padding: 8px 14px;
+  border: 1px solid var(--action-primary-border);
+  border-radius: 7px;
+  background: var(--action-primary-bg);
+  color: var(--accent-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.admin-dialog-secondary {
+  color: var(--text-muted);
+}
+
+.admin-dialog-primary:hover,
+.admin-dialog-secondary:hover {
+  background: var(--action-primary-hover-bg);
+}
+
+.app-navigation-admin {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.app-navigation-admin:hover {
+  color: var(--text-primary);
+  background: var(--action-primary-bg);
+}
+
+.admin-dialog input:focus-visible,
+.admin-dialog-primary:focus-visible,
+.admin-dialog-secondary:focus-visible,
+.app-navigation-admin:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}

@@ -336,3 +336,102 @@ describe('TaskExecutionService — participant ledger', () => {
     expect(ledger.adjustments).toHaveLength(1);
   });
 });
+
+describe('TaskExecutionService — un-complete (household undo)', () => {
+  it('reopens the cycle and exactly reverses the granted reward', async () => {
+    const { taskService, executionService, ledgerRepository } = makeHarness();
+    const task = await taskService.createTask(createTaskInput());
+    const cycleId = `${task.task_id}:2026-01-05`;
+
+    const completed = await executionService.completeCycle(cycleId, { completed_by_user_id: 'participant-1' });
+    expect(completed.transaction?.yield.primary_xp).toBe(5);
+
+    const result = await executionService.uncompleteCycle(cycleId);
+    expect(result.cycle.status).toBe('pending');
+    expect(result.cycle.satisfied_at).toBeUndefined();
+
+    const ledger = await executionService.getParticipantLedger('participant-1');
+    expect(ledger.balance).toBe(0);
+    expect(ledger.adjustments).toHaveLength(1);
+    expect(ledger.adjustments[0].reason).toBe('system_correction');
+    expect(ledger.adjustments[0].credits_delta).toBe(-0.5);
+    expect(ledger.adjustments[0].xp_adjustments).toEqual([{ discipline: 'order', xp_delta: -5 }]);
+  });
+
+  it('rejects un-completing a cycle that is not satisfied', async () => {
+    const { taskService, executionService } = makeHarness();
+    const task = await taskService.createTask(createTaskInput());
+    await taskService.getOrMaterializeCycle(`${task.task_id}:2026-01-05`);
+    await expect(executionService.uncompleteCycle(`${task.task_id}:2026-01-05`)).rejects.toBeInstanceOf(InvalidCycleStateError);
+  });
+
+  it('allows completing again after an un-complete', async () => {
+    const { taskService, executionService } = makeHarness();
+    const task = await taskService.createTask(createTaskInput());
+    const cycleId = `${task.task_id}:2026-01-05`;
+    await executionService.completeCycle(cycleId, { completed_by_user_id: 'participant-1' });
+    await executionService.uncompleteCycle(cycleId);
+    const again = await executionService.completeCycle(cycleId, { completed_by_user_id: 'participant-1' });
+    expect(again.cycle.status).toBe('satisfied');
+  });
+});
+
+describe('TaskExecutionService — Deductive Pruning (Reason perk, explicit opt-in)', () => {
+  it('awards Reason XP (no Credits) to the actor for a sustained task with causal evidence', async () => {
+    const { taskService, executionService } = makeHarness();
+    const task = await taskService.createTask(createTaskInput({ primary_discipline: 'order', duration_tier: 'sustained' }));
+    const cycleId = `${task.task_id}:2026-01-05`;
+
+    const result = await executionService.pruneCycle(cycleId, {
+      reason_code: 'condition_no_longer_exists',
+      note: 'Checked: the leak was already fixed',
+      completed_by_user_id: 'participant-1',
+      award_reason_yield: true,
+    });
+
+    expect(result.transaction?.reward_event_type).toBe('deductive_pruning');
+    expect(result.transaction?.yield.primary_discipline).toBe('reason');
+    expect(result.transaction?.yield.primary_xp).toBe(30);
+    expect(result.transaction?.yield.credits_earned).toBe(0);
+    expect(result.cycle.status).toBe('superseded');
+
+    const ledger = await executionService.getParticipantLedger('participant-1');
+    expect(ledger.balance).toBe(0);
+    expect(ledger.transactions).toHaveLength(1);
+  });
+
+  it('rejects the paid path without a recognised reason code', async () => {
+    const { taskService, executionService } = makeHarness();
+    const task = await taskService.createTask(createTaskInput());
+    const cycleId = `${task.task_id}:2026-01-05`;
+
+    await expect(executionService.pruneCycle(cycleId, {
+      reason_code: 'just_did_not_feel_like_it',
+      completed_by_user_id: 'participant-1',
+      award_reason_yield: true,
+    })).rejects.toThrow(/not recognised causal evidence/);
+  });
+
+  it('requires a linked task when another task satisfied this one', async () => {
+    const { taskService, executionService } = makeHarness();
+    const task = await taskService.createTask(createTaskInput());
+    const cycleId = `${task.task_id}:2026-01-05`;
+
+    await expect(executionService.pruneCycle(cycleId, {
+      reason_code: 'another_task_satisfied',
+      completed_by_user_id: 'participant-1',
+      award_reason_yield: true,
+    })).rejects.toThrow(/linked_task_id is required/);
+  });
+
+  it('requires an acting participant to receive the Reason XP', async () => {
+    const { taskService, executionService } = makeHarness();
+    const task = await taskService.createTask(createTaskInput({ assignment: { scope: 'household' } as never }));
+    const cycleId = `${task.task_id}:2026-01-05`;
+
+    await expect(executionService.pruneCycle(cycleId, {
+      reason_code: 'established_redundant',
+      award_reason_yield: true,
+    })).rejects.toThrow(/acting participant is required/);
+  });
+});

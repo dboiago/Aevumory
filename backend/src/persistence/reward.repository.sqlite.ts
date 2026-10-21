@@ -33,6 +33,7 @@ interface RewardRow {
   base_cost: number;
   is_discountable: number;
   is_active: number;
+  image_ref: string | null;
 }
 
 interface RewardRedemptionRow {
@@ -45,7 +46,7 @@ interface RewardRedemptionRow {
 }
 
 const REWARD_COLUMNS = `
-  id, title, description, category, base_cost, is_discountable, is_active
+  id, title, description, category, base_cost, is_discountable, is_active, image_ref
 `;
 
 const REDEMPTION_COLUMNS = `
@@ -84,14 +85,15 @@ export class SqliteRewardRepository implements RewardRepository {
       .prepare(
         `
       INSERT INTO rewards (${REWARD_COLUMNS})
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         title = excluded.title,
         description = excluded.description,
         category = excluded.category,
         base_cost = excluded.base_cost,
         is_discountable = excluded.is_discountable,
-        is_active = excluded.is_active
+        is_active = excluded.is_active,
+        image_ref = excluded.image_ref
     `,
       )
       .run(
@@ -102,8 +104,14 @@ export class SqliteRewardRepository implements RewardRepository {
         reward.base_cost,
         reward.is_discountable ? 1 : 0,
         reward.is_active ? 1 : 0,
+        reward.image_ref ?? null,
       );
 
+    return Promise.resolve();
+  }
+
+  deleteReward(reward_id: string): Promise<void> {
+    this.db.prepare('DELETE FROM rewards WHERE id = ?').run(reward_id);
     return Promise.resolve();
   }
 
@@ -178,6 +186,7 @@ function rowToReward(row: RewardRow): Reward {
     base_cost: row.base_cost,
     is_discountable: row.is_discountable === 1,
     is_active: row.is_active === 1,
+    image_ref: row.image_ref ?? undefined,
   };
 }
 

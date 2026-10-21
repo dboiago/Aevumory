@@ -66,7 +66,7 @@ body:has(.calendar-page) { overflow-x: hidden; }
 
 .calendar-more { width: 100%; padding: 3px 5px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: .7rem; text-align: left; cursor: pointer; }
 .calendar-more:hover { color: var(--text-primary); }
-.calendar-actions { display: flex; justify-content: flex-end; padding-top: 12px; }
+.calendar-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; }
 .calendar-primary-action { padding: 6px 11px; }
 
 .calendar-dialog { width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--border-active); border-radius: var(--radius-card); background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 12px 40px var(--overlay-black-shadow); }
@@ -114,3 +114,11 @@ body:has(.calendar-page) { overflow-x: hidden; }
 
 @media (max-width: 900px) { .calendar-day { min-height: 108px; } .calendar-event { font-size: .7rem; } }
 @media (max-width: 650px) { .calendar-page { padding: 20px 12px 40px; } .calendar-grid { overflow-x: auto; grid-template-columns: repeat(7, minmax(115px, 1fr)); } .calendar-day { min-height: 100px; } .calendar-controls { align-items: flex-start; } .calendar-weekly-days { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Task editor hosted on the Calendar (stays on-screen per product
+   decision): dimmed overlay + panel reusing the task form's own styles. */
+.calendar-task-dialog { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 24px 16px; background: rgba(0, 0, 0, .45); }
+.calendar-task-dialog-panel { width: min(640px, 100%); }
+.calendar-task-dialog-panel .task-form { margin: 0; }
+.calendar-task-dialog-loading { color: var(--text-primary); }
+.calendar-secondary-action { padding: 10px 16px; border: 1px solid var(--border-subtle); border-radius: var(--radius-badge, 999px); background: transparent; color: var(--text-primary); font: inherit; font-weight: 600; cursor: pointer; }

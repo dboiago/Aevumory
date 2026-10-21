@@ -80,9 +80,9 @@ describe('Task/TaskCycle API', () => {
     expect(response.json()).toEqual([]);
   });
 
-  it('rejects task creation without an admin session', async () => {
+  it('allows task creation without an admin session (anyone may create a task)', async () => {
     const response = await app.inject({ method: 'POST', url: '/api/tasks', payload: taskPayload });
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toBe(201);
   });
 
   it('creates, reads, updates, and deletes a task once authorized', async () => {

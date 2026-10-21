@@ -8,6 +8,9 @@ export interface Reward {
   base_cost: number; // Integer credits
   is_discountable: boolean; // Explicitly false for 'household'
   is_active: boolean;
+  /** Optional card image: '/uploads/...' path, an http(s) URL, or a
+   * data:image/... reference. Presentational only. */
+  image_ref?: string;
 }
 
 export interface ActiveRecoveryWindow {

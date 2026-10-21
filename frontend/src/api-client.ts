@@ -73,12 +73,44 @@ export const participantsApi = {
     apiRequest(`/api/participants/${encodeURIComponent(participantId)}`, { method: 'DELETE' }),
 };
 
+export interface AdminSessionStatusDto {
+  pin_configured: boolean;
+  authenticated: boolean;
+}
+
 export const adminApi = {
   setupPin: (pin: string): Promise<{ ok: true }> =>
     apiRequest('/api/admin/pin/setup', { method: 'POST', body: { pin } }),
 
   login: (pin: string): Promise<{ ok: true }> =>
     apiRequest('/api/admin/session', { method: 'POST', body: { pin } }),
+
+  status: (): Promise<AdminSessionStatusDto> =>
+    apiRequest('/api/admin/session'),
+
+  logout: (): Promise<{ ok: true }> =>
+    apiRequest('/api/admin/session', { method: 'DELETE' }),
+};
+
+export interface RewardAdjustmentDto {
+  adjustment_id: string;
+  original_transaction_id: string;
+  reason: string;
+  xp_adjustments: Array<{ discipline: string; xp_delta: number }>;
+  credits_delta: number;
+  created_at: string;
+  created_by_user_id: string;
+}
+
+export const rewardAdjustmentsApi = {
+  create: (input: {
+    original_transaction_id: string;
+    reason: string;
+    xp_adjustments: Array<{ discipline: string; xp_delta: number }>;
+    credits_delta: number;
+    created_by_user_id: string;
+  }): Promise<{ adjustment: RewardAdjustmentDto; cycle: TaskCycleDto | null }> =>
+    apiRequest('/api/reward-adjustments', { method: 'POST', body: input }),
 };
 
 // ============================================================================
@@ -219,6 +251,23 @@ export const taskCyclesApi = {
 
   complete: (cycleId: string, input: { completed_by_user_id?: string } = {}): Promise<CompleteCycleResultDto> =>
     apiRequest(`/api/task-cycles/${encodeURIComponent(cycleId)}/complete`, { method: 'POST', body: input }),
+
+  uncomplete: (cycleId: string): Promise<{ cycle: TaskCycleDto }> =>
+    apiRequest(`/api/task-cycles/${encodeURIComponent(cycleId)}/uncomplete`, { method: 'POST', body: {} }),
+
+  foothold: (cycleId: string, input: { completed_by_user_id?: string } = {}): Promise<CompleteCycleResultDto> =>
+    apiRequest(`/api/task-cycles/${encodeURIComponent(cycleId)}/foothold`, { method: 'POST', body: input }),
+
+  /** Ordinary resolution earns nothing; with award_reason_yield this is
+   * Deductive Pruning (Reason XP for the actor, no Credits). */
+  prune: (cycleId: string, input: {
+    reason_code: string;
+    note?: string;
+    linked_task_id?: string;
+    completed_by_user_id?: string;
+    award_reason_yield?: boolean;
+  }): Promise<CompleteCycleResultDto> =>
+    apiRequest(`/api/task-cycles/${encodeURIComponent(cycleId)}/prune`, { method: 'POST', body: input }),
 };
 
 // ============================================================================
@@ -235,6 +284,7 @@ export interface RewardDto {
   base_cost: number;
   is_discountable: boolean;
   is_active: boolean;
+  image_ref?: string;
 }
 
 export interface RewardRedemptionDto {
@@ -257,6 +307,7 @@ export interface CreateRewardDtoInput {
   category: RewardCategoryDto;
   base_cost: number;
   is_active?: boolean;
+  image_ref?: string | null;
 }
 
 export const rewardsApi = {
@@ -270,6 +321,12 @@ export const rewardsApi = {
 
   redeem: (rewardId: string, input: { user_id: string; idempotency_key: string }): Promise<RedeemRewardResultDto> =>
     apiRequest(`/api/rewards/${encodeURIComponent(rewardId)}/redeem`, { method: 'POST', body: input }),
+
+  remove: (rewardId: string): Promise<void> =>
+    apiRequest(`/api/rewards/${encodeURIComponent(rewardId)}`, { method: 'DELETE' }),
+
+  uploadImage: (filename: string, dataBase64: string): Promise<{ url: string }> =>
+    apiRequest('/api/rewards/images', { method: 'POST', body: { filename, data_base64: dataBase64 } }),
 };
 
 // The existing Phase 3 ledger endpoint is the single authoritative spendable
@@ -279,7 +336,7 @@ export interface ParticipantLedgerDto {
   reward_owner_user_id: string;
   balance: number;
   transactions: RewardTransactionDto[];
-  adjustments: Array<{ adjustment_id: string; credits_delta: number }>;
+  adjustments: RewardAdjustmentDto[];
 }
 
 export const participantLedgerApi = {

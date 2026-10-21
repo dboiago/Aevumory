@@ -34,6 +34,11 @@ export class InMemoryRewardRepository implements RewardRepository {
     return Promise.resolve();
   }
 
+  deleteReward(reward_id: string): Promise<void> {
+    this.rewards.delete(reward_id);
+    return Promise.resolve();
+  }
+
   getRedemption(redemption_id: string): Promise<RewardRedemption | null> {
     return Promise.resolve(this.redemptions.get(redemption_id) ?? null);
   }

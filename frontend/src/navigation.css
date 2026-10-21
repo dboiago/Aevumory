@@ -1,0 +1,158 @@
+/* Global fly-out navigation for functional screens.
+   Reuses the established design tokens and the small uppercase
+   secondary-navigation treatment (DESIGN_SYSTEM.md); no new visual
+   conventions. The Ambient screen never shows this shell. */
+
+.app-nav-toggle {
+  position: fixed;
+  z-index: 40;
+  top: 14px;
+  left: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  border: 1px solid var(--action-primary-border);
+  border-radius: 7px;
+  background: var(--action-primary-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.app-nav-toggle:hover {
+  border-color: var(--border-active);
+  background: var(--action-primary-hover-bg);
+  color: var(--text-primary);
+}
+
+.app-nav-toggle:focus-visible,
+.app-nav-link:focus-visible,
+.app-nav-ambient:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
+}
+
+.app-nav-toggle-bars,
+.app-nav-toggle-bars::before,
+.app-nav-toggle-bars::after {
+  display: block;
+  width: 14px;
+  height: 2px;
+  background: currentColor;
+  content: "";
+}
+
+.app-nav-toggle-bars {
+  position: relative;
+}
+
+.app-nav-toggle-bars::before {
+  position: absolute;
+  top: -5px;
+}
+
+.app-nav-toggle-bars::after {
+  position: absolute;
+  top: 5px;
+}
+
+.app-nav-backdrop {
+  position: fixed;
+  z-index: 49;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+}
+
+.app-nav-drawer {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(280px, 82vw);
+  height: 100dvh;
+  padding: 22px 20px;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 12px 0 40px rgb(0 0 0 / 35%);
+  animation: app-nav-slide-in 160ms ease-out;
+}
+
+.app-nav-drawer[hidden] {
+  display: none;
+}
+
+@keyframes app-nav-slide-in {
+  from {
+    transform: translateX(-12px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.app-nav-title {
+  margin: 0 0 20px;
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.app-nav-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-nav-link {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+
+.app-nav-link:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.app-nav-link-active {
+  color: var(--accent-primary);
+}
+
+.app-nav-ambient {
+  margin-top: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.app-nav-ambient:hover {
+  color: var(--text-primary);
+}

@@ -35,16 +35,16 @@ export function computeBaseYield(task: Task): RewardYield {
 }
 
 /**
- * Reserved for a future, domain-specific Inquiry mechanic ("Deductive
- * Pruning": investigative work that establishes a task is unnecessary —
- * TASK_LIFECYCLE.md §6, PROGRESSION_SPEC.md §12). NOT currently called by
- * `TaskExecutionService.pruneCycle` — ordinary non-completion resolution is
- * not an earned reward, and that future reward must never be inferred
- * merely because a cycle was resolved. Kept here, unused, as the shape a
- * future bounded Inquiry reward would reuse: the avoided task's own
- * base-yield magnitude (its only documented measure of "burden"), attributed
- * to the `reason` Discipline instead of the task's own primary Discipline,
- * with zero Credits since "the physical work did not occur".
+ * Deductive Pruning yield ("Reason": investigative work that establishes
+ * a task is unnecessary — TASK_LIFECYCLE.md §6, PROGRESSION_SPEC.md §12).
+ * Called by `TaskExecutionService.pruneCycle` ONLY when the caller
+ * explicitly requests the Deductive Pruning reward and supplies a
+ * documented causal-evidence reason code plus an acting participant.
+ * Ordinary non-completion resolution remains unpaid: this yield is never
+ * inferred merely because a cycle was resolved. The amount is the avoided
+ * task's own base-yield magnitude (its documented measure of burden),
+ * attributed to the `reason` Discipline instead of the task's own primary
+ * Discipline, with zero Credits since "the physical work did not occur".
  */
 export function computeReasonYield(task: Task): RewardYield {
   const base = computeBaseYield(task);

@@ -598,3 +598,74 @@ All state — household, participants, tasks, executions, rewards, and
 calendar — lives in the SQLite file under `DATA_DIR`. Stopping and
 restarting the process against the same `DATA_DIR` restores everything;
 no state is kept only in memory.
+
+## 12. Completion pass (2026-10-20)
+
+What "finished" means here: Phases 0–8 implemented and verified as far as
+the dev VM allows (the full stack still gets its end-to-end run on the
+household's own machine — see the Phase 8 checklist), plus the product
+decisions made during live testing:
+
+- **Navigation**: swipe up from Ambient to Tasks, swipe down (from the
+  top edge) back to Ambient, fly-out menu on functional screens, and
+  Back buttons that return to the previous screen.
+- **Task creation for everyone**: a deliberately simple form (title,
+  assignment chips, domain chips with best-guess inference from the
+  title, calendar-style repetition, duration tier, optional Foothold).
+  Creation/completion are household actions; task-definition edits and
+  deletion stay admin-gated. A completed task can be **un-completed**
+  by anyone (Undo) — the granted reward is reversed exactly via
+  compensating ledger entries.
+- **Admin mode**: one PIN unlock (fly-out padlock) until locked or the
+  30-minute session expires. The **Activity** screen (PIN-locked) lists
+  completions, redemptions, and corrections, and can reverse a granted
+  reward ("trust but verify"). Redemption refunds remain a distinct,
+  unimplemented concept by design.
+- **Settings screen**: theme choice (moved from the removed prototype
+  widget) and idle return-to-Ambient (default 3 minutes; an open dialog
+  defers it). The Sources screen manages ambient image sources; real
+  provider sync is future work and must be handled securely.
+- **Countdown**: "how many sleeps until…" over real calendar events.
+- **Forgot PIN**: start the server once with
+  `AEVUMORY_RESET_ADMIN_PIN=1` (see `.env.example`), set a new PIN from
+  Household Setup, unset, restart.
+
+Deliberately not in this pass: external calendar/image sync, weather,
+home integrations, emergency contacts (needs a data design), the
+avatar system (a design discussion of its own), and Mon–Fri weekday
+task presets (task recurrence anchors support a single weekday today).
+
+## 13. Round-2 live feedback + Deductive Pruning (2026-10-20, 524545b + follow-up)
+
+- **Calendar tasks fixed**: the all-day exclusive-end convention meant
+  task entries with end == start rendered zero days. Tasks now render —
+  timed at their due time when the task has one, all-day otherwise
+  (end = next day, exclusive).
+- **Due time**: the task form has a Due time (default: creation + 12h),
+  stored as the strict-window end (00:00 → due time). "Never" replaces
+  "Once"; the Days field is disabled unless "Every N days".
+- **Task delete** is a two-step inline confirm with post-delete server
+  verification (the earlier window.confirm flow failed silently for the
+  user; root cause not reproduced from code).
+- **Calendar**: clicking a task opens the task editor in place; separate
+  Add event / Add task buttons; Add calendar creates a local source
+  (PIN-gated). ALL existing sources are writable locally again — Phase
+  5's read-only external sources locked them out of the editor.
+  The colour-picker logic is deliberate and must not be rewritten.
+- **Profiles**: #profiles lists household members (flyout links there).
+- **Rewards**: avatar-circle redeemer picker, one-tap redeem, compact
+  grid cards, minimal Add reward with PIN prompt, admin-only Edit/Delete
+  (DELETE /api/rewards/:id now exists), calendar-style Active checkbox,
+  shared admin mode. Optional reward images: `image_ref` (migration
+  0006); uploads go to DATA_DIR/uploads, served at /uploads/.
+- **Ambient exit**: last-used screen within 1 hour, else the default
+  screen (Settings; factory default Tasks).
+- **Deductive Pruning (Reason) is wired**: POST /api/task-cycles/:id/prune
+  with `award_reason_yield: true`, a recognised causal-evidence
+  reason_code (another_task_satisfied requires linked_task_id), and an
+  acting participant awards the actor Reason XP (avoided task's base
+  magnitude, zero Credits) as a `deductive_pruning` transaction —
+  reversible in Activity like a completion. Without the opt-in, pruning
+  stays the ordinary unpaid resolution. Board UI: "Not needed" button
+  offers both outcomes distinctly; Foothold-supported tasks also have
+  a "Start" button (foothold initiation was API-only until now).

@@ -1,4 +1,5 @@
 import './household-setup.css';
+import { goBack } from './navigation';
 import { adminApi, householdApi, participantsApi, type HouseholdDto, type ParticipantDto } from './api-client';
 
 interface SetupState {
@@ -138,7 +139,7 @@ function renderParticipantRow(participant: ParticipantDto, state: SetupState): s
 
 function wire(target: HTMLDivElement, state: SetupState, rerender: () => void): void {
   target.querySelector<HTMLButtonElement>('[data-setup-back]')?.addEventListener('click', () => {
-    window.location.hash = '';
+    goBack('');
   });
 
   target.querySelector<HTMLFormElement>('[data-pin-setup-form]')?.addEventListener('submit', async (event) => {

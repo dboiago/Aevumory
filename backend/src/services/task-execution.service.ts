@@ -15,10 +15,11 @@
  *     completed (condition no longer applies, another action satisfied it,
  *     etc.) — recorded for provenance/audit only. Resolving a cycle is not
  *     itself an earned reward.
- *   - Future Deductive Pruning: a not-yet-implemented, domain-specific
- *     Inquiry mechanic where genuine investigative work behind a resolution
- *     may justify a bounded reward. That reward must never be inferred
- *     merely because a cycle was resolved (see `pruneCycle`).
+ *   - Deductive Pruning (Reason perk): pruneCycle with the explicit
+ *     `award_reason_yield` opt-in, a recognised causal-evidence reason
+ *     code, and an acting participant awards bounded Reason XP (no
+ *     Credits) to the actor. It is never inferred merely because a cycle
+ *     was resolved — ordinary pruneCycle calls stay unpaid.
  *
  * Idempotency: every RewardTransaction carries an `idempotency_key` of
  * `${task_id}:${cycle_id}:${reward_owner_user_id ?? 'unassigned'}:${reward_event_type}`.
@@ -49,8 +50,8 @@ import type { ExecutionRepository } from '../repositories/execution.repository.j
 import type { LedgerRepository } from '../repositories/ledger.repository.js';
 import type { UserTaskStateRepository } from '../repositories/user-task-state.repository.js';
 import { REASON_ENGINE_CONFIG } from '../config/engine.config.js';
-import { TaskNotFoundError, TaskService } from './task.service.js';
-import { computeBaseYield, scaleYield } from './reward-yield.engine.js';
+import { TaskCycleNotFoundError, TaskNotFoundError, TaskService } from './task.service.js';
+import { applyModifiers, computeBaseYield, computeReasonYield, scaleYield } from './reward-yield.engine.js';
 
 export class InvalidCycleStateError extends Error {
   constructor(cycle_id: string, reason: string) {
@@ -96,7 +97,29 @@ export interface PruneCycleInput {
   note?: string;
   linked_task_id?: string;
   completed_by_user_id?: string;
+  /**
+   * Explicit Deductive Pruning opt-in. When true, the resolution is
+   * treated as the Reason mechanic (PROGRESSION_SPEC.md §12): causal
+   * evidence (a recognised reason_code; a linked task for the
+   * another-task code) and an acting participant are required, and the
+   * actor earns Reason XP (no Credits). When absent/false, pruneCycle
+   * remains the ordinary, unpaid resolution it has always been.
+   */
+  award_reason_yield?: boolean;
 }
+
+export class DeductivePruningError extends Error {}
+
+/** Causal-evidence codes recognised for a paid Deductive Pruning. */
+export const DEDUCTIVE_PRUNING_REASON_CODES = new Set([
+  'another_task_satisfied',
+  'satisfied_by_another_task',
+  'satisfied_externally',
+  'external_event_resolved',
+  'condition_no_longer_exists',
+  'established_redundant',
+  'redundant_after_investigation',
+]);
 
 export interface CreateRewardAdjustmentInput {
   original_transaction_id: string;
@@ -306,16 +329,89 @@ export class TaskExecutionService {
    * CycleStatus to "work is no longer required"; no new CycleStatus literal
    * is introduced.
    *
-   * A future, domain-specific Inquiry mechanic ("Deductive Pruning") may
-   * award a bounded reward when the resolution reflects real investigative
-   * work — but that reward must never be inferred merely because a cycle
-   * was resolved, and is deliberately NOT implemented here (see
-   * `computeReasonYield` in reward-yield.engine.ts, reserved/unused pending
-   * that future mechanic). The `prune`/`deductively_pruned` naming is kept
-   * as-is (matching the already-documented `ExecutionOutcomeType` literal in
-   * task-domain.types.ts) rather than introducing a second, competing name
-   * for the same generic-resolution concept.
+   * Deductive Pruning (PROGRESSION_SPEC.md §12) is layered on this same
+   * resolution: callers opt in explicitly with `award_reason_yield`,
+   * a recognised causal-evidence `reason_code`, and an acting
+   * participant; the actor then earns `computeReasonYield` (the avoided
+   * task's base-yield magnitude as Reason XP, zero Credits), recorded as
+   * a `deductive_pruning` RewardTransaction that an admin can reverse
+   * through createRewardAdjustment (which reopens the cycle). Without
+   * the opt-in, a resolution earns nothing — a reward is never inferred
+   * merely because a cycle was resolved. The `prune`/`deductively_pruned`
+   * naming matches the already-documented `ExecutionOutcomeType` literal
+   * in task-domain.types.ts.
    */
+  /**
+   * Household "oops" undo for a mistaken completion (product decision,
+   * 2026-10-20): NOT admin-gated — mistakes happen on a shared display.
+   * Reverses every not-yet-reversed reward transaction for the cycle
+   * (Foothold first, then completion) with compensating adjustments —
+   * history is never mutated — and reopens the cycle via
+   * createRewardAdjustment's completion-reversal path. Distinct from
+   * an admin revocation: the deltas are always the exact negation of
+   * what was granted, never an arbitrary amount.
+   */
+  async uncompleteCycle(cycle_id: string, input: { created_by_user_id?: string } = {}): Promise<{ cycle: TaskCycle }> {
+    const cycle = await this.taskRepository.getCycle(cycle_id);
+    if (!cycle) throw new TaskCycleNotFoundError(cycle_id);
+    if (cycle.status !== 'satisfied') {
+      throw new InvalidCycleStateError(cycle_id, `cycle status is '${cycle.status}'`);
+    }
+
+    const candidateOwners = [...new Set([cycle.responsible_user_id, cycle.satisfied_by_user_id].filter(Boolean))] as string[];
+    const reversible: RewardTransaction[] = [];
+    for (const owner of candidateOwners) {
+      const transactions = await this.ledgerRepository.listTransactionsForOwner(owner);
+      for (const transaction of transactions) {
+        if (transaction.cycle_id !== cycle_id) continue;
+        if (transaction.reward_event_type !== 'completion' && transaction.reward_event_type !== 'foothold_initiation') continue;
+        const adjustments = await this.ledgerRepository.listAdjustmentsForTransaction(transaction.transaction_id);
+        if (adjustments.length === 0) reversible.push(transaction);
+      }
+    }
+    // A household-pool completion may have no reward owner; its
+    // transaction (if any) carries reward_owner_user_id undefined and is
+    // not reachable via listTransactionsForOwner — such a completion
+    // granted XP/credits to nobody individually beyond the pool record,
+    // and the reopen below still applies.
+
+    const ordered = [
+      ...reversible.filter((t) => t.reward_event_type === 'foothold_initiation'),
+      ...reversible.filter((t) => t.reward_event_type === 'completion'),
+    ];
+    for (const transaction of ordered) {
+      const xp_adjustments = [
+        ...(transaction.yield.primary_discipline
+          ? [{ discipline: transaction.yield.primary_discipline, xp_delta: -transaction.yield.primary_xp }]
+          : []),
+        ...transaction.yield.secondary_yields.map((entry) => ({ discipline: entry.discipline, xp_delta: -entry.xp })),
+      ];
+      await this.createRewardAdjustment({
+        original_transaction_id: transaction.transaction_id,
+        reason: 'system_correction',
+        xp_adjustments,
+        credits_delta: -transaction.yield.credits_earned,
+        created_by_user_id: input.created_by_user_id ?? 'household',
+      });
+    }
+
+    if (ordered.length === 0) {
+      // No reward to reverse (e.g. pool completion) — reopen directly.
+      const reopened: TaskCycle = {
+        ...cycle,
+        status: 'pending',
+        satisfied_at: undefined,
+        satisfied_by_user_id: undefined,
+        resolved_at: undefined,
+      };
+      await this.taskRepository.saveCycle(reopened);
+      return { cycle: reopened };
+    }
+
+    const updated = await this.taskRepository.getCycle(cycle_id);
+    return { cycle: updated ?? cycle };
+  }
+
   async pruneCycle(cycle_id: string, input: PruneCycleInput): Promise<ExecutionResult> {
     const cycle = await this.taskService.getOrMaterializeCycle(cycle_id);
     const task = await this.requireTask(cycle.task_id);
@@ -323,6 +419,48 @@ export class TaskExecutionService {
     if (cycle.status !== 'pending') throw new InvalidCycleStateError(cycle_id, `cycle status is '${cycle.status}'`);
 
     const reward_owner_user_id = cycle.responsible_user_id;
+
+    // Deductive Pruning (Reason perk): only on explicit opt-in, with
+    // causal evidence and an identifiable actor. The actor — the person
+    // who established the task was unnecessary — earns the Reason XP,
+    // which may differ from the cycle's responsible participant.
+    let transaction: RewardTransaction | null = null;
+    if (input.award_reason_yield) {
+      if (!DEDUCTIVE_PRUNING_REASON_CODES.has(input.reason_code)) {
+        throw new DeductivePruningError(
+          `reason_code '${input.reason_code}' is not recognised causal evidence for Deductive Pruning`,
+        );
+      }
+      if ((input.reason_code === 'another_task_satisfied' || input.reason_code === 'satisfied_by_another_task') && !input.linked_task_id) {
+        throw new DeductivePruningError('linked_task_id is required when another task satisfied this one');
+      }
+      const actor_user_id = input.completed_by_user_id ?? reward_owner_user_id;
+      if (!actor_user_id) {
+        throw new DeductivePruningError('An acting participant is required to earn Reason XP for Deductive Pruning');
+      }
+
+      const { idempotency_key, reusableExisting } = await this.resolveRewardTransactionSlot(
+        task.task_id,
+        cycle_id,
+        actor_user_id,
+        'deductive_pruning',
+      );
+      if (reusableExisting) {
+        transaction = reusableExisting;
+      } else {
+        transaction = {
+          transaction_id: randomUUID(),
+          idempotency_key,
+          task_id: task.task_id,
+          cycle_id,
+          reward_event_type: 'deductive_pruning',
+          reward_owner_user_id: actor_user_id,
+          yield: applyModifiers(computeReasonYield(task)),
+          processed_at: new Date().toISOString(),
+        };
+        await this.ledgerRepository.saveTransaction(transaction);
+      }
+    }
 
     const now = new Date().toISOString();
     const executionEvent: ExecutionEvent = {
@@ -343,7 +481,7 @@ export class TaskExecutionService {
     const updatedCycle: TaskCycle = { ...cycle, status: 'superseded', resolved_at: now };
     await this.taskRepository.saveCycle(updatedCycle);
 
-    return { cycle: updatedCycle, transaction: null, executionEvent, state: null };
+    return { cycle: updatedCycle, transaction, executionEvent, state: null };
   }
 
   /**
@@ -380,9 +518,8 @@ export class TaskExecutionService {
     const cycle = await this.taskRepository.getCycle(cycle_id);
     if (!cycle) return { adjustment, cycle: null };
 
-    // 'deductive_pruning' is not produced by pruneCycle today (ordinary
-    // resolution earns no reward) but stays handled here so a future
-    // Inquiry-mechanic transaction of that type is reversible the same way.
+    // Ordinary pruning earns no reward; a Deductive Pruning transaction
+    // (explicit opt-in in pruneCycle) reverses exactly like a completion.
     if (original.reward_event_type === 'completion' || original.reward_event_type === 'deductive_pruning') {
       const reopened: TaskCycle = {
         ...cycle,

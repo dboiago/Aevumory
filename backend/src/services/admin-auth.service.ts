@@ -76,6 +76,20 @@ export class AdminAuthService {
     return token;
   }
 
+  /** Admin-mode "lock": ends one session immediately. */
+  invalidateSession(token: string | undefined): void {
+    if (token) this.sessions.delete(token);
+  }
+
+  /** Forgot-PIN recovery: clears the PIN and every live session. Only
+   *  invoked from the server's own startup path (AEVUMORY_RESET_ADMIN_PIN),
+   *  never from an HTTP route — physical/server access is the credential. */
+  async clearPin(): Promise<void> {
+    const household = await this.householdService.getHousehold();
+    await this.householdService.setAdminPinHash(household.household_id, null);
+    this.sessions.clear();
+  }
+
   validateSession(token: string | undefined): boolean {
     if (!token) return false;
     const expiresAt = this.sessions.get(token);

@@ -253,10 +253,6 @@ button, select { font: inherit; }
 @media (max-width: 520px) { .task-columns { grid-template-columns: minmax(220px, 400px); } }
 @media (max-width: 700px) { .horizon-event { max-width: 42vw; white-space: normal; } .ambient-context { right: 16px; bottom: 16px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
-.theme-switcher { position: fixed; right: 18px; bottom: 18px; z-index: 20; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border-active); border-radius: var(--radius-badge, 999px); background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 6px 24px var(--overlay-black-shadow); }
-.theme-switcher label { color: var(--text-muted); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
-.theme-switcher select { min-width: 120px; padding: 4px 22px 4px 6px; border: 0; background: transparent; color: var(--text-primary); cursor: pointer; }
-.theme-switcher select:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 .participant-profile-back { margin: 0 0 24px; padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 .participant-profile-back:hover { color: var(--text-primary); }
 .participant-profile-back:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }

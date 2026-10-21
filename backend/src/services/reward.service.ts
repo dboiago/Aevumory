@@ -52,6 +52,7 @@ export interface CreateRewardInput {
   category: RewardCategory;
   base_cost: number;
   is_active?: boolean;
+  image_ref?: string;
 }
 
 export interface UpdateRewardInput {
@@ -60,6 +61,7 @@ export interface UpdateRewardInput {
   category?: RewardCategory;
   base_cost?: number;
   is_active?: boolean;
+  image_ref?: string | null;
 }
 
 export interface RedeemRewardInput {
@@ -71,6 +73,18 @@ export interface RedeemRewardInput {
 export interface RedeemRewardResult {
   redemption: RewardRedemption;
   balance: number;
+}
+
+/** Accepts '/uploads/...', http(s) URLs, and data:image references
+ * (capped — card thumbnails, not photo storage). Returns undefined for
+ * absent/blank values; throws on anything else. */
+function validateImageRef(value: string | undefined): string | undefined {
+  if (value === undefined || value.trim() === '') return undefined;
+  const ref = value.trim();
+  if (ref.startsWith('/uploads/') && ref.length <= 300) return ref;
+  if (/^https?:\/\//i.test(ref) && ref.length <= 2048) return ref;
+  if (/^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(ref) && ref.length <= 2_800_000) return ref;
+  throw new Error('image_ref must be an uploaded image path, an http(s) URL, or a data:image reference');
 }
 
 function validateRewardFields(input: { title?: string; category?: RewardCategory; base_cost?: number }): void {
@@ -118,6 +132,7 @@ export class RewardService {
       // human/product review once that engine exists.
       is_discountable: false,
       is_active: input.is_active ?? true,
+      image_ref: validateImageRef(input.image_ref),
     };
 
     await this.rewardRepository.saveReward(reward);
@@ -137,10 +152,19 @@ export class RewardService {
       category: input.category ?? existing.category,
       base_cost: input.base_cost ?? existing.base_cost,
       is_active: input.is_active ?? existing.is_active,
+      image_ref: input.image_ref === null ? undefined : (validateImageRef(input.image_ref) ?? existing.image_ref),
     };
 
     await this.rewardRepository.saveReward(updated);
     return updated;
+  }
+
+  /** Admin catalogue maintenance: removes the reward definition.
+   * Past redemptions and their ledger debits are history and stay. */
+  async deleteReward(reward_id: string): Promise<void> {
+    const existing = await this.rewardRepository.getReward(reward_id);
+    if (!existing) throw new RewardNotFoundError(reward_id);
+    await this.rewardRepository.deleteReward(reward_id);
   }
 
   /** The existing Phase 3 ledger balance — the single authoritative spendable Credit figure, now inclusive of redemption debits. */

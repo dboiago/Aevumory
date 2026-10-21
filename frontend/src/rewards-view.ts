@@ -1,6 +1,6 @@
 import './rewards.css';
+import { goBack } from './navigation';
 import {
-  adminApi,
   attachPolling,
   participantLedgerApi,
   rewardsApi,
@@ -9,6 +9,7 @@ import {
   type RewardCategoryDto,
   type RewardDto,
 } from './api-client';
+import { getCachedAdminStatus, openAdminUnlockDialog, refreshAdminStatus } from './admin';
 import type { RewardsQuery } from './rewards';
 
 interface RewardsPageState {
@@ -48,6 +49,9 @@ export async function renderRewards(target: HTMLDivElement, query: RewardsQuery)
     wire(target, state, rerender);
   };
 
+  // Admin state is the shared admin mode (flyout padlock) — the Rewards
+  // screen no longer keeps its own separate PIN unlock.
+  state.authorized = getCachedAdminStatus()?.authenticated ?? (await refreshAdminStatus())?.authenticated ?? false;
   await refreshBalance(state);
   rerender();
 
@@ -62,6 +66,8 @@ async function pollRefresh(query: RewardsQuery, state: RewardsPageState, rerende
   const fresh = await query.getState();
   state.participants = fresh.participants;
   state.rewards = fresh.rewards;
+  const cachedAdmin = getCachedAdminStatus();
+  if (cachedAdmin) state.authorized = cachedAdmin.authenticated;
   if (state.selectedParticipantId && !fresh.participants.some((participant) => participant.participant_id === state.selectedParticipantId)) {
     state.selectedParticipantId = fresh.participants[0]?.participant_id ?? null;
   }
@@ -89,10 +95,10 @@ function renderPage(state: RewardsPageState): string {
       <header class="rewards-header">
         <button type="button" class="rewards-back" data-rewards-back>← Back</button>
         <h1>Rewards</h1>
+        ${state.showCreateForm ? '' : '<button type="button" class="rewards-add-button" data-rewards-add>+ Add reward</button>'}
       </header>
       ${state.error ? `<p class="rewards-error" role="alert">${escapeHtml(state.error)}</p>` : ''}
       ${renderParticipantSection(state)}
-      ${renderAdminSection(state)}
       ${state.showCreateForm ? renderRewardForm(null) : ''}
       ${renderCatalogue(state)}
     </main>
@@ -104,50 +110,35 @@ function renderParticipantSection(state: RewardsPageState): string {
     return '<p class="rewards-empty">Add a participant in Household Setup before redeeming rewards.</p>';
   }
 
-  const options = state.participants
-    .map(
-      (participant) =>
-        `<option value="${escapeHtml(participant.participant_id)}" ${participant.participant_id === state.selectedParticipantId ? 'selected' : ''}>${escapeHtml(participant.display_name)}</option>`,
-    )
-    .join('');
-
   const balanceLabel = state.balance === null ? '—' : `${formatCredits(state.balance)} credits`;
 
   return `
-    <section class="rewards-participant-bar" aria-label="Redeeming participant">
-      <label class="rewards-participant-select">Redeeming as
-        <select data-rewards-participant>${options}</select>
-      </label>
+    <section class="rewards-participant-bar" aria-label="Who is redeeming">
+      <div class="rewards-avatars" role="radiogroup" aria-label="Redeeming as">
+        ${state.participants.map((participant) => `
+          <button type="button" role="radio" aria-checked="${participant.participant_id === state.selectedParticipantId}"
+            class="rewards-avatar${participant.participant_id === state.selectedParticipantId ? ' rewards-avatar-selected' : ''}"
+            data-rewards-participant="${escapeHtml(participant.participant_id)}">
+            <span class="rewards-avatar-circle" aria-hidden="true">${participant.representation_ref
+              ? `<img src="${escapeHtml(participant.representation_ref)}" alt="">`
+              : escapeHtml(initials(participant.display_name))}</span>
+            <span class="rewards-avatar-name">${escapeHtml(participant.display_name)}</span>
+          </button>`).join('')}
+      </div>
       <span class="rewards-balance">Balance: <strong>${escapeHtml(balanceLabel)}</strong></span>
     </section>
   `;
 }
 
-function renderAdminSection(state: RewardsPageState): string {
-  if (!state.authorized) {
-    return `
-      <section class="rewards-admin-bar" aria-label="Admin sign-in">
-        <form class="rewards-inline-form" data-rewards-pin-form>
-          <input type="password" inputmode="numeric" pattern="[0-9]*" name="pin" placeholder="Admin PIN" autocomplete="current-password" required>
-          <button type="submit" class="rewards-secondary-action">Unlock catalogue editing</button>
-        </form>
-      </section>
-    `;
-  }
-
-  return `
-    <section class="rewards-admin-bar" aria-label="Admin actions">
-      <span class="rewards-admin-status">Admin actions unlocked.</span>
-      ${!state.showCreateForm ? '<button type="button" class="rewards-primary-action" data-rewards-add>Add a reward</button>' : ''}
-    </section>
-  `;
+function initials(name: string): string {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || '?';
 }
 
 function renderCatalogue(state: RewardsPageState): string {
   if (!state.rewards.length) {
     return `
       <p class="rewards-empty">No rewards yet.${
-        state.authorized && !state.showCreateForm
+        !state.showCreateForm
           ? ' <button type="button" class="rewards-inline-action" data-rewards-add>Add a reward</button>'
           : ''
       }</p>
@@ -176,6 +167,7 @@ function renderRewardItem(reward: RewardDto, state: RewardsPageState): string {
 
   return `
     <li class="rewards-card ${reward.is_active ? '' : 'rewards-card-inactive'}">
+      ${reward.image_ref ? `<img class="rewards-card-image" src="${escapeHtml(reward.image_ref)}" alt="">` : ''}
       <div class="rewards-card-main">
         <h3>${escapeHtml(reward.title)}</h3>
         ${reward.description ? `<p class="rewards-card-description">${escapeHtml(reward.description)}</p>` : ''}
@@ -186,7 +178,8 @@ function renderRewardItem(reward: RewardDto, state: RewardsPageState): string {
         <div class="rewards-card-actions">
           ${
             state.authorized
-              ? `<button type="button" class="rewards-inline-action" data-rewards-edit="${escapeHtml(reward.id)}">Edit</button>`
+              ? `<button type="button" class="rewards-inline-action" data-rewards-edit="${escapeHtml(reward.id)}">Edit</button>
+                 <button type="button" class="rewards-inline-action rewards-delete-action" data-rewards-delete="${escapeHtml(reward.id)}">Delete</button>`
               : ''
           }
           <button
@@ -228,9 +221,16 @@ function renderRewardForm(reward: RewardDto | null): string {
         <input type="number" name="base_cost" min="1" step="1" value="${isEdit ? reward.base_cost : ''}" required>
       </label>
       <label class="rewards-form-checkbox">
-        <input type="checkbox" name="is_active" ${!isEdit || reward.is_active ? 'checked' : ''}>
+        <span class="rewards-checkbox"><input type="checkbox" name="is_active" ${!isEdit || reward.is_active ? 'checked' : ''} aria-label="Active"><span class="rewards-checkbox-box" aria-hidden="true"></span></span>
         Active
       </label>
+      <label>Image (optional)
+        <input type="file" name="image_file" accept="image/png,image/jpeg,image/gif,image/webp">
+      </label>
+      ${isEdit && reward.image_ref ? `<label class="rewards-form-checkbox">
+        <span class="rewards-checkbox"><input type="checkbox" name="remove_image" aria-label="Remove image"><span class="rewards-checkbox-box" aria-hidden="true"></span></span>
+        Remove current image
+      </label>` : ''}
       <div class="rewards-form-actions">
         <button type="submit" class="rewards-primary-action">${isEdit ? 'Save' : 'Add reward'}</button>
         <button type="button" class="rewards-secondary-action" data-rewards-cancel-form>Cancel</button>
@@ -241,36 +241,64 @@ function renderRewardForm(reward: RewardDto | null): string {
 
 function wire(target: HTMLDivElement, state: RewardsPageState, rerender: () => void): void {
   target.querySelector<HTMLButtonElement>('[data-rewards-back]')?.addEventListener('click', () => {
-    window.location.hash = '';
+    goBack('');
   });
 
-  target.querySelector<HTMLSelectElement>('[data-rewards-participant]')?.addEventListener('change', async (event) => {
-    state.selectedParticipantId = (event.currentTarget as HTMLSelectElement).value;
-    state.balance = null;
-    rerender();
-    await refreshBalance(state);
-    rerender();
+  target.querySelectorAll<HTMLButtonElement>('[data-rewards-participant]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      state.selectedParticipantId = button.dataset.rewardsParticipant ?? null;
+      state.balance = null;
+      rerender();
+      await refreshBalance(state);
+      rerender();
+    });
   });
 
-  target.querySelector<HTMLFormElement>('[data-rewards-pin-form]')?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget as HTMLFormElement;
-    const pin = (form.elements.namedItem('pin') as HTMLInputElement).value;
-
-    try {
-      await adminApi.login(pin);
-      state.authorized = true;
+  // Add reward: if admin mode isn't unlocked yet, prompt for the PIN
+  // right here (shared admin dialog) and continue straight into the form.
+  target.querySelectorAll<HTMLButtonElement>('[data-rewards-add]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      if (!state.authorized) {
+        const status = getCachedAdminStatus() ?? await refreshAdminStatus();
+        if (status && !status.pin_configured) {
+          state.error = 'Set an admin PIN in Household Setup first.';
+          rerender();
+          return;
+        }
+        if (status?.authenticated) {
+          state.authorized = true;
+        } else {
+          const unlocked = await openAdminUnlockDialog();
+          if (!unlocked) return;
+          state.authorized = true;
+        }
+      }
+      state.showCreateForm = true;
+      state.editingRewardId = null;
       state.error = null;
-    } catch (error) {
-      state.error = errorMessage(error);
-    }
-    rerender();
+      rerender();
+    });
   });
 
-  target.querySelector<HTMLButtonElement>('[data-rewards-add]')?.addEventListener('click', () => {
-    state.showCreateForm = true;
-    state.editingRewardId = null;
-    rerender();
+  // Delete (admin only): two-step inline confirm, verified afterwards.
+  target.querySelectorAll<HTMLButtonElement>('[data-rewards-delete]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const rewardId = button.dataset.rewardsDelete;
+      if (!rewardId) return;
+      if (button.dataset.armed !== 'true') {
+        button.dataset.armed = 'true';
+        button.textContent = 'Confirm?';
+        return;
+      }
+      try {
+        await rewardsApi.remove(rewardId);
+        state.rewards = state.rewards.filter((reward) => reward.id !== rewardId);
+        state.error = null;
+      } catch (error) {
+        state.error = errorMessage(error);
+      }
+      rerender();
+    });
   });
 
   target.querySelectorAll<HTMLButtonElement>('[data-rewards-edit]').forEach((button) => {
@@ -293,13 +321,33 @@ function wire(target: HTMLDivElement, state: RewardsPageState, rerender: () => v
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
     const rewardId = form.dataset.rewardId || undefined;
-    const input = {
+    const input: Parameters<typeof rewardsApi.create>[0] = {
       title: (form.elements.namedItem('title') as HTMLInputElement).value,
       description: (form.elements.namedItem('description') as HTMLTextAreaElement).value || undefined,
       category: (form.elements.namedItem('category') as HTMLSelectElement).value as RewardCategoryDto,
       base_cost: Number((form.elements.namedItem('base_cost') as HTMLInputElement).value),
       is_active: (form.elements.namedItem('is_active') as HTMLInputElement).checked,
     };
+
+    // Optional image: a newly chosen file is uploaded first and stored by
+    // path; "Remove current image" clears it. No file + no removal keeps
+    // the existing image untouched.
+    const fileInput = form.elements.namedItem('image_file') as HTMLInputElement | null;
+    const file = fileInput?.files?.[0];
+    const removeImage = (form.elements.namedItem('remove_image') as HTMLInputElement | null)?.checked ?? false;
+    try {
+      if (removeImage) {
+        input.image_ref = null;
+      } else if (file) {
+        const dataBase64 = await readFileAsBase64(file);
+        const uploaded = await rewardsApi.uploadImage(file.name, dataBase64);
+        input.image_ref = uploaded.url;
+      }
+    } catch (error) {
+      state.error = errorMessage(error);
+      rerender();
+      return;
+    }
 
     try {
       if (rewardId) {
@@ -340,6 +388,18 @@ function wire(target: HTMLDivElement, state: RewardsPageState, rerender: () => v
       state.pendingRewardId = null;
       rerender();
     });
+  });
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that image file.'));
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      resolve(result.includes(',') ? result.slice(result.indexOf(',') + 1) : result);
+    };
+    reader.readAsDataURL(file);
   });
 }
 

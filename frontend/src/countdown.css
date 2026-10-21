@@ -1,0 +1,79 @@
+/* Countdown — big, friendly numbers for kids; same tokens/type as the
+   rest of the app so it belongs on the same device. */
+
+.countdown {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+  color: var(--text-primary);
+}
+
+.countdown-back {
+  margin: 0 0 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.countdown-back:hover { color: var(--text-primary); }
+
+.countdown-header h1 {
+  margin: 0 0 8px;
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.countdown-sub, .countdown-loading, .countdown-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.countdown-list {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.countdown-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card, 10px);
+  background: var(--bg-surface);
+}
+
+.countdown-item-today {
+  border-color: var(--accent-primary);
+}
+
+.countdown-sleeps {
+  min-width: 128px;
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: .03em;
+  color: var(--accent-primary);
+}
+
+.countdown-what { display: grid; gap: 3px; }
+.countdown-title { font-size: 17px; font-weight: 600; }
+.countdown-date { color: var(--text-muted); font-size: 13px; }
+
+.countdown-back:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
+}
