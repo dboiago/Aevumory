@@ -12,3 +12,9 @@
 .prune-dialog-primary { padding: 9px 14px; border: 1px solid var(--action-primary-border); border-radius: 7px; background: var(--action-primary-bg); color: var(--accent-primary); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .prune-dialog-secondary { padding: 9px 14px; border: 1px solid var(--border-subtle); border-radius: 7px; background: transparent; color: var(--text-soft); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .prune-dialog-hint { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+
+.prune-dialog-recognition { color: var(--text-soft); font-size: 13px; }
+.prune-dialog-recognition span { display: flex; align-items: center; gap: 8px; }
+.prune-dialog-recognition input { accent-color: var(--accent-primary); }
+.prune-dialog-actions { justify-content: flex-end; }
+.prune-dialog [hidden] { display: none !important; }
