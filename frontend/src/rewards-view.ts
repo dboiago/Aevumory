@@ -22,6 +22,7 @@ interface RewardsPageState {
   editingRewardId: string | null;
   error: string | null;
   pendingRewardId: string | null;
+  notice: string | null;
 }
 
 const CATEGORY_LABELS: Record<RewardCategoryDto, string> = {
@@ -42,6 +43,7 @@ export async function renderRewards(target: HTMLDivElement, query: RewardsQuery)
     editingRewardId: null,
     error: null,
     pendingRewardId: null,
+    notice: null,
   };
 
   const rerender = (): void => {
@@ -98,6 +100,7 @@ function renderPage(state: RewardsPageState): string {
         ${state.showCreateForm ? '' : '<button type="button" class="rewards-add-button" data-rewards-add>+ Add reward</button>'}
       </header>
       ${state.error ? `<p class="rewards-error" role="alert">${escapeHtml(state.error)}</p>` : ''}
+      ${state.notice ? `<p class="rewards-notice" role="status">${escapeHtml(state.notice)}</p>` : ''}
       ${renderParticipantSection(state)}
       ${state.showCreateForm ? renderRewardForm(null) : ''}
       ${renderCatalogue(state)}
@@ -171,7 +174,6 @@ function renderRewardItem(reward: RewardDto, state: RewardsPageState): string {
       <div class="rewards-card-main">
         <h3>${escapeHtml(reward.title)}</h3>
         ${reward.description ? `<p class="rewards-card-description">${escapeHtml(reward.description)}</p>` : ''}
-        <span class="rewards-card-category">${escapeHtml(CATEGORY_LABELS[reward.category])}</span>
       </div>
       <div class="rewards-card-footer">
         <span class="rewards-cost" aria-label="Credit cost">${reward.base_cost} credits</span>
@@ -189,8 +191,9 @@ function renderRewardItem(reward: RewardDto, state: RewardsPageState): string {
             ${affordable && !pending ? '' : 'disabled'}
             aria-label="${affordable ? `Redeem ${escapeHtml(reward.title)}` : `${disabledReason}: ${escapeHtml(reward.title)}`}"
           >
-            ${pending ? 'Redeeming…' : affordable ? 'Redeem' : disabledReason}
+            ${pending ? 'Redeeming…' : 'Redeem'}
           </button>
+          ${!affordable && !pending ? `<span class="rewards-disabled-reason">${escapeHtml(disabledReason === 'Not enough credits' ? 'Need more credits' : disabledReason)}</span>` : ''}
         </div>
       </div>
     </li>
@@ -381,8 +384,10 @@ function wire(target: HTMLDivElement, state: RewardsPageState, rerender: () => v
         });
         state.balance = result.balance;
         state.error = null;
+        state.notice = `Redeemed “${state.rewards.find((reward) => reward.id === rewardId)?.title ?? 'reward'}” for ${state.participants.find((participant) => participant.participant_id === state.selectedParticipantId)?.display_name ?? 'participant'}.`;
       } catch (error) {
         state.error = errorMessage(error);
+        state.notice = null;
       }
 
       state.pendingRewardId = null;
