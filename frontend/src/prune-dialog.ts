@@ -14,14 +14,7 @@ const REASON_OPTIONS: Array<{ code: string; label: string }> = [
   { code: 'established_redundant', label: 'Looked into it — the task is redundant' },
 ];
 
-/**
- * "Didn't need doing" — the resolution dialog behind the board's
- * Not needed button. Two outcomes, kept visibly distinct:
- *  - Mark not needed: the ordinary resolution — recorded, no reward.
- *  - Prune (Reason): Deductive Pruning — the person who established the
- *    task was unnecessary earns Reason XP (no Credits), per
- *    PROGRESSION_SPEC.md §12. Requires the causal-evidence reason above.
- */
+/** Resolution dialog for a task that turned out not to be needed. */
 export function openPruneDialog(input: {
   taskTitle: string;
   participants: HouseholdParticipant[];
@@ -49,7 +42,10 @@ export function openPruneDialog(input: {
               ${input.otherTasks.map((task) => `<option value="${escapeHtml(task.taskId)}">${escapeHtml(task.title)}</option>`).join('')}
             </select>
           </label>
-          <label>Who spotted it?
+          <label class="prune-dialog-recognition">
+            <span><input type="checkbox" name="recognize" data-prune-recognize> Recognize the person who spotted it</span>
+          </label>
+          <label data-prune-actor-wrap hidden>Who spotted it?
             <select name="completed_by_user_id" data-prune-actor>
               ${input.participants.map((p) => `<option value="${escapeHtml(p.id)}"${p.id === input.defaultActorId ? ' selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
             </select>
@@ -59,10 +55,10 @@ export function openPruneDialog(input: {
           </label>
         </div>
         <footer class="prune-dialog-actions">
-          <button type="button" class="prune-dialog-secondary" data-prune-ordinary>Just mark not needed</button>
-          <button type="submit" class="prune-dialog-primary">Prune · earn Reason XP</button>
+          <button type="button" class="prune-dialog-secondary" data-prune-close>Cancel</button>
+          <button type="submit" class="prune-dialog-primary">Mark not needed</button>
         </footer>
-        <p class="prune-dialog-hint">Pruning credits the person who figured it out, with Reason XP based on the work avoided. No Credits — the work itself wasn’t done. An admin can reverse it in Activity.</p>
+        <p class="prune-dialog-hint">This records why the task wasn’t needed. Recognition is optional; no Credits are awarded because the task wasn’t completed.</p>
       </form>
     `;
     document.body.append(dialog);
@@ -70,11 +66,15 @@ export function openPruneDialog(input: {
 
     const reasonSelect = dialog.querySelector<HTMLSelectElement>('[data-prune-reason]');
     const linkedWrap = dialog.querySelector<HTMLElement>('[data-prune-linked-wrap]');
-    const syncLinked = (): void => {
+    const recognize = dialog.querySelector<HTMLInputElement>('[data-prune-recognize]');
+    const actorWrap = dialog.querySelector<HTMLElement>('[data-prune-actor-wrap]');
+    const syncFields = (): void => {
       if (linkedWrap) linkedWrap.hidden = reasonSelect?.value !== 'another_task_satisfied';
+      if (actorWrap) actorWrap.hidden = !recognize?.checked;
     };
-    reasonSelect?.addEventListener('change', syncLinked);
-    syncLinked();
+    reasonSelect?.addEventListener('change', syncFields);
+    recognize?.addEventListener('change', syncFields);
+    syncFields();
 
     let settled = false;
     const settle = (value: PruneActionInput | null): void => {
@@ -94,16 +94,13 @@ export function openPruneDialog(input: {
         reason_code: reason,
         note: String(data.get('note') ?? '').trim() || undefined,
         linked_task_id: reason === 'another_task_satisfied' ? (String(data.get('linked_task_id') ?? '') || undefined) : undefined,
-        completed_by_user_id: String(data.get('completed_by_user_id') ?? '') || undefined,
+        completed_by_user_id: recognize?.checked ? (String(data.get('completed_by_user_id') ?? '') || undefined) : undefined,
       };
     };
 
-    dialog.querySelector('[data-prune-ordinary]')?.addEventListener('click', () => {
-      settle({ ...readFields(), award_reason_yield: false });
-    });
     dialog.querySelector('form')?.addEventListener('submit', (event) => {
       event.preventDefault();
-      settle({ ...readFields(), award_reason_yield: true });
+      settle({ ...readFields(), award_reason_yield: recognize?.checked ?? false });
     });
   });
 }
